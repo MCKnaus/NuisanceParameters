@@ -1,0 +1,16 @@
+---
+bibliography: vignettes/assets/NuisanceParameters_refs.bib
+output: github_document
+---
+
+# NuisanceParameters
+
+Using some of the most popular prediction functions in R, the `NuisanceParameters` packages estimates nuisance parameters that can be put into practice for causal inference as shown in @knaus.
+
+### Bug reports & support
+
+For reporting a bug, simply [open an issue](https://github.com/stefan-1997/NuisanceParameters/issues/new) on GitHub. For personal contact, you can write an email to michael.knaus\@uni-tuebingen.de.
+  
+### References
+
+
