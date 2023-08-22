@@ -1,0 +1,13 @@
+Package: NuisanceParameters
+Type: Package
+Title: Nuisance Parameters Estimation
+Version: 0.1.0
+Authors@R: c(
+    person("Glaisner", "Stefan", email = "stefan.glaisner@student.uni-tuebingen.de", role = c("aut","cre")),
+    person("Knaus", "Michael C.", email = "michael.knaus@uni-tuebingen.de", role = "ctb", comment = c(ORCID = "0000-0002-7328-1363"))
+    )
+Description: Estimation of nuisance parameters using different prediction algorithms.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.2.3
