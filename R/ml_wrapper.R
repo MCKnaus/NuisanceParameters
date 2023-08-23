@@ -58,23 +58,33 @@ predict.mean_fit = function(mean_fit,x,y,xnew=NULL,weights=FALSE) {
 }
 
 
-#' Calculates OLS fit.
+#' Fits OLS
+#'
+#' @description
+#' \code{\link{ols_fit}} fits ordinary least squares (OLS) to the given data.
 #'
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
 #'
 #' @return Returns OLS coefficients
 #'
+#' @importFrom stats lm.fit
+#'
 #' @keywords internal
 #'
 ols_fit = function(x,y) {
   x = cbind(rep(1,nrow(x)),x)
-  ols_coef = lm.fit(x,y)$coefficients
-  ols_coef
+  ols_coef = stats::lm.fit(x,y)$coefficients
+  return(ols_coef)
 }
 
 
-#' Prediction based on OLS and provides prediction weights if required.
+#' Predictions based on OLS
+#'
+#' @description
+#' Prediction based on fitted ordinary least squares models. The method also
+#' provides prediction weights if required.
+#'
 #' @param ols_fit Output of \code{\link{ols_fit}}
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
@@ -86,6 +96,8 @@ ols_fit = function(x,y) {
 #' \item{weights}{If \code{weights=TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
 #' containing the weights that deliver predictions where each row gives the weight that each training
 #' outcome received in the prediction for xnew.}
+#'
+#' @method predict ols_fit
 #'
 #' @keywords internal
 #'
@@ -105,27 +117,43 @@ predict.ols_fit = function(ols_fit,x,y,xnew=NULL,weights=FALSE) {
 
   if (weights==FALSE) hat_mat = NULL
 
-  list("prediction"=fit,"weights"=hat_mat)
+  return(
+    list(
+      "prediction"=fit,
+      "weights"=hat_mat
+    )
+  )
 }
 
 
-#' This function estimates cross-validated ridge regression based on the \code{\link{glmnet}} package
+#' Fits Ridge regression
 #'
-#' @param x Matrix of covariates (number of observations times number of covariates matrix)
+#' @description
+#' \code{\link{ridge_fit}} estimates cross-validated Ridge regression based on
+#' the \code{\link{glmnet}} package.
+#'
+#' @param x Matrix of covariates
 #' @param y vector of outcomes
 #' @param args List of arguments passed to  \code{\link{glmnet}}
-#' @import glmnet
 #'
-#' @return An object with S3 class "glmnet"
+#' @return An object with S3 class \code{\link{glmnet}}
+#'
+#' @importFrom glmnet cv.glmnet
 #'
 #' @keywords internal
 #'
 ridge_fit = function(x,y,args=list()) {
   ridge = do.call(cv.glmnet,c(list(x=x,y=y,alpha=0),args))
-  ridge
+  return(ridge)
 }
 
-#' Prediction based on Ridge and provides prediction weights if required.
+
+#' Predictions based on Ridge regression
+#'
+#' @description
+#' Prediction based on fitted Ridge regression model.
+#' The method also provides prediction weights if required.
+#'
 #' @param ridge_fit Output of \code{\link{ridge_fit}}
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
@@ -137,6 +165,11 @@ ridge_fit = function(x,y,args=list()) {
 #' \item{weights}{If \code{weights=TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
 #' containing the weights that deliver predictions where each row gives the weight that each training
 #' outcome received in the prediction for xnew.}
+#'
+#' @importFrom stats sd predict
+#' @importFrom glmnet cv.glmnet
+#'
+#' @method predict ridge_fit
 #'
 #' @keywords internal
 #'
@@ -156,11 +189,16 @@ predict.ridge_fit = function(ridge_fit,x,y,xnew=NULL,weights=FALSE) {
     xnew = cbind(rep(1,nrow(xnew)),xnew)
 
     # Calculate hat matrix, see also (https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat)
-    hat_mat = xnew %*% solve(crossprod(x) + ridge_fit$lambda.min  * n / sd(y) * diag(x = c(0, rep(1,p)))) %*% t(x)
+    hat_mat = xnew %*% solve(crossprod(x) + ridge_fit$lambda.min  * n / stats::sd(y) * diag(x = c(0, rep(1,p)))) %*% t(x)
     fit = hat_mat %*% y
   }
 
-  list("prediction"=fit,"weights"=hat_mat)
+  return(
+    list(
+      "prediction"=fit,
+      "weights"=hat_mat
+    )
+  )
 }
 
 

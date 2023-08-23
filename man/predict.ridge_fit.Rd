@@ -2,7 +2,7 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.ridge_fit}
 \alias{predict.ridge_fit}
-\title{Prediction based on Ridge and provides prediction weights if required.}
+\title{Predictions based on Ridge regression}
 \usage{
 \method{predict}{ridge_fit}(ridge_fit, x, y, xnew = NULL, weights = FALSE)
 }
@@ -25,6 +25,7 @@ containing the weights that deliver predictions where each row gives the weight 
 outcome received in the prediction for xnew.}
 }
 \description{
-Prediction based on Ridge and provides prediction weights if required.
+Prediction based on fitted Ridge regression model.
+The method also provides prediction weights if required.
 }
 \keyword{internal}

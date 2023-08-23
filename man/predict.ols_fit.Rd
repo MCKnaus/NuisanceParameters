@@ -2,7 +2,7 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.ols_fit}
 \alias{predict.ols_fit}
-\title{Prediction based on OLS and provides prediction weights if required.}
+\title{Predictions based on OLS}
 \usage{
 \method{predict}{ols_fit}(ols_fit, x, y, xnew = NULL, weights = FALSE)
 }
@@ -25,6 +25,7 @@ containing the weights that deliver predictions where each row gives the weight 
 outcome received in the prediction for xnew.}
 }
 \description{
-Prediction based on OLS and provides prediction weights if required.
+Prediction based on fitted ordinary least squares models. The method also
+provides prediction weights if required.
 }
 \keyword{internal}

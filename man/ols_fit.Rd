@@ -2,7 +2,7 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{ols_fit}
 \alias{ols_fit}
-\title{Calculates OLS fit.}
+\title{Fits OLS}
 \usage{
 ols_fit(x, y)
 }
@@ -15,6 +15,6 @@ ols_fit(x, y)
 Returns OLS coefficients
 }
 \description{
-Calculates OLS fit.
+\code{\link{ols_fit}} fits ordinary least squares (OLS) to the given data.
 }
 \keyword{internal}

@@ -2,21 +2,22 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{ridge_fit}
 \alias{ridge_fit}
-\title{This function estimates cross-validated ridge regression based on the \code{\link{glmnet}} package}
+\title{Fits Ridge regression}
 \usage{
 ridge_fit(x, y, args = list())
 }
 \arguments{
-\item{x}{Matrix of covariates (number of observations times number of covariates matrix)}
+\item{x}{Matrix of covariates}
 
 \item{y}{vector of outcomes}
 
 \item{args}{List of arguments passed to  \code{\link{glmnet}}}
 }
 \value{
-An object with S3 class "glmnet"
+An object with S3 class \code{\link{glmnet}}
 }
 \description{
-This function estimates cross-validated ridge regression based on the \code{\link{glmnet}} package
+\code{\link{ridge_fit}} estimates cross-validated Ridge regression based on
+the \code{\link{glmnet}} package.
 }
 \keyword{internal}
