@@ -2,7 +2,7 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{mean_fit}
 \alias{mean_fit}
-\title{Calculates arithmetic mean.}
+\title{Arithmetic mean}
 \usage{
 mean_fit(x, y)
 }
@@ -12,9 +12,10 @@ mean_fit(x, y)
 \item{y}{Vector of outcomes of training sample}
 }
 \value{
-Returns list containing mean and number of observations
+Returns list containing mean and number of observations.
 }
 \description{
-Calculates arithmetic mean.
+\code{\link{mean_fit}} acts as prediction function by calculating the
+arithmetic mean of the training outcomes.
 }
 \keyword{internal}

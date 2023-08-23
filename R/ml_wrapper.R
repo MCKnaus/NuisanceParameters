@@ -1,30 +1,44 @@
-#' Calculates arithmetic mean.
+#' Arithmetic mean
+#'
+#' @description
+#' \code{\link{mean_fit}} acts as prediction function by calculating the
+#' arithmetic mean of the training outcomes.
 #'
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
 #'
-#' @return Returns list containing mean and number of observations
+#' @return Returns list containing mean and number of observations.
 #'
 #' @keywords internal
 #'
 mean_fit = function(x,y) {
   mean = mean(y)
-  output = list("mean"=mean,"n"=nrow(x))
-  output
+  output = list(
+    "mean"=mean,
+    "n"=nrow(x)
+  )
+  return(output)
 }
 
+
+#' Predict after arithmetic mean fitting
+#'
+#' @description
 #' Predicts arithmetic mean and provides prediction weights if required.
+#'
 #' @param mean_fit Output of \code{\link{mean_fit}}
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
 #' @param xnew Covariate matrix of test sample
 #' @param weights If TRUE, weights underlying the prediction for xnew calculated
 #'
-#' @return Returns list containing:
+#' @return List element containing:
 #' \item{prediction}{vector of predictions for xnew}
-#' \item{weights}{If \code{weights=TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
+#' \item{weights}{if \code{weights=TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
 #' containing the weights that deliver predictions where each row gives the weight that each training
 #' outcome received in the prediction for xnew.}
+#'
+#' @method predict mean_fit
 #'
 #' @keywords internal
 #'
@@ -35,7 +49,12 @@ predict.mean_fit = function(mean_fit,x,y,xnew=NULL,weights=FALSE) {
   if (isTRUE(weights)) w = matrix(1 / length(y),nrow(xnew),nrow(x))
   else w = NULL
 
-  list("prediction"=fit,"weights"=w)
+  return(
+    list(
+      "prediction"=fit,
+      "weights"=w
+    )
+  )
 }
 
 

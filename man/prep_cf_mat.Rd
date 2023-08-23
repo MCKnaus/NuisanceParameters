@@ -2,23 +2,26 @@
 % Please edit documentation in R/utils.R
 \name{prep_cf_mat}
 \alias{prep_cf_mat}
-\title{Creates matrix of binary cross-fitting fold indicators (n x # cross-folds)}
+\title{Cross-fitting fold indicators}
 \usage{
 prep_cf_mat(n, cf, w_mat = NULL, cl = NULL)
 }
 \arguments{
-\item{n}{Number of observations.}
+\item{n}{Number of observations}
 
-\item{cf}{Number of cross-fitting folds.}
+\item{cf}{Number of cross-fitting folds}
 
-\item{w_mat}{Optional logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.
-If specified, cross-fitting folds will preserve the treatment rations from full sample.}
+\item{w_mat}{Optional logical matrix of treatment indicators (n x T+1 with T
+being the number of treatments).
+For example created by \code{\link{prep_w_mat}}.
+If specified, cross-fitting folds will preserve the treatment ratios from full sample.}
 
-\item{cl}{Optional vector of cluster variable if cross-fitting should account for clusters.}
+\item{cl}{Optional vector of cluster variable if cross-fitting should account for clusters}
 }
 \value{
 Logical matrix of cross-fitting folds (n x # folds).
 }
 \description{
-Creates matrix of binary cross-fitting fold indicators (n x # cross-folds)
+\code{\link{prep_cf_mat}} creates a matrix of binary cross-fitting fold
+indicators (n x # cross-folds)
 }

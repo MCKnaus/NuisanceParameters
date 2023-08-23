@@ -1,15 +1,20 @@
-#' Create interactions and polynomials
+#' Creates design matrix
 #'
-#' This function takes a dataset and strings with variable names as input and creates interactions and polynomials
+#' @description
+#' \code{\link{design_matrix}} creates interactions and polynomials for a proper
+#' design matrix that can be used as input for prediction functions.
 #'
-#' @param data Matrix with the main variables.
-#' @param int Vector of strings with the variables to be interacted.
+#' @param data Matrix with the main variables
+#' @param int Vector of strings with the variables to be interacted
 #' @param int_d Degree of interactions created. Default is 2.
-#' @param poly Vector of strings with the variables for which polynomials should be created.
+#' @param poly Vector of strings with the variables for which polynomials should be created
 #' @param poly_d Degree of polynomials to be created. Default is 2.
-#' @param log Vector of strings with the variables for which the logged versions should be added.
+#' @param log Vector of strings with the variables for which the logged versions should be added
 #'
-#' @return Matrix including the main variables and the newly generated ones.#'
+#' @return Matrix including the main variables and the newly generated ones.
+#'
+#' @importFrom matrixStats colMins
+#' @importFrom stats model.matrix as.formula
 #'
 #' @export
 #'
@@ -29,7 +34,7 @@ design_matrix = function(data,int=NULL,int_d=2,poly=NULL,poly_d=2,log=NULL) {
   # Part for logs
   if (!is.null(log)) {
     # Check whether some variables can't be logged because not positive
-    ind_neg = colMins(data[,log])<=0
+    ind_neg = matrixStats::colMins(data[,log]) <= 0
     if (sum(ind_neg)>0) {
       cat("\n Following variables not modified to be logged because of non-positive values:",paste(colnames(data[,log])[ind_neg]),"\n" )
       log = log[!ind_neg]
@@ -38,10 +43,11 @@ design_matrix = function(data,int=NULL,int_d=2,poly=NULL,poly_d=2,log=NULL) {
   }
 
   # Combine the three parts
-  fmla = as.formula(paste("~0",int,poly,log))
+  fmla = stats::as.formula(paste("~0",int,poly,log))
 
   # Generate matrix
-  data = model.matrix(fmla,data=as.data.frame(data))
+  data = stats::model.matrix(fmla,data=as.data.frame(data))
+
   # Clean variable names to make sense
   colnames(data) = gsub("poly\\(","",colnames(data))
   colnames(data) = gsub(paste0(", ",toString(poly_d),", raw = TRUE)"),"",colnames(data))
@@ -51,23 +57,26 @@ design_matrix = function(data,int=NULL,int_d=2,poly=NULL,poly_d=2,log=NULL) {
   return(data)
 }
 
-
 #' Data screening
 #'
-#' This function takes a matrix of data and removes
-#' 1. Variables without variation
-#' 2. Dummy variables where one group is nearly empty (optional in one of both treatment groups)
-#' 3. Redundant (highly correlated variables)
+#' @description
+#' \code{\link{data_screen}} takes a matrix of data and cleans it for the sake
+#' of an improved input for subsequent prediction algorithms. \cr
+#' It removes \cr
+#' 1. Variables without variation \cr
+#' 2. Dummy variables where one group is nearly empty (optionally in one of both treatment groups) \cr
+#' 3. Redundant (i.e. highly correlated) variables \cr
 #'
-#' @param data Matrix the variables to be screened.
+#' @param data Matrix the variables to be screened
 #' @param treat Optional binary treatment vector if screening should be done within treatment groups
 #' @param bin_cut Cut-off fraction under which nearly empty binary variables should be removed. Default 0.01.
-#' @param corr_cut Cut-off above which highly correlated varialbes should be removed. Default 0.99.
-#' @param print Shows details about the reomved variables at each step
+#' @param corr_cut Cut-off above which highly correlated variables should be removed. Default 0.99.
+#' @param print Shows details about the removed variables at each step
 #'
-#' @return Screened matrix
+#' @return Screened matrix.
 #'
-#' @import matrixStats
+#' @importFrom matrixStats colSds
+#' @importFrom Matrix colMeans colSums
 #'
 #' @export
 #'
@@ -75,7 +84,7 @@ data_screen = function(data,treat=NULL,bin_cut=0.01,corr_cut=0.99,print=FALSE) {
 
   ## Kick out variables with no variation
   # Identify the names
-  nm_del = colnames(data)[colSds(data) == 0]
+  nm_del = colnames(data)[matrixStats::colSds(data) == 0]
   # Describe identified variables
   if (print==TRUE) {
     cat("\n\n Variables with no variation:",nm_del,"\n\n")
@@ -89,11 +98,11 @@ data_screen = function(data,treat=NULL,bin_cut=0.01,corr_cut=0.99,print=FALSE) {
 
   # Calculate means of all variables and check whether they are potentially close to 0 or 1
   if (is.null(treat)) {
-    mean = colMeans(data)
+    mean = Matrix::colMeans(data)
     bel_cut = (mean<bin_cut | mean > (1-bin_cut))
   } else {
-    mean1 = colMeans(data[treat==1,])
-    mean0 = colMeans(data[treat==0,])
+    mean1 = Matrix::colMeans(data[treat==1,])
+    mean0 = Matrix::colMeans(data[treat==0,])
     bel_cut = (mean1<bin_cut | mean1 > (1-bin_cut) | mean0<bin_cut | mean0 > (1-bin_cut))
   }
 
@@ -112,12 +121,12 @@ data_screen = function(data,treat=NULL,bin_cut=0.01,corr_cut=0.99,print=FALSE) {
   cor[lower.tri(cor, diag=TRUE)] = FALSE
 
   # Identify names of redundant variables
-  nm_del = colnames(cor)[colSums(cor)>0]
+  nm_del = colnames(cor)[Matrix::colSums(cor)>0]
 
   if (print==TRUE) {
     cat("\n\n Variables (nearly) perfectly correlated:",nm_del,"\n\n")
   }
-  if (identical(nm_del, character(0)) == FALSE) data = data[,colSums(cor)==0]
+  if (identical(nm_del, character(0)) == FALSE) data = data[,Matrix::colSums(cor)==0]
 
   return(data)
 }

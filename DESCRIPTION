@@ -15,11 +15,12 @@ RoxygenNote: 7.2.3
 Suggests:
     testthat (>= 3.0.0), knitr, rmarkdown, xfun
 Imports:
+    utils,
+    stats,
     glmnet,
     grf,
     Matrix,
     matrixStats,
     nnls,
-    plasso,
-    utils
+    plasso
 Config/testthat/edition: 3

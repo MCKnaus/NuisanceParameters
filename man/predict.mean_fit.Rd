@@ -2,7 +2,7 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.mean_fit}
 \alias{predict.mean_fit}
-\title{Predicts arithmetic mean and provides prediction weights if required.}
+\title{Predict after arithmetic mean fitting}
 \usage{
 \method{predict}{mean_fit}(mean_fit, x, y, xnew = NULL, weights = FALSE)
 }
@@ -18,9 +18,9 @@
 \item{weights}{If TRUE, weights underlying the prediction for xnew calculated}
 }
 \value{
-Returns list containing:
+List element containing:
 \item{prediction}{vector of predictions for xnew}
-\item{weights}{If \code{weights=TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
+\item{weights}{if \code{weights=TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
 containing the weights that deliver predictions where each row gives the weight that each training
 outcome received in the prediction for xnew.}
 }

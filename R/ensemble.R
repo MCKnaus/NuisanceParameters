@@ -53,38 +53,35 @@ ensemble = function(ml,
     fit_cv[is.na(fit_cv)] = mean(y) # e.g. glmnet produced sometimes NaN for logistic Ridge
     mse_cv = colMeans((c(y) - fit_cv)^2)
 
-    # Calculate weights each method receives
-    nnls_weights = nnls::nnls(fit_cv,y)$x
-    # In case of perfectly agreeing predictions nnls provides only zeros
-    if (sum(nnls_weights) == 0) nnls_weights = nnls_weights + 1 / length(nnls_weights)
-    nnls_weights = nnls_weights / sum(nnls_weights)
+    # Calculate weights using custom nnls_weights function
+    nnls_w = nnls_weights(X=fit_cv,y=y)
 
     # Run all methods on the full sample
     fit_full = ensemble_core(ml,x,y,xnew,weights=weights,quiet=quiet)
     best = fit_full$predictions[,which.min(mse_cv)]
-    ensemble = fit_full$predictions %*% nnls_weights
+    ensemble = fit_full$predictions %*% nnls_w
 
     # Calculate Smoothing matrix if weights=TRUE
     w = NULL
     if (isTRUE(weights)) {
       w = matrix(0,nrow(xnew),nrow(x))
       for (i in 1:length(ml)) {
-        w = w + nnls_weights[i] * fit_full$weights[[i]]
+        w = w + nnls_w[i] * fit_full$weights[[i]]
       }
       w = Matrix::Matrix(w,sparse=T)
     }
 
-    colnames(fit_full$predictions) = names(mse_cv) = names(nnls_weights) = colnames(fit_cv)
+    colnames(fit_full$predictions) = names(mse_cv) = names(nnls_w) = colnames(fit_cv)
   }
   else { # in case only one method defined, no cross-validation needed
     fit_full = ensemble_core(ml,x,y,xnew,weights=weights,quiet=quiet)
     ensemble = best = fit_full$predictions
-    w = nnls_weights = mse_cv = fit_cv = NULL
+    w = nnls_w = mse_cv = fit_cv = NULL
     if (isTRUE(weights)) w = fit_full$weights[[1]]
   }
 
   output = list("ensemble" = ensemble,"best" = best,"fit_full" = fit_full,"weights" = w,
-       "nnls_weights" = nnls_weights, "mse_cv" = mse_cv, "fit_cv" = fit_cv)
+       "nnls_weights" = nnls_w, "mse_cv" = mse_cv, "fit_cv" = fit_cv)
   class(output) = "ensemble"
   output
 }

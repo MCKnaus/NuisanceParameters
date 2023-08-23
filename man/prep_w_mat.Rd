@@ -2,19 +2,21 @@
 % Please edit documentation in R/utils.R
 \name{prep_w_mat}
 \alias{prep_w_mat}
-\title{Creates matrix of binary treament indicators (n x T+1) where each column contains
-a binary indicator for one treatment.}
+\title{One-hot encoding of treatment vector}
 \usage{
 prep_w_mat(w)
 }
 \arguments{
-\item{w}{Treatment vector. Provide as factor to control ordering of the treatments,
-otherwise program orders treatments in ascending order or alphabetically.}
+\item{w}{Treatment vector.
+Provide as factor to control ordering of the treatments,
+otherwise arranged in ascending order or alphabetically.}
 }
 \value{
 Logical matrix of treatment indicators (n x T+1).
 }
 \description{
-Creates matrix of binary treament indicators (n x T+1) where each column contains
-a binary indicator for one treatment.
+\code{\link{prep_w_mat}} creates a matrix of binary treatment indicators
+(n x T+1 with T being the number of treatments)
+where each column contains a binary indicator for one treatment (i.e. one-hot
+encoding).
 }

@@ -1,12 +1,18 @@
-#' Creates matrix of binary treament indicators (n x T+1) where each column contains
-#' a binary indicator for one treatment.
+#' One-hot encoding of treatment vector
 #'
-#' @param w Treatment vector. Provide as factor to control ordering of the treatments,
-#' otherwise program orders treatments in ascending order or alphabetically.
+#' @description
+#' \code{\link{prep_w_mat}} creates a matrix of binary treatment indicators
+#' (n x T+1 with T being the number of treatments)
+#' where each column contains a binary indicator for one treatment (i.e. one-hot
+#' encoding).
+#'
+#' @param w Treatment vector.
+#' Provide as factor to control ordering of the treatments,
+#' otherwise arranged in ascending order or alphabetically.
 #'
 #' @return Logical matrix of treatment indicators (n x T+1).
 #'
-#' @import stats
+#' @importFrom stats model.matrix
 #'
 #' @export
 #'
@@ -16,23 +22,29 @@ prep_w_mat = function(w) {
   if (!is.factor(w)) w = factor(w, levels = sort(unique(w)))
 
   # Create one-hot matrix for each category
-  w_mat = model.matrix(~0+w)
+  w_mat = stats::model.matrix(~0+w)
   colnames(w_mat) = gsub("w","",colnames(w_mat))
   return(w_mat == 1)
 }
 
 
-#' Creates matrix of binary cross-fitting fold indicators (n x # cross-folds)
+#' Cross-fitting fold indicators
 #'
-#' @param n Number of observations.
-#' @param cf Number of cross-fitting folds.
-#' @param w_mat Optional logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.
-#' If specified, cross-fitting folds will preserve the treatment rations from full sample.
-#' @param cl Optional vector of cluster variable if cross-fitting should account for clusters.
+#' @description
+#' \code{\link{prep_cf_mat}} creates a matrix of binary cross-fitting fold
+#' indicators (n x # cross-folds)
 #'
-#' @import stats
+#' @param n Number of observations
+#' @param cf Number of cross-fitting folds
+#' @param w_mat Optional logical matrix of treatment indicators (n x T+1 with T
+#' being the number of treatments).
+#' For example created by \code{\link{prep_w_mat}}.
+#' If specified, cross-fitting folds will preserve the treatment ratios from full sample.
+#' @param cl Optional vector of cluster variable if cross-fitting should account for clusters
 #'
 #' @return Logical matrix of cross-fitting folds (n x # folds).
+#'
+#' @importFrom stats model.matrix quantile
 #'
 #' @export
 #'
@@ -41,15 +53,15 @@ prep_cf_mat = function(n,cf,w_mat=NULL,cl=NULL) {
 
   if (!is.null(cl)) {
     rnd_id = sample(1:length(unique(cl)),length(unique(cl)))
-    fold = as.numeric(cut(rnd_id, breaks=quantile(rnd_id, probs=seq(0,1, length = cf+1)),include.lowest=TRUE))
+    fold = as.numeric(cut(rnd_id, breaks=stats::quantile(rnd_id, probs=seq(0,1, length = cf+1)),include.lowest=TRUE))
     fold = factor(fold[match(cl,unique(cl))])
-    cf_mat = (model.matrix(~0+fold) == 1)
+    cf_mat = (stats::model.matrix(~0+fold) == 1)
   }
   else {
     if (is.null(w_mat)) {
       rnd_id = sample(1:n,n)
-      fold = factor(as.numeric(cut(rnd_id, breaks=quantile(rnd_id, probs=seq(0,1, length = cf+1)),include.lowest=TRUE)))
-      cf_mat = (model.matrix(~0+fold) == 1)
+      fold = factor(as.numeric(cut(rnd_id, breaks=stats::quantile(rnd_id, probs=seq(0,1, length = cf+1)),include.lowest=TRUE)))
+      cf_mat = (stats::model.matrix(~0+fold) == 1)
     }
     else {
       cf_mat = matrix(NA,n,cf)
@@ -57,7 +69,7 @@ prep_cf_mat = function(n,cf,w_mat=NULL,cl=NULL) {
       for (i in 1:ncol(w_mat)) {
         cf_mat_w = matrix(FALSE,nw[i],cf)
         rnd_id = sample(1:nw[i],nw[i])
-        fold = as.numeric(cut(rnd_id, breaks=quantile(rnd_id, probs=seq(0,1, length = cf+1)),include.lowest=TRUE))
+        fold = as.numeric(cut(rnd_id, breaks=stats::quantile(rnd_id, probs=seq(0,1, length = cf+1)),include.lowest=TRUE))
         for (j in 1:cf) {
           cf_mat_w[fold == j,j] = TRUE
         }
@@ -70,3 +82,40 @@ prep_cf_mat = function(n,cf,w_mat=NULL,cl=NULL) {
   return(cf_mat)
 }
 
+
+#' Non-linear least weights function
+#'
+#' @description
+#' \code{\link{nnls_weights}} calculates the non-linear least weights on the
+#' basis of the non-negative least squares algorithm.
+#'
+#' @param X A matrix where each column represents a different predictor variable
+#' and each row represents an observation
+#' @param y A numeric vector of actual target values
+#'
+#' @return A numeric vector of non-linear least weights.
+#'
+#' @importFrom nnls nnls
+#'
+#' @export
+#'
+#' @examples
+#' X = matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2)
+#' y = c(0.25, 0.45, 0.65)
+#' \donttest{nnls_w = nnls_weights(X, y)}
+#'
+nnls_weights = function(X, y) {
+  nnls_result = nnls::nnls(X, y)
+  nnls_w = nnls_result$x
+
+  # in case of perfectly agreeing predictions, nnls provides only zeros
+  # in this scenario: uniform weights that add up to 1
+  if (sum(nnls_w) == 0) {
+    nnls_w = nnls_w + 1 / length(nnls_w)
+  }
+
+  # normalize weights
+  nnls_w = nnls_w / sum(nnls_w)
+
+  return(nnls_w)
+}
