@@ -92,8 +92,8 @@ data_screen = function(data,treat=NULL,bin_cut=0.01,corr_cut=0.99,print=FALSE) {
     mean = colMeans(data)
     bel_cut = (mean<bin_cut | mean > (1-bin_cut))
   } else {
-    mean1 = colMeans(data[d==1,])
-    mean0 = colMeans(data[d==0,])
+    mean1 = colMeans(data[treat==1,])
+    mean0 = colMeans(data[treat==0,])
     bel_cut = (mean1<bin_cut | mean1 > (1-bin_cut) | mean0<bin_cut | mean0 > (1-bin_cut))
   }
 

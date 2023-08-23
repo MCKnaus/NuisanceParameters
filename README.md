@@ -2,7 +2,7 @@
 # NuisanceParameters
 
 Using some of the most popular prediction functions in R, the
-`NuisanceParameters` packages estimates nuisance parameters that can be
+`NuisanceParameters` package estimates nuisance parameters that can be
 put into practice for causal inference as shown in Knaus (2022).
 
 ### Bug reports & support

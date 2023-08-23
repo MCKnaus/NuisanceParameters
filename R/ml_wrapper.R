@@ -157,7 +157,7 @@ predict.ridge_fit = function(ridge_fit,x,y,xnew=NULL,weights=FALSE) {
 #' @keywords internal
 #'
 plasso_fit = function(x,y,args=list()) {
-  plasso = do.call(plasso,c(list(x=x,y=y),args))
+  plasso = do.call(plasso::plasso,c(list(x=x,y=y),args))
   plasso
 }
 
@@ -179,8 +179,8 @@ plasso_fit = function(x,y,args=list()) {
 #'
 predict.plasso_fit = function(plasso_fit,x,y,xnew=NULL,weights=FALSE) {
   if (is.null(xnew)) xnew = x
-  x = add_intercept(x)
-  xnew = add_intercept(xnew)
+  x = plasso:::add_intercept(x)
+  xnew = plasso:::add_intercept(xnew)
 
   # Fitted values for post lasso
   nm_act = names(coef(plasso_fit$lasso_full)[,plasso_fit$ind_min_pl])[which(coef(plasso_fit$lasso_full)[,plasso_fit$ind_min_pl] != 0)]
@@ -239,7 +239,7 @@ predict.forest_grf_fit = function(forest_grf_fit,x,y,xnew=NULL,weights=FALSE) {
   fit = predict(forest_grf_fit,newdata=xnew)$prediction
 
   if (weights==TRUE) {
-    if (packageVersion("grf") < "2.0.0") w = get_sample_weights(forest_grf_fit,newdata=xnew)
+    if (utils::packageVersion("grf") < "2.0.0") w = get_sample_weights(forest_grf_fit,newdata=xnew)
     else  w = get_forest_weights(forest_grf_fit,newdata=xnew)
   }
   else w = NULL
