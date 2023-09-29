@@ -2,7 +2,7 @@
 % Please edit documentation in R/nuisance_parameters.R
 \name{nuisance_cf}
 \alias{nuisance_cf}
-\title{Cross-fitting of nuisance parameter with \code{\link{ensemble}}.}
+\title{Cross-fitting of nuisance parameters}
 \usage{
 nuisance_cf(
   ml,
@@ -20,28 +20,29 @@ nuisance_cf(
 \item{ml}{List of methods to be used in \code{\link{ensemble}} estimation.
 Methods can be created by \code{\link{create_method}}.}
 
-\item{y}{Vector of variable to be predicted.}
+\item{y}{Vector of variable to be predicted}
 
-\item{x}{Matrix of covariates.}
+\item{x}{Matrix of covariates}
 
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
-(for example created by \code{\link{prep_cf_mat}}).}
+(for example created by \code{\link{prep_cf_mat}})}
 
-\item{cv}{Number of cross-validation when estimating ensemble (default 5).}
+\item{cv}{Number of cross-validation when estimating ensemble (default 5)}
 
-\item{subset}{Optional logical vector if only subset of data should be used for prediction.}
+\item{subset}{Optional logical vector if only subset of data should be used for prediction}
 
-\item{weights}{If TRUE, prediction weights of the outcome nuisance extracted and saved (requires to provide a path).}
+\item{weights}{If TRUE, prediction weights of the outcome nuisance extracted and saved (requires to provide a path)}
 
 \item{path}{Optional path to save the \code{\link{ensemble}} of each fold for later processing.
 Saved as path + "_foldi" where i is the fold number.}
 
-\item{quiet}{If FALSE, ensemble estimators print method that is currently running.}
+\item{quiet}{If FALSE, method that is currently running is printed into console.}
 }
 \value{
 Returns a n x 1 matrix of nuisance parameters.
 }
 \description{
-Cross-fitting of nuisance parameter with \code{\link{ensemble}}.
+\code{\link{nuisance_cf}} makes a cross-fitted ensemble prediction using
+\code{\link{ensemble}}.
 }
 \keyword{internal}

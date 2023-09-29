@@ -2,24 +2,32 @@
 % Please edit documentation in R/ensemble.R
 \name{create_method}
 \alias{create_method}
-\title{Creates the methods to be used in \code{\link{ensemble}}}
+\title{Method creation for ensemble}
 \usage{
-create_method(method, x_select = NULL, args = list(), name = NULL)
+create_method(
+  method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso"),
+  x_select = NULL,
+  args = list(),
+  name = NULL
+)
 }
 \arguments{
-\item{method}{Choose method from currently \code{c("mean","ols",ridge","plasso",forest_grf","lasso")}.}
+\item{method}{Choose method from \code{c("mean","ols","ridge","plasso","forest_grf","lasso")}.
+To be continued.}
 
-\item{x_select}{Optional logical vector of length equal to the number of columns of the covariate matrix
-indicating which variables should be used by this method. E.g. tree-based methods usually should not be provided
-with the interactions that Lasso is using.}
+\item{x_select}{Optional logical vector of length equal to the number of
+columns of the covariate matrix indicating which variables should be used by
+this method. E.g. tree-based methods usually should not be provided with the
+interactions that Lasso is using.}
 
-\item{args}{Optional list containing the additional arguments that should be passed to the underlying method.}
+\item{args}{Optional list containing the additional arguments that should be
+passed to the underlying method.}
 
 \item{name}{Optional string naming the method.}
 }
 \value{
-Method that can be passed to \code{\link{ensemble}}.
+List object that can be passed as input to \code{\link{ensemble}}
 }
 \description{
-Creates the methods to be used in \code{\link{ensemble}}
+Creates the methods to be used in the subsequent \code{\link{ensemble}} model.
 }

@@ -2,25 +2,28 @@
 % Please edit documentation in R/ensemble.R
 \name{ensemble}
 \alias{ensemble}
-\title{This function implements an ensemble learner with the possibility to extract the
-smoother matrix of linear smoothers.}
+\title{Ensemble learner}
 \usage{
 ensemble(ml, x, y, xnew, nfolds = 5, weights = FALSE, quiet = TRUE)
 }
 \arguments{
-\item{ml}{List of methods build via \code{\link{create_method}} to be used in ensemble.}
+\item{ml}{List of methods built via \code{\link{create_method}} to be used in
+ensemble model}
 
-\item{x}{Covariate matrix of training sample.}
+\item{x}{Covariate matrix of training sample}
 
-\item{y}{Vector of outcomes of training sample.}
+\item{y}{Vector of outcomes of training sample}
 
-\item{xnew}{Covariate matrix of test sample.}
+\item{xnew}{Covariate matrix of test sample}
 
-\item{nfolds}{Number of folds used in cross-validation of ensemble weights (default \code{nfolds=5}).}
+\item{nfolds}{Number of folds used in cross-validation of ensemble weights
+(default \code{nfolds=5}).}
 
-\item{weights}{If TRUE, weights underlying the ensemble prediction for xnew calculated.}
+\item{weights}{If TRUE, the weights underlying the ensemble prediction for
+xnew are calculated}
 
-\item{quiet}{If FALSE, print method that is currently computed.}
+\item{quiet}{If FALSE, method that is currently computed is printed into the
+console}
 }
 \value{
 Ensemble object containing:
@@ -37,6 +40,6 @@ ensemble predictions where each row gives the weight that each training outcome 
  @export
 }
 \description{
-This function implements an ensemble learner with the possibility to extract the
-smoother matrix of linear smoothers.
+\code{\link{ensemble}} implements an ensemble learner including the
+possibility to extract the smoother matrix of linear smoothers.
 }

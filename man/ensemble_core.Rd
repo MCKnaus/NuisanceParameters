@@ -2,22 +2,25 @@
 % Please edit documentation in R/ensemble.R
 \name{ensemble_core}
 \alias{ensemble_core}
-\title{Core function of \code{\link{ensemble}}.}
+\title{Ensemble fitting}
 \usage{
 ensemble_core(ml, x_tr, y_tr, x_te, weights = FALSE, quiet = TRUE)
 }
 \arguments{
-\item{ml}{List of methods build via \code{\link{create_method}} to be used in ensemble.}
+\item{ml}{List of methods built via \code{\link{create_method}} to be used in
+ensemble model}
 
-\item{x_tr}{Covariate matrix of training sample.}
+\item{x_tr}{Covariate matrix of training sample}
 
-\item{y_tr}{Vector of outcomes of training sample.}
+\item{y_tr}{Vector of outcomes of training sample}
 
-\item{x_te}{Covariate matrix of test sample.}
+\item{x_te}{Covariate matrix of test sample}
 
-\item{weights}{If TRUE, weights underlying the ensemble prediction for x_te calculated.}
+\item{weights}{If TRUE, the weights underlying the ensemble prediction for x_te
+are calculated}
 
-\item{quiet}{If FALSE, print method that is currently computed.}
+\item{quiet}{If FALSE, method that is currently computed is printed into the
+console}
 }
 \value{
 Returns list containing:
@@ -27,6 +30,7 @@ containing the weights that deliver predictions of each method where each row gi
 outcome received in the prediction}
 }
 \description{
-Core function of \code{\link{ensemble}}.
+Core function of \code{\link{ensemble}} used for fitting the several models
+of the ensemble model.
 }
 \keyword{internal}

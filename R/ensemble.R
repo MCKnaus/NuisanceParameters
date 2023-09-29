@@ -1,13 +1,20 @@
-#' This function implements an ensemble learner with the possibility to extract the
-#' smoother matrix of linear smoothers.
+#' Ensemble learner
 #'
-#' @param ml List of methods build via \code{\link{create_method}} to be used in ensemble.
-#' @param x Covariate matrix of training sample.
-#' @param y Vector of outcomes of training sample.
-#' @param xnew Covariate matrix of test sample.
-#' @param nfolds Number of folds used in cross-validation of ensemble weights (default \code{nfolds=5}).
-#' @param weights If TRUE, weights underlying the ensemble prediction for xnew calculated.
-#' @param quiet If FALSE, print method that is currently computed.
+#' @description
+#' \code{\link{ensemble}} implements an ensemble learner including the
+#' possibility to extract the smoother matrix of linear smoothers.
+#'
+#' @param ml List of methods built via \code{\link{create_method}} to be used in
+#' ensemble model
+#' @param x Covariate matrix of training sample
+#' @param y Vector of outcomes of training sample
+#' @param xnew Covariate matrix of test sample
+#' @param nfolds Number of folds used in cross-validation of ensemble weights
+#' (default \code{nfolds=5}).
+#' @param weights If TRUE, the weights underlying the ensemble prediction for
+#' xnew are calculated
+#' @param quiet If FALSE, method that is currently computed is printed into the
+#' console
 #'
 #' @return Ensemble object containing:
 #' \item{ensemble}{the predictions of the trained ensemble for the test sample}
@@ -80,29 +87,38 @@ ensemble = function(ml,
     if (isTRUE(weights)) w = fit_full$weights[[1]]
   }
 
-  output = list("ensemble" = ensemble,"best" = best,"fit_full" = fit_full,"weights" = w,
-       "nnls_weights" = nnls_w, "mse_cv" = mse_cv, "fit_cv" = fit_cv)
+  output = list(
+    "ensemble" = ensemble,"best" = best,"fit_full" = fit_full,"weights" = w,
+    "nnls_weights" = nnls_w, "mse_cv" = mse_cv, "fit_cv" = fit_cv
+  )
   class(output) = "ensemble"
-  output
+  return(output)
 }
 
 
-#' Core function of \code{\link{ensemble}}.
+#' Ensemble fitting
 #'
-#' @param ml List of methods build via \code{\link{create_method}} to be used in ensemble.
-#' @param x_tr Covariate matrix of training sample.
-#' @param y_tr Vector of outcomes of training sample.
-#' @param x_te Covariate matrix of test sample.
-#' @param weights If TRUE, weights underlying the ensemble prediction for x_te calculated.
-#' @param quiet If FALSE, print method that is currently computed.
+#' @description
+#' Core function of \code{\link{ensemble}} used for fitting the several models
+#' of the ensemble model.
 #'
-#' @keywords internal
+#' @param ml List of methods built via \code{\link{create_method}} to be used in
+#' ensemble model
+#' @param x_tr Covariate matrix of training sample
+#' @param y_tr Vector of outcomes of training sample
+#' @param x_te Covariate matrix of test sample
+#' @param weights If TRUE, the weights underlying the ensemble prediction for x_te
+#' are calculated
+#' @param quiet If FALSE, method that is currently computed is printed into the
+#' console
 #'
 #' @return Returns list containing:
 #' \item{predictions}{\code{nrow(x_te)} x \code{length(ml)} matrix with the predictions of each method}
 #' \item{weights}{If \code{weights=TRUE}, list of length(ml) with smoother matrices of dimension \code{nrow(xnew)} x \code{nrow(x)}
 #' containing the weights that deliver predictions of each method where each row gives the weight that each training
 #' outcome received in the prediction}
+#'
+#' @keywords internal
 #'
 ensemble_core = function(ml,
                          x_tr,y_tr,x_te,
@@ -131,30 +147,38 @@ ensemble_core = function(ml,
   }
 
   list("predictions" = fit_mat, "weights" = weights_list)
+  return(list)
 }
 
 
-#' Creates the methods to be used in \code{\link{ensemble}}
+#' Method creation for ensemble
 #'
-#' @param method Choose method from currently \code{c("mean","ols",ridge","plasso",forest_grf","lasso")}.
-#' @param x_select Optional logical vector of length equal to the number of columns of the covariate matrix
-#' indicating which variables should be used by this method. E.g. tree-based methods usually should not be provided
-#' with the interactions that Lasso is using.
-#' @param args Optional list containing the additional arguments that should be passed to the underlying method.
+#' @description
+#' Creates the methods to be used in the subsequent \code{\link{ensemble}} model.
+#'
+#' @param method Choose method from \code{c("mean","ols","ridge","plasso","forest_grf","lasso")}.
+#' To be continued.
+#' @param x_select Optional logical vector of length equal to the number of
+#' columns of the covariate matrix indicating which variables should be used by
+#' this method. E.g. tree-based methods usually should not be provided with the
+#' interactions that Lasso is using.
+#' @param args Optional list containing the additional arguments that should be
+#' passed to the underlying method.
 #' @param name Optional string naming the method.
 #'
-#' @return Method that can be passed to \code{\link{ensemble}}.
+#' @return List object that can be passed as input to \code{\link{ensemble}}
 #'
 #' @export
 #'
-create_method = function(method,
-                         x_select=NULL,
-                         args=list(),
-                         name=NULL) {
+create_method = function(
+    method=c("mean","ols","ridge","plasso","forest_grf","lasso"),
+    x_select=NULL,
+    args=list(),
+    name=NULL) {
 
-  if (!(is.character(method) & length(method) == 1)) stop("Provide single string to define method.")
-  if (!(any(method == c("mean","ols","ridge","plasso","forest_grf","lasso")))
-  ) stop("Provide one of these options c(\"mean\",\"ols\",\"ridge\",\"plasso\",\"forest_grf\",\"lasso\").")
+  # check if method is valid
+  method = match.arg(method)
+  # check if other inputs are valid
   if (!(is.null(args) | is.list(args))) stop("Provide either NULL or list for args.")
   if (!(is.null(x_select) | is.logical(x_select))) stop("Provide either NULL or logical for x_select.")
   if (!((is.character(name) & length(name) == 1) | is.null(name))) stop("Provide single string to name method.")

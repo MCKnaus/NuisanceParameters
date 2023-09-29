@@ -1,17 +1,21 @@
-#' Cross-fitted ensemble prediction of propensity score nuisance parameter.
+#' Propensity score nuisance parameters prediction
+#'
+#' @description
+#' \code{\link{nuisance_e}} makes a cross-fitted ensemble prediction of
+#' propensity score nuisance parameters.
 #'
 #' @param ml List of methods to be used in \code{\link{ensemble}} estimation of propensity score.
 #' Methods can be created by \code{\link{create_method}}.
 #' @param w_mat Logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.
-#' @param x Covariate matrix.
+#' @param x Covariate matrix
 #' @param cf_mat Logical matrix with k columns of indicators representing the different folds
-#' (for example created by \code{\link{prep_cf_mat}}).
-#' @param cv Number of cross-validation when estimating ensemble (default 5).
+#' (for example created by \code{\link{prep_cf_mat}})
+#' @param cv Number of cross-validation when estimating ensemble (default 5)
 #' @param path Optional path to save the \code{\link{ensemble}} objects for later inspection.
 #' Saved as Ensemble_Wi where i is the number of the treatment in multiple treatment settings.
-#' @param quiet If FALSE, ensemble estimators print method that is currently running.
+#' @param quiet If FALSE, method that is currently running is printed into console
 #'
-#' @return Returns n x T+1 matrix with each columns containing the propensity score for the treatment corresponding to w_mat.
+#' @return Returns n x T+1 matrix with each column containing the propensity score for the treatment corresponding to w_mat.
 #'
 #' @export
 #'
@@ -48,22 +52,29 @@ nuisance_e = function(ml,w_mat,x,cf_mat,
 }
 
 
-#' Cross-fitted ensemble prediction of outcome regression nuisance parameter.
+#' Outcome model nuisance parameters prediction
 #'
-#' @param ml List of methods to be used in \code{\link{ensemble}} estimation of propensity score.
+#' @description
+#' \code{\link{nuisance_m}} makes a cross-fitted ensemble prediction of
+#' the outcome regression nuisance parameters.
+#'
+#' @param ml List of methods to be used in \code{\link{ensemble}} estimation of
+#' propensity score.
 #' Methods can be created by \code{\link{create_method}}.
-#' @param y Numerical vector containing the outcome variable.
-#' @param w_mat Logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.
-#' @param x Covariate matrix.
+#' @param y Numerical vector containing the outcome variable
+#' @param w_mat Logical matrix of treatment indicators (n x T+1). For example
+#' created by \code{\link{prep_w_mat}}.
+#' @param x Covariate matrix
 #' @param cf_mat Logical matrix with k columns of indicators representing the different folds
-#' (for example created by \code{\link{prep_cf_mat}}).
-#' @param cv Number of cross-validation when estimating ensemble (default 5).
-#' @param weights If TRUE, prediction weights of the outcome nuisance extracted and saved (requires to provide a path).
+#' (for example created by \code{\link{prep_cf_mat}})
+#' @param cv Number of cross-validation when estimating ensemble (default 5)
+#' @param weights If TRUE, prediction weights of the outcome nuisance extracted
+#' and saved (requires to provide a path)
 #' @param path Optional path to save the \code{\link{ensemble}} objects for later processing.
 #' Saved as Ensemble_Yi where i is the number of the treatment in multiple treatment settings.
-#' @param quiet If FALSE, ensemble estimators print method that is currently running.
+#' @param quiet If FALSE, method that is currently running is printed into console
 #'
-#' @return Returns n x T+1 matrix with each columns containing the predicted outcome for the treatment corresponding to w_mat.
+#' @return Returns n x T+1 matrix with each column containing the predicted outcome for the treatment corresponding to w_mat.
 #'
 #' @export
 #'
@@ -90,21 +101,24 @@ nuisance_m = function(ml,y,w_mat,x,cf_mat,
 }
 
 
-
-#' Cross-fitting of nuisance parameter with \code{\link{ensemble}}.
+#' Cross-fitting of nuisance parameters
+#'
+#' @description
+#' \code{\link{nuisance_cf}} makes a cross-fitted ensemble prediction using
+#' \code{\link{ensemble}}.
 #'
 #' @param ml List of methods to be used in \code{\link{ensemble}} estimation.
 #' Methods can be created by \code{\link{create_method}}.
-#' @param y Vector of variable to be predicted.
-#' @param x Matrix of covariates.
+#' @param y Vector of variable to be predicted
+#' @param x Matrix of covariates
 #' @param cf_mat Logical matrix with k columns of indicators representing the different folds
-#' (for example created by \code{\link{prep_cf_mat}}).
-#' @param cv Number of cross-validation when estimating ensemble (default 5).
-#' @param subset Optional logical vector if only subset of data should be used for prediction.
-#' @param weights If TRUE, prediction weights of the outcome nuisance extracted and saved (requires to provide a path).
+#' (for example created by \code{\link{prep_cf_mat}})
+#' @param cv Number of cross-validation when estimating ensemble (default 5)
+#' @param subset Optional logical vector if only subset of data should be used for prediction
+#' @param weights If TRUE, prediction weights of the outcome nuisance extracted and saved (requires to provide a path)
 #' @param path Optional path to save the \code{\link{ensemble}} of each fold for later processing.
 #' Saved as path + "_foldi" where i is the fold number.
-#' @param quiet If FALSE, ensemble estimators print method that is currently running.
+#' @param quiet If FALSE, method that is currently running is printed into console.
 #'
 #' @return Returns a n x 1 matrix of nuisance parameters.
 #'

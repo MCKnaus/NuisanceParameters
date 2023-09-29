@@ -2,7 +2,7 @@
 % Please edit documentation in R/nuisance_parameters.R
 \name{nuisance_m}
 \alias{nuisance_m}
-\title{Cross-fitted ensemble prediction of outcome regression nuisance parameter.}
+\title{Outcome model nuisance parameters prediction}
 \usage{
 nuisance_m(
   ml,
@@ -17,30 +17,34 @@ nuisance_m(
 )
 }
 \arguments{
-\item{ml}{List of methods to be used in \code{\link{ensemble}} estimation of propensity score.
+\item{ml}{List of methods to be used in \code{\link{ensemble}} estimation of
+propensity score.
 Methods can be created by \code{\link{create_method}}.}
 
-\item{y}{Numerical vector containing the outcome variable.}
+\item{y}{Numerical vector containing the outcome variable}
 
-\item{w_mat}{Logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.}
+\item{w_mat}{Logical matrix of treatment indicators (n x T+1). For example
+created by \code{\link{prep_w_mat}}.}
 
-\item{x}{Covariate matrix.}
+\item{x}{Covariate matrix}
 
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
-(for example created by \code{\link{prep_cf_mat}}).}
+(for example created by \code{\link{prep_cf_mat}})}
 
-\item{cv}{Number of cross-validation when estimating ensemble (default 5).}
+\item{cv}{Number of cross-validation when estimating ensemble (default 5)}
 
-\item{weights}{If TRUE, prediction weights of the outcome nuisance extracted and saved (requires to provide a path).}
+\item{weights}{If TRUE, prediction weights of the outcome nuisance extracted
+and saved (requires to provide a path)}
 
 \item{path}{Optional path to save the \code{\link{ensemble}} objects for later processing.
 Saved as Ensemble_Yi where i is the number of the treatment in multiple treatment settings.}
 
-\item{quiet}{If FALSE, ensemble estimators print method that is currently running.}
+\item{quiet}{If FALSE, method that is currently running is printed into console}
 }
 \value{
-Returns n x T+1 matrix with each columns containing the predicted outcome for the treatment corresponding to w_mat.
+Returns n x T+1 matrix with each column containing the predicted outcome for the treatment corresponding to w_mat.
 }
 \description{
-Cross-fitted ensemble prediction of outcome regression nuisance parameter.
+\code{\link{nuisance_m}} makes a cross-fitted ensemble prediction of
+the outcome regression nuisance parameters.
 }

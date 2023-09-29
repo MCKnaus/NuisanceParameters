@@ -2,7 +2,7 @@
 % Please edit documentation in R/nuisance_parameters.R
 \name{nuisance_e}
 \alias{nuisance_e}
-\title{Cross-fitted ensemble prediction of propensity score nuisance parameter.}
+\title{Propensity score nuisance parameters prediction}
 \usage{
 nuisance_e(ml, w_mat, x, cf_mat, cv = 5, path = NULL, quiet = TRUE)
 }
@@ -12,21 +12,22 @@ Methods can be created by \code{\link{create_method}}.}
 
 \item{w_mat}{Logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.}
 
-\item{x}{Covariate matrix.}
+\item{x}{Covariate matrix}
 
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
-(for example created by \code{\link{prep_cf_mat}}).}
+(for example created by \code{\link{prep_cf_mat}})}
 
-\item{cv}{Number of cross-validation when estimating ensemble (default 5).}
+\item{cv}{Number of cross-validation when estimating ensemble (default 5)}
 
 \item{path}{Optional path to save the \code{\link{ensemble}} objects for later inspection.
 Saved as Ensemble_Wi where i is the number of the treatment in multiple treatment settings.}
 
-\item{quiet}{If FALSE, ensemble estimators print method that is currently running.}
+\item{quiet}{If FALSE, method that is currently running is printed into console}
 }
 \value{
-Returns n x T+1 matrix with each columns containing the propensity score for the treatment corresponding to w_mat.
+Returns n x T+1 matrix with each column containing the propensity score for the treatment corresponding to w_mat.
 }
 \description{
-Cross-fitted ensemble prediction of propensity score nuisance parameter.
+\code{\link{nuisance_e}} makes a cross-fitted ensemble prediction of
+propensity score nuisance parameters.
 }

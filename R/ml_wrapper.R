@@ -17,6 +17,7 @@ mean_fit = function(x,y) {
     "mean"=mean,
     "n"=nrow(x)
   )
+  class(output) = "mean_fit"
   return(output)
 }
 
@@ -72,6 +73,7 @@ predict.mean_fit = function(mean_fit,x,y,xnew=NULL,weights=FALSE) {
 ols_fit = function(x,y) {
   x = cbind(rep(1,nrow(x)),x)
   ols_coef = stats::lm.fit(x,y)$coefficients
+  class(output) = "ols_fit"
   return(ols_coef)
 }
 
@@ -138,6 +140,7 @@ predict.ols_fit = function(ols_fit,x,y,xnew=NULL,weights=FALSE) {
 #'
 ridge_fit = function(x,y,args=list()) {
   ridge = do.call(glmnet::cv.glmnet,c(list(x=x,y=y,alpha=0),args))
+  class(output) = "ridge_fit"
   return(ridge)
 }
 
@@ -210,6 +213,7 @@ predict.ridge_fit = function(ridge_fit,x,y,xnew=NULL,weights=FALSE) {
 #'
 plasso_fit = function(x,y,args=list()) {
   plasso = do.call(plasso::cv.plasso,c(list(x=x,y=y),args))
+  class(output) = "plasso_fit"
   return(plasso)
 }
 
@@ -281,6 +285,7 @@ predict.plasso_fit = function(plasso_fit,x,y,xnew=NULL,weights=FALSE) {
 #'
 forest_grf_fit = function(x,y,args=list()) {
   rf = do.call(regression_forest,c(list(X=x,Y=y),args))
+  class(output) = "forest_grf_fit"
   return(rf)
 }
 
@@ -346,6 +351,7 @@ predict.forest_grf_fit = function(forest_grf_fit,x,y,xnew=NULL,weights=FALSE) {
 #'
 lasso_fit = function(x,y,args=list()) {
   lasso = do.call(glmnet::cv.glmnet,c(list(x=x,y=y),args))
+  class(output) = "lasso_fit"
   return(lasso)
 }
 
