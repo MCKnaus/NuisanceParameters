@@ -2,12 +2,12 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.forest_grf_fit}
 \alias{predict.forest_grf_fit}
-\title{Prediction based on Random Forest and provides prediction weights if required.}
+\title{Predictions based on Random Forest}
 \usage{
 \method{predict}{forest_grf_fit}(forest_grf_fit, x, y, xnew = NULL, weights = FALSE)
 }
 \arguments{
-\item{forest_grf_fit}{Output of \code{\link{regression_forest}} or \code{\link{forest_grf_fit}}}
+\item{forest_grf_fit}{Output of \code{\link{forest_grf_fit}}}
 
 \item{x}{Covariate matrix of training sample}
 
@@ -25,6 +25,7 @@ containing the weights that deliver predictions where each row gives the weight 
 outcome received in the prediction for xnew.}
 }
 \description{
-Prediction based on Random Forest and provides prediction weights if required.
+Prediction based on Random Forest and provides prediction weights if
+required.
 }
 \keyword{internal}

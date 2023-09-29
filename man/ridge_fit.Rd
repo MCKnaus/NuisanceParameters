@@ -11,10 +11,10 @@ ridge_fit(x, y, args = list())
 
 \item{y}{vector of outcomes}
 
-\item{args}{List of arguments passed to  \code{\link{glmnet}}}
+\item{args}{List of arguments passed to \code{\link[glmnet]{glmnet}}}
 }
 \value{
-An object with S3 class \code{\link{glmnet}}
+An object with S3 class \code{\link[glmnet]{glmnet}}
 }
 \description{
 \code{\link{ridge_fit}} estimates cross-validated Ridge regression based on

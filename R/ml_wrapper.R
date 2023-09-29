@@ -50,10 +50,7 @@ predict.mean_fit = function(mean_fit,x,y,xnew=NULL,weights=FALSE) {
   else w = NULL
 
   return(
-    list(
-      "prediction"=fit,
-      "weights"=w
-    )
+    list("prediction"=fit, "weights"=w)
   )
 }
 
@@ -118,10 +115,7 @@ predict.ols_fit = function(ols_fit,x,y,xnew=NULL,weights=FALSE) {
   if (weights==FALSE) hat_mat = NULL
 
   return(
-    list(
-      "prediction"=fit,
-      "weights"=hat_mat
-    )
+    list("prediction"=fit, "weights"=hat_mat)
   )
 }
 
@@ -134,16 +128,16 @@ predict.ols_fit = function(ols_fit,x,y,xnew=NULL,weights=FALSE) {
 #'
 #' @param x Matrix of covariates
 #' @param y vector of outcomes
-#' @param args List of arguments passed to  \code{\link{glmnet}}
+#' @param args List of arguments passed to \code{\link[glmnet]{glmnet}}
 #'
-#' @return An object with S3 class \code{\link{glmnet}}
+#' @return An object with S3 class \code{\link[glmnet]{glmnet}}
 #'
 #' @importFrom glmnet cv.glmnet
 #'
 #' @keywords internal
 #'
 ridge_fit = function(x,y,args=list()) {
-  ridge = do.call(cv.glmnet,c(list(x=x,y=y,alpha=0),args))
+  ridge = do.call(glmnet::cv.glmnet,c(list(x=x,y=y,alpha=0),args))
   return(ridge)
 }
 
@@ -166,8 +160,8 @@ ridge_fit = function(x,y,args=list()) {
 #' containing the weights that deliver predictions where each row gives the weight that each training
 #' outcome received in the prediction for xnew.}
 #'
-#' @importFrom stats sd predict
-#' @importFrom glmnet cv.glmnet
+#' @importFrom stats sd
+#' @importFrom glmnet predict.glmnet
 #'
 #' @method predict ridge_fit
 #'
@@ -176,7 +170,7 @@ ridge_fit = function(x,y,args=list()) {
 predict.ridge_fit = function(ridge_fit,x,y,xnew=NULL,weights=FALSE) {
   if (is.null(xnew)) xnew = x
 
-  fit = predict(ridge_fit,newx=xnew,type="response")
+  fit = glmnet::predict.glmnet(ridge_fit,newx=xnew,type="response")
 
   if (weights==FALSE) hat_mat = NULL
   else {
@@ -194,32 +188,37 @@ predict.ridge_fit = function(ridge_fit,x,y,xnew=NULL,weights=FALSE) {
   }
 
   return(
-    list(
-      "prediction"=fit,
-      "weights"=hat_mat
-    )
+    list("prediction"=fit, "weights"=hat_mat)
   )
 }
 
 
-#' This function estimates cross-validated Post-Lasso based on the \code{\link{glmnet}} package
+#' Fits Post-Lasso regression
+#'
+#' @description
+#' \code{\link{plasso_fit}} estimates cross-validated Post-Lasso regression.
 #'
 #' @param x Matrix of covariates (number of observations times number of covariates matrix)
 #' @param y vector of outcomes
-#' @param args List of arguments passed to  \code{\link{glmnet}}
-#' @import glmnet
+#' @param args List of arguments passed to \code{\link[plasso]{cv.plasso}}
 #'
-#' @return An object with S3 class "plasso"
+#' @importFrom plasso cv.plasso
+#'
+#' @return An object with S3 class \code{\link[plasso]{cv.plasso}}
 #'
 #' @keywords internal
 #'
 plasso_fit = function(x,y,args=list()) {
-  plasso = do.call(plasso::plasso,c(list(x=x,y=y),args))
-  plasso
+  plasso = do.call(plasso::cv.plasso,c(list(x=x,y=y),args))
+  return(plasso)
 }
 
 
+#' Predictions based on Post-Lasso regression
+#'
+#' @description
 #' Prediction based on Post-Lasso and provides prediction weights if required.
+#'
 #' @param plasso_fit Output of \code{\link{plasso_fit}}
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
@@ -232,12 +231,16 @@ plasso_fit = function(x,y,args=list()) {
 #' containing the weights that deliver predictions where each row gives the weight that each training
 #' outcome received in the prediction for xnew.}
 #'
+#' @importFrom stats lm.fit
+#'
+#' @method predict plasso_fit
+#'
 #' @keywords internal
 #'
 predict.plasso_fit = function(plasso_fit,x,y,xnew=NULL,weights=FALSE) {
   if (is.null(xnew)) xnew = x
-  x = plasso:::add_intercept(x)
-  xnew = plasso:::add_intercept(xnew)
+  x = add_intercept(x)
+  xnew = add_intercept(xnew)
 
   # Fitted values for post lasso
   nm_act = names(coef(plasso_fit$lasso_full)[,plasso_fit$ind_min_pl])[which(coef(plasso_fit$lasso_full)[,plasso_fit$ind_min_pl] != 0)]
@@ -246,7 +249,7 @@ predict.plasso_fit = function(plasso_fit,x,y,xnew=NULL,weights=FALSE) {
   xactnew = xnew[,nm_act,drop=F]
 
   # Remove potentially collinear variables
-  coef = lm.fit(xact,y)$coefficients
+  coef = stats::lm.fit(xact,y)$coefficients
   xact = xact[,!is.na(coef)]
   xactnew = xactnew[,!is.na(coef)]
 
@@ -254,29 +257,41 @@ predict.plasso_fit = function(plasso_fit,x,y,xnew=NULL,weights=FALSE) {
   fit_plasso = hat_mat %*% y
   if (weights==FALSE) hat_mat = NULL
 
-  list("prediction"=fit_plasso,"weights"=hat_mat)
+  return(
+    list("prediction"=fit_plasso,"weights"=hat_mat)
+  )
 }
 
 
-#' Calculates Random Forest fit using the \code{\link{grf}} package
+#' Fits Random Forest
+#'
+#' @description
+#' \code{\link{forest_grf_fit}} fits a random forest using the
+#' \code{\link{grf}} package.
 #'
 #' @param x Matrix of covariates
 #' @param y vector of outcomes
-#' @param args List of arguments passed to  \code{\link{regression_forest}}
-#' @import grf
+#' @param args List of arguments passed to \code{\link[grf]{regression_forest}}
 #'
-#' @return An object with S3 class "regression_forest"
+#' @importFrom grf regression_forest
+#'
+#' @return An object with S3 class \code{\link[grf]{regression_forest}}
 #'
 #' @keywords internal
 #'
 forest_grf_fit = function(x,y,args=list()) {
   rf = do.call(regression_forest,c(list(X=x,Y=y),args))
-  rf
+  return(rf)
 }
 
 
-#' Prediction based on Random Forest and provides prediction weights if required.
-#' @param forest_grf_fit Output of \code{\link{regression_forest}} or \code{\link{forest_grf_fit}}
+#' Predictions based on Random Forest
+#'
+#' @description
+#' Prediction based on Random Forest and provides prediction weights if
+#' required.
+#'
+#' @param forest_grf_fit Output of \code{\link{forest_grf_fit}}
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
 #' @param xnew Covariate matrix of test sample
@@ -288,44 +303,60 @@ forest_grf_fit = function(x,y,args=list()) {
 #' containing the weights that deliver predictions where each row gives the weight that each training
 #' outcome received in the prediction for xnew.}
 #'
+#' @import grf
+#' @importFrom utils packageVersion
+#' @importFrom stats predict
+#'
+#' @method predict forest_grf_fit
+#'
 #' @keywords internal
 #'
 predict.forest_grf_fit = function(forest_grf_fit,x,y,xnew=NULL,weights=FALSE) {
   if (is.null(xnew)) xnew = x
 
-  fit = predict(forest_grf_fit,newdata=xnew)$prediction
+  fit = stats::predict(forest_grf_fit,newdata=xnew)$prediction
 
   if (weights==TRUE) {
-    if (utils::packageVersion("grf") < "2.0.0") w = get_sample_weights(forest_grf_fit,newdata=xnew)
-    else  w = get_forest_weights(forest_grf_fit,newdata=xnew)
+    if (utils::packageVersion("grf") < "2.0.0") w = grf::get_sample_weights(forest_grf_fit,newdata=xnew)
+    else  w = grf::get_forest_weights(forest_grf_fit,newdata=xnew)
   }
   else w = NULL
 
-  list("prediction"=fit,"weights"=w)
+  return(
+    list("prediction"=fit,"weights"=w)
+  )
 }
 
 
-
-
-#' This function estimates cross-validated lasso regression based on the \code{\link{glmnet}} package
+#' Fits Lasso regression
+#'
+#' @description
+#' \code{\link{lasso_fit}} estimates cross-validated Lasso regression based on
+#' the \code{\link{glmnet}} package.
 #'
 #' @param x Matrix of covariates (number of observations times number of covariates matrix)
 #' @param y vector of outcomes
-#' @param args List of arguments passed to  \code{\link{glmnet}}
-#' @import glmnet
+#' @param args List of arguments passed to \code{\link[glmnet]{cv.glmnet}}
 #'
-#' @return An object with S3 class "glmnet"
+#' @return An object with S3 class \code{\link[glmnet]{cv.glmnet}}
+#'
+#' @importFrom glmnet cv.glmnet
 #'
 #' @keywords internal
 #'
 lasso_fit = function(x,y,args=list()) {
-  lasso = do.call(cv.glmnet,c(list(x=x,y=y),args))
-  lasso
+  lasso = do.call(glmnet::cv.glmnet,c(list(x=x,y=y),args))
+  return(lasso)
 }
 
 
-#' Prediction based on Lasso Forest and provides prediction weights if required.
-#' @param lasso_fit Output of \code{\link{glmnet}} or \code{\link{lasso_fit}}
+#' Predictions based on Lasso regression
+#'
+#' @description
+#' Prediction based on fitted Lasso regression model.
+#' The method also provides prediction weights if required.
+#'
+#' @param lasso_fit Output of \code{\link{lasso_fit}}
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
 #' @param xnew Covariate matrix of test sample
@@ -335,6 +366,10 @@ lasso_fit = function(x,y,args=list()) {
 #' \item{prediction}{vector of predictions for xnew}
 #' \item{weights}{Not available for Lasso, only for Post-Lasso}
 #'
+#' @importFrom glmnet predict.glmnet
+#'
+#' @method predict lasso_fit
+#'
 #' @keywords internal
 #'
 predict.lasso_fit = function(lasso_fit,x,y,xnew=NULL,weights=FALSE) {
@@ -342,7 +377,9 @@ predict.lasso_fit = function(lasso_fit,x,y,xnew=NULL,weights=FALSE) {
   if (isTRUE(weights)) f()
   if (is.null(xnew)) xnew = x
 
-  fit = predict(lasso_fit,newx=xnew,type="response",s="lambda.min")
+  fit = glmnet::predict.glmnet(lasso_fit,newx=xnew,type="response",s="lambda.min")
 
-  list("prediction"=fit,"weights"="No weighted representation of Lasso available.")
+  return(
+    list("prediction"=fit,"weights"="No weighted representation of Lasso available.")
+  )
 }

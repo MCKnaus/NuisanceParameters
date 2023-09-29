@@ -2,12 +2,12 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.lasso_fit}
 \alias{predict.lasso_fit}
-\title{Prediction based on Lasso Forest and provides prediction weights if required.}
+\title{Predictions based on Lasso regression}
 \usage{
 \method{predict}{lasso_fit}(lasso_fit, x, y, xnew = NULL, weights = FALSE)
 }
 \arguments{
-\item{lasso_fit}{Output of \code{\link{glmnet}} or \code{\link{lasso_fit}}}
+\item{lasso_fit}{Output of \code{\link{lasso_fit}}}
 
 \item{x}{Covariate matrix of training sample}
 
@@ -23,6 +23,7 @@ Returns list containing:
 \item{weights}{Not available for Lasso, only for Post-Lasso}
 }
 \description{
-Prediction based on Lasso Forest and provides prediction weights if required.
+Prediction based on fitted Lasso regression model.
+The method also provides prediction weights if required.
 }
 \keyword{internal}

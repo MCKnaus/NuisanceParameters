@@ -2,7 +2,7 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{plasso_fit}
 \alias{plasso_fit}
-\title{This function estimates cross-validated Post-Lasso based on the \code{\link{glmnet}} package}
+\title{Fits Post-Lasso regression}
 \usage{
 plasso_fit(x, y, args = list())
 }
@@ -11,12 +11,12 @@ plasso_fit(x, y, args = list())
 
 \item{y}{vector of outcomes}
 
-\item{args}{List of arguments passed to  \code{\link{glmnet}}}
+\item{args}{List of arguments passed to \code{\link[plasso]{cv.plasso}}}
 }
 \value{
-An object with S3 class "plasso"
+An object with S3 class \code{\link[plasso]{cv.plasso}}
 }
 \description{
-This function estimates cross-validated Post-Lasso based on the \code{\link{glmnet}} package
+\code{\link{plasso_fit}} estimates cross-validated Post-Lasso regression.
 }
 \keyword{internal}

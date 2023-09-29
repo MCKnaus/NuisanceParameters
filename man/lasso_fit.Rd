@@ -2,7 +2,7 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{lasso_fit}
 \alias{lasso_fit}
-\title{This function estimates cross-validated lasso regression based on the \code{\link{glmnet}} package}
+\title{Fits Lasso regression}
 \usage{
 lasso_fit(x, y, args = list())
 }
@@ -11,12 +11,13 @@ lasso_fit(x, y, args = list())
 
 \item{y}{vector of outcomes}
 
-\item{args}{List of arguments passed to  \code{\link{glmnet}}}
+\item{args}{List of arguments passed to \code{\link[glmnet]{cv.glmnet}}}
 }
 \value{
-An object with S3 class "glmnet"
+An object with S3 class \code{\link[glmnet]{cv.glmnet}}
 }
 \description{
-This function estimates cross-validated lasso regression based on the \code{\link{glmnet}} package
+\code{\link{lasso_fit}} estimates cross-validated Lasso regression based on
+the \code{\link{glmnet}} package.
 }
 \keyword{internal}

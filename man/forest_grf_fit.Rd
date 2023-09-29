@@ -2,7 +2,7 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{forest_grf_fit}
 \alias{forest_grf_fit}
-\title{Calculates Random Forest fit using the \code{\link{grf}} package}
+\title{Fits Random Forest}
 \usage{
 forest_grf_fit(x, y, args = list())
 }
@@ -11,12 +11,13 @@ forest_grf_fit(x, y, args = list())
 
 \item{y}{vector of outcomes}
 
-\item{args}{List of arguments passed to  \code{\link{regression_forest}}}
+\item{args}{List of arguments passed to \code{\link[grf]{regression_forest}}}
 }
 \value{
-An object with S3 class "regression_forest"
+An object with S3 class \code{\link[grf]{regression_forest}}
 }
 \description{
-Calculates Random Forest fit using the \code{\link{grf}} package
+\code{\link{forest_grf_fit}} fits a random forest using the
+\code{\link{grf}} package.
 }
 \keyword{internal}

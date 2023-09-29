@@ -159,5 +159,5 @@ create_method = function(method,
   if (!(is.null(x_select) | is.logical(x_select))) stop("Provide either NULL or logical for x_select.")
   if (!((is.character(name) & length(name) == 1) | is.null(name))) stop("Provide single string to name method.")
 
-  list(method=method,args=args,x_select=x_select,name=name,weights=weights)
+  list(method=method,args=args,x_select=x_select,name=name)
 }

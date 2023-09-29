@@ -2,7 +2,7 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.plasso_fit}
 \alias{predict.plasso_fit}
-\title{Prediction based on Post-Lasso and provides prediction weights if required.}
+\title{Predictions based on Post-Lasso regression}
 \usage{
 \method{predict}{plasso_fit}(plasso_fit, x, y, xnew = NULL, weights = FALSE)
 }
