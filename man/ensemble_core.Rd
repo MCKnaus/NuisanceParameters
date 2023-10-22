@@ -4,7 +4,7 @@
 \alias{ensemble_core}
 \title{Ensemble fitting}
 \usage{
-ensemble_core(ml, x_tr, y_tr, x_te, weights = FALSE, quiet = TRUE)
+ensemble_core(ml, x_tr, y_tr, quiet = TRUE)
 }
 \arguments{
 \item{ml}{List of methods built via \code{\link{create_method}} to be used in
@@ -14,23 +14,14 @@ ensemble model}
 
 \item{y_tr}{Vector of outcomes of training sample}
 
-\item{x_te}{Covariate matrix of test sample}
-
-\item{weights}{If TRUE, the weights underlying the ensemble prediction for x_te
-are calculated}
-
 \item{quiet}{If FALSE, method that is currently computed is printed into the
 console}
 }
 \value{
-Returns list containing:
-\item{predictions}{\code{nrow(x_te)} x \code{length(ml)} matrix with the predictions of each method}
-\item{weights}{If \code{weights=TRUE}, list of length(ml) with smoother matrices of dimension \code{nrow(xnew)} x \code{nrow(x)}
-containing the weights that deliver predictions of each method where each row gives the weight that each training
-outcome received in the prediction}
+Returns list object containing the trained models of the ensemble.
 }
 \description{
-Core function of \code{\link{ensemble}} used for fitting the several models
-of the ensemble model.
+Core function of \code{\link{ensemble}} used for fitting (i.e. training) the
+inputted (machine learning) methods for the ensemble model.
 }
 \keyword{internal}
