@@ -16,7 +16,9 @@ being the number of treatments).
 For example created by \code{\link{prep_w_mat}}.
 If specified, cross-fitting folds will preserve the treatment ratios from full sample.}
 
-\item{cl}{Optional vector of cluster variable if cross-fitting should account for clusters}
+\item{cl}{Optional vector of cluster variable if cross-fitting should account for clusters.
+If w_mat is provided, cluster vector is ignored due to computational and feasibility constraints
+for the cross-fitting procedure to work.}
 }
 \value{
 Logical matrix of cross-fitting folds (n x # folds).

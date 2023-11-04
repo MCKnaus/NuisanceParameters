@@ -22,9 +22,44 @@ prep_w_mat = function(w) {
   if (!is.factor(w)) w = factor(w, levels = sort(unique(w)))
 
   # Create one-hot matrix for each category
-  w_mat = stats::model.matrix(~0+w)
-  colnames(w_mat) = gsub("w","",colnames(w_mat))
+  w_mat = stats::model.matrix(~ 0 + w)
+  colnames(w_mat) = gsub("w", "", colnames(w_mat))
   return(w_mat == 1)
+}
+
+
+#' Compatibility check of cluster vector
+#'
+#' @description
+#' \code{\link{check_cluster_compatibility}} checks if the cross-fitting procedure is feasible
+#' given the cluster vector and desired number of cross-fitting folds.
+#'
+#' @param cl A vector representing the cluster assignments
+#' @param cf The desired number of folds for cross-validation
+#'
+#' @return Does not return anything, only throws an error if checks fail.
+#'
+#' @export
+#'
+check_cluster_compatibility = function(cl, cf) {
+
+  num_clusters = length(unique(cl))
+
+  if (num_clusters < cf) {
+    stop(
+      "The number of clusters is less than the desired number of folds. Either choose a smaller number of folds or do not specify a cluster vector."
+    )
+  }
+
+  cluster_shares = table(cl) / length(cl)
+  max_cluster_share = max(cluster_shares)
+
+  if (max_cluster_share > (1/cf) * 0.9) {
+    stop(
+      "There is a high imbalance in the cluster sizes. This poses a problem for the cross-fitting procedure. Either choose a smaller number of folds or do not specify a cluster vector."
+    )
+  }
+
 }
 
 
@@ -40,7 +75,9 @@ prep_w_mat = function(w) {
 #' being the number of treatments).
 #' For example created by \code{\link{prep_w_mat}}.
 #' If specified, cross-fitting folds will preserve the treatment ratios from full sample.
-#' @param cl Optional vector of cluster variable if cross-fitting should account for clusters
+#' @param cl Optional vector of cluster variable if cross-fitting should account for clusters.
+#' If w_mat is provided, cluster vector is ignored due to computational and feasibility constraints
+#' for the cross-fitting procedure to work.
 #'
 #' @return Logical matrix of cross-fitting folds (n x # folds).
 #'
@@ -48,38 +85,85 @@ prep_w_mat = function(w) {
 #'
 #' @export
 #'
-prep_cf_mat = function(n,cf,w_mat=NULL,cl=NULL) {
-  if (cf == 1) cf_mat = matrix(rep(1,n),ncol=1)
+prep_cf_mat = function(n, cf, w_mat = NULL, cl = NULL) {
 
-  if (!is.null(cl)) {
-    rnd_id = sample(1:length(unique(cl)),length(unique(cl)))
-    fold = as.numeric(cut(rnd_id, breaks=stats::quantile(rnd_id, probs=seq(0,1, length = cf+1)),include.lowest=TRUE))
-    fold = factor(fold[match(cl,unique(cl))])
-    cf_mat = (stats::model.matrix(~0+fold) == 1)
-  }
-  else {
-    if (is.null(w_mat)) {
-      rnd_id = sample(1:n,n)
-      fold = factor(as.numeric(cut(rnd_id, breaks=stats::quantile(rnd_id, probs=seq(0,1, length = cf+1)),include.lowest=TRUE)))
-      cf_mat = (stats::model.matrix(~0+fold) == 1)
-    }
-    else {
-      cf_mat = matrix(NA,n,cf)
-      nw = colSums(w_mat)
-      for (i in 1:ncol(w_mat)) {
-        cf_mat_w = matrix(FALSE,nw[i],cf)
-        rnd_id = sample(1:nw[i],nw[i])
-        fold = as.numeric(cut(rnd_id, breaks=stats::quantile(rnd_id, probs=seq(0,1, length = cf+1)),include.lowest=TRUE))
-        for (j in 1:cf) {
-          cf_mat_w[fold == j,j] = TRUE
-        }
-        cf_mat[w_mat[,i],] = cf_mat_w
+  # only one fold (i.e. no cross-fitting)
+  if (cf == 1) {
+
+    cf_mat = matrix(rep(1,n), ncol = 1)
+
+  # neither treatment matrix nor cluster vector provided
+  } else if (is.null(w_mat) & is.null(cl)) {
+
+    rnd_id = sample(1:n, n)
+    fold = factor(as.numeric(cut(rnd_id, breaks = stats::quantile(rnd_id, probs = seq(0, 1, length = cf + 1)), include.lowest = TRUE)))
+    cf_mat = (stats::model.matrix(~ 0 + fold) == 1)
+
+  # treatment matrix but no cluster vector provided
+  } else if (!is.null(w_mat) & is.null(cl)) {
+
+    cf_mat = matrix(NA, nrow = n, ncol = cf)
+    nw = colSums(w_mat)
+
+    for (i in 1:ncol(w_mat)) {
+
+      cf_mat_w = matrix(FALSE, nrow = nw[i], ncol = cf)
+      rnd_id = sample(1:nw[i], nw[i])
+      fold = as.numeric(cut(rnd_id, breaks = stats::quantile(rnd_id, probs = seq(0, 1, length = cf + 1)), include.lowest = TRUE))
+
+      for (j in 1:cf) {
+
+        cf_mat_w[fold == j,j] = TRUE
+
       }
+
+      cf_mat[w_mat[,i],] = cf_mat_w
+
     }
+
+  # no treatment matrix but cluster vector provided
+  } else if (is.null(w_mat) & !is.null(cl)) {
+
+    check_cluster_compatibility(cl, cf)
+
+    rnd_id = sample(1:length(unique(cl)), length(unique(cl)))
+    fold = as.numeric(cut(rnd_id, breaks = stats::quantile(rnd_id, probs = seq(0, 1, length = cf + 1)), include.lowest = TRUE))
+    fold = factor(fold[match(cl, unique(cl))])
+    cf_mat = (stats::model.matrix(~ 0 + fold) == 1)
+
+    cf_mat_balance = colSums(cf_mat) / nrow(cf_mat)
+
+    if (any(cf_mat_balance < (1/cf) * 0.5)) stop("There is a high imbalance in the cluster sizes. This poses a problem for the cross-fitting procedure. Either choose a smaller number of folds or do not specify a cluster vector.")
+
+  } else if (!is.null(w_mat) & !is.null(cl)) {
+
+    warning("You cannot provide both a treatment matrix and a cluster vector due to computational and feasibility constraints of the cross-fitting procedure.")
+
+    cf_mat = matrix(NA, nrow = n, ncol = cf)
+    nw = colSums(w_mat)
+
+    for (i in 1:ncol(w_mat)) {
+
+      cf_mat_w = matrix(FALSE, nrow = nw[i], ncol = cf)
+      rnd_id = sample(1:nw[i], nw[i])
+      fold = as.numeric(cut(rnd_id, breaks = stats::quantile(rnd_id, probs = seq(0, 1, length = cf + 1)), include.lowest = TRUE))
+
+      for (j in 1:cf) {
+
+        cf_mat_w[fold == j,j] = TRUE
+
+      }
+
+      cf_mat[w_mat[,i],] = cf_mat_w
+
+    }
+
   }
+
   colnames(cf_mat) = sprintf("CF %d",1:cf)
 
   return(cf_mat)
+
 }
 
 
@@ -134,7 +218,7 @@ nnls_weights = function(X, y) {
 #'
 add_intercept <- function(mat) {
   if (is.null(dim(mat))) {
-    mat = as.matrix(mat,ncol=1)
+    mat = as.matrix(mat,ncol = 1)
     colnames(mat) = "Var1"
   }
 
