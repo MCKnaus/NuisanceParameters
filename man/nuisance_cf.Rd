@@ -27,7 +27,9 @@ Methods can be created by \code{\link{create_method}}.}
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
 (for example created by \code{\link{prep_cf_mat}})}
 
-\item{cv}{Number of cross-validation when estimating ensemble (default 5)}
+\item{cv}{Number of cross-validation folds when estimating ensemble model.
+Default value is 1 which then evaluates to a short-stacking procedure which
+is computationally less demanding than standard stacking.}
 
 \item{subset}{Optional logical vector if only subset of data should be used for prediction}
 

@@ -113,7 +113,9 @@ nuisance_m = function(ml,y,w_mat,x,cf_mat,
 #' @param x Matrix of covariates
 #' @param cf_mat Logical matrix with k columns of indicators representing the different folds
 #' (for example created by \code{\link{prep_cf_mat}})
-#' @param cv Number of cross-validation when estimating ensemble (default 5)
+#' @param cv Number of cross-validation folds when estimating ensemble model.
+#' Default value is 1 which then evaluates to a short-stacking procedure which
+#' is computationally less demanding than standard stacking.
 #' @param subset Optional logical vector if only subset of data should be used for prediction
 #' @param weights If TRUE, prediction weights of the outcome nuisance extracted and saved (requires to provide a path)
 #' @param path Optional path to save the \code{\link{ensemble}} of each fold for later processing.
@@ -143,19 +145,94 @@ nuisance_cf = function(ml,y,x,cf_mat,
 
   np = rep(NA,length(y))
 
-  for (i in 1:ncol(cf_mat)) {
-    if (isFALSE(quiet)) print(paste("Cross-fitting fold:",toString(i)))
-    fold = cf_mat[,i]
-    x_tr = x[!fold & subset,]
-    y_tr = y[!fold & subset]
-    x_te = x[fold,]
 
-    ens = do.call(ensemble,c(list(ml=ml,x=x_tr,y=y_tr,xnew=x_te,nfolds=cv,weights=weights,quiet=quiet)))
-    np[fold] = ens$ensemble
-    if (!is.null(path)) {
-      save(ens, file = paste0(path,"_fold",toString(i),".RData"))
+
+  ### Short-Stacking ###
+
+  if (cv == 1) {
+
+    message("Short-stacking is used.")
+
+    fit_cv = matrix(NA,nrow(x),length(ml))
+    colnames(fit_cv) = sprintf("Method%s",seq(1:length(ml)))
+
+    w = NULL
+    if (isTRUE(weights)) w_list = list()
+
+    for (i in 1:ncol(cf_mat)) {
+
+      if (isFALSE(quiet)) print(paste("Cross-fitting fold:",toString(i)))
+      fold = cf_mat[,i]
+      x_tr = x[!fold & subset,]
+      y_tr = y[!fold & subset]
+      x_te = x[fold,]
+
+      ens = ensemble_core(ml,x_tr,y_tr,quiet=quiet)
+      ens_p = predict(ens,x_tr,y_tr,x_te,weights=weights,quiet=quiet)
+      fit_cv[fold,] = ens_p$predictions
+      if (isTRUE(weights)) append(w_list, ens_p$weights)
+
+      }
+
+    fit_cv[is.na(fit_cv)] = mean(y)
+    mse_cv = colMeans((c(y) - fit_cv)^2)
+    best = fit_cv[,which.min(mse_cv)]
+
+    nnls_w = nnls_weights(X=fit_cv, y=y)
+
+    np = fit_cv %*% nnls_w
+
+    if (isTRUE(weights)) {
+      w = matrix(0, nrow(x), nrow(x))
+      for (i in 1:ncol(cf_mat)) {
+        w_fold = w_list[[i]]
+        fold = cf_mat[,i]
+        for (j in 1:length(ml)) {
+          w[fold,fold] = w[fold,fold] + nnls_w[j] * w_fold[[j]]
+        }
+      }
+      w = Matrix::Matrix(w,sparse=T)
     }
-    rm(ens); gc()
+
+    names(mse_cv) = names(nnls_w) = colnames(fit_cv)
+
+    output = list(
+      "ensemble" = np, "best" = best, "fit_full" = NULL, "weights" = w,
+      "nnls_weights" = nnls_w, "mse_cv" = mse_cv, "fit_cv" = fit_cv
+    )
+    class(output) = "ensemble"
+
+    if (!is.null(path)) {
+      save(output, file = paste0(path,"_fold",toString(i),".RData"))
+    }
+
+
+
+    ### Standard-Stacking ###
+
+  } else if (cv > 1) {
+
+    message("Standard-stacking is used.")
+
+    for (i in 1:ncol(cf_mat)) {
+
+      if (isFALSE(quiet)) print(paste("Cross-fitting fold:",toString(i)))
+      fold = cf_mat[,i]
+      x_tr = x[!fold & subset,]
+      y_tr = y[!fold & subset]
+      x_te = x[fold,]
+
+      ens = do.call(ensemble,c(list(ml=ml,x=x_tr,y=y_tr,xnew=x_te,nfolds=cv,weights=weights,quiet=quiet)))
+      np[fold] = ens$ensemble
+      if (!is.null(path)) {
+        save(ens, file = paste0(path,"_fold",toString(i),".RData"))
+      }
+      rm(ens); invisible(gc());
+
+    }
+
   }
+
   return(np)
+
 }

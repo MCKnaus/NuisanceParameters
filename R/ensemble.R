@@ -136,6 +136,9 @@ ensemble_core = function(ml,
     trained_models[[wrapper]] = fit
 
   }
+
+  class(trained_models) = "ensemble_core"
+
   return(trained_models)
 }
 
