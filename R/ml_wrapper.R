@@ -11,11 +11,11 @@
 #'
 #' @keywords internal
 #'
-mean_fit = function(x,y) {
-  mean = mean(y)
+mean_fit = function(x, y) {
+  mean_value = mean(y)
   output = list(
-    "mean"=mean,
-    "n"=nrow(x)
+    "mean" = mean_value,
+    "n" = nrow(x)
   )
   class(output) = "mean_fit"
   return(output)
@@ -43,15 +43,15 @@ mean_fit = function(x,y) {
 #'
 #' @keywords internal
 #'
-predict.mean_fit = function(mean_fit,x,y,xnew=NULL,weights=FALSE) {
-  if (is.null(xnew)) fit = rep(mean_fit$mean,nrow(x))
-  else fit = rep(mean_fit$mean,nrow(xnew))
+predict.mean_fit = function(mean_fit, x, y, xnew = NULL, weights = FALSE) {
+  if (is.null(xnew)) fit = rep(mean_fit$mean, nrow(x))
+  else fit = rep(mean_fit$mean, nrow(xnew))
 
-  if (isTRUE(weights)) w = matrix(1 / length(y),nrow(xnew),nrow(x))
+  if (isTRUE(weights)) w = matrix(1 / length(y), nrow(xnew), nrow(x))
   else w = NULL
 
   return(
-    list("prediction"=fit, "weights"=w)
+    list("prediction" = fit, "weights" = w)
   )
 }
 
@@ -70,10 +70,10 @@ predict.mean_fit = function(mean_fit,x,y,xnew=NULL,weights=FALSE) {
 #'
 #' @keywords internal
 #'
-ols_fit = function(x,y) {
-  x = cbind(rep(1,nrow(x)),x)
-  ols_coef = stats::lm.fit(x,y)$coefficients
-  class(output) = "ols_fit"
+ols_fit = function(x, y) {
+  x = cbind(rep(1, nrow(x)), x)
+  ols_coef = stats::lm.fit(x, y)$coefficients
+  class(ols_coef) = "ols_fit"
   return(ols_coef)
 }
 
@@ -100,24 +100,24 @@ ols_fit = function(x,y) {
 #'
 #' @keywords internal
 #'
-predict.ols_fit = function(ols_fit,x,y,xnew=NULL,weights=FALSE) {
+predict.ols_fit = function(ols_fit, x, y, xnew = NULL, weights = FALSE) {
   if (is.null(xnew)) xnew = x
 
-  x = cbind(rep(1,nrow(x)),x)
-  xnew = cbind(rep(1,nrow(xnew)),xnew)
+  x = cbind(rep(1, nrow(x)), x)
+  xnew = cbind(rep(1, nrow(xnew)), xnew)
 
-  # Remove variables that were dropped due to collinearity
-  x = x[,!is.na(ols_fit)]
-  xnew = xnew[,!is.na(ols_fit)]
+  # remove variables that were dropped due to collinearity
+  x = x[, !is.na(ols_fit)]
+  xnew = xnew[, !is.na(ols_fit)]
 
-  # Calculate hat matrix
-  hat_mat = xnew %*% solve(crossprod(x),tol=2.225074e-308) %*% t(x)
+  # calculate hat matrix
+  hat_mat = xnew %*% solve(crossprod(x), tol = 2.225074e-308) %*% t(x)
   fit = hat_mat %*% y
 
-  if (weights==FALSE) hat_mat = NULL
+  if (weights == FALSE) hat_mat = NULL
 
   return(
-    list("prediction"=fit, "weights"=hat_mat)
+    list("prediction" = fit, "weights" = hat_mat)
   )
 }
 
@@ -138,9 +138,9 @@ predict.ols_fit = function(ols_fit,x,y,xnew=NULL,weights=FALSE) {
 #'
 #' @keywords internal
 #'
-ridge_fit = function(x,y,args=list()) {
-  ridge = do.call(glmnet::cv.glmnet,c(list(x=x,y=y,alpha=0),args))
-  class(output) = "ridge_fit"
+ridge_fit = function(x, y, args = list()) {
+  ridge = do.call(glmnet::cv.glmnet, c(list(x = x, y = y, alpha = 0), args))
+  class(ridge) = "ridge_fit"
   return(ridge)
 }
 
@@ -170,28 +170,28 @@ ridge_fit = function(x,y,args=list()) {
 #'
 #' @keywords internal
 #'
-predict.ridge_fit = function(ridge_fit,x,y,xnew=NULL,weights=FALSE) {
+predict.ridge_fit = function(ridge_fit, x, y, xnew = NULL, weights = FALSE) {
   if (is.null(xnew)) xnew = x
 
-  fit = glmnet::predict.glmnet(ridge_fit,newx=xnew,type="response")
+  fit = glmnet::predict.glmnet(ridge_fit, newx = xnew, type = "response")
 
-  if (weights==FALSE) hat_mat = NULL
+  if (weights == FALSE) hat_mat = NULL
   else {
     # Get covariate matrices
     n = nrow(x)
     p = ncol(x)
     x = scale(x)
-    x = cbind(rep(1,nrow(x)),x)
+    x = cbind(rep(1, nrow(x)), x)
     xnew = scale(xnew)
-    xnew = cbind(rep(1,nrow(xnew)),xnew)
+    xnew = cbind(rep(1, nrow(xnew)), xnew)
 
     # Calculate hat matrix, see also (https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat)
-    hat_mat = xnew %*% solve(crossprod(x) + ridge_fit$lambda.min  * n / stats::sd(y) * diag(x = c(0, rep(1,p)))) %*% t(x)
+    hat_mat = xnew %*% solve(crossprod(x) + ridge_fit$lambda.min  * n / stats::sd(y) * diag(x = c(0, rep(1, p)))) %*% t(x)
     fit = hat_mat %*% y
   }
 
   return(
-    list("prediction"=fit, "weights"=hat_mat)
+    list("prediction" = fit, "weights" = hat_mat)
   )
 }
 
@@ -211,10 +211,10 @@ predict.ridge_fit = function(ridge_fit,x,y,xnew=NULL,weights=FALSE) {
 #'
 #' @keywords internal
 #'
-plasso_fit = function(x,y,args=list()) {
-  plasso = do.call(plasso::cv.plasso,c(list(x=x,y=y),args))
-  class(output) = "plasso_fit"
-  return(plasso)
+plasso_fit = function(x, y, args = list()) {
+  p = do.call(plasso::cv.plasso, c(list(x = x, y = y), args))
+  class(p) = "plasso_fit"
+  return(p)
 }
 
 
@@ -241,28 +241,28 @@ plasso_fit = function(x,y,args=list()) {
 #'
 #' @keywords internal
 #'
-predict.plasso_fit = function(plasso_fit,x,y,xnew=NULL,weights=FALSE) {
+predict.plasso_fit = function(plasso_fit, x, y, xnew = NULL, weights = FALSE) {
   if (is.null(xnew)) xnew = x
   x = add_intercept(x)
   xnew = add_intercept(xnew)
 
-  # Fitted values for post lasso
-  nm_act = names(coef(plasso_fit$lasso_full)[,plasso_fit$ind_min_pl])[which(coef(plasso_fit$lasso_full)[,plasso_fit$ind_min_pl] != 0)]
+  # fitted values for post lasso
+  nm_act = names(coef(plasso_fit$lasso_full)[, plasso_fit$ind_min_pl])[which(coef(plasso_fit$lasso_full)[, plasso_fit$ind_min_pl] != 0)]
 
-  xact = x[,nm_act,drop=F]
-  xactnew = xnew[,nm_act,drop=F]
+  xact = x[, nm_act, drop = FALSE]
+  xactnew = xnew[, nm_act, drop = FALSE]
 
-  # Remove potentially collinear variables
-  coef = stats::lm.fit(xact,y)$coefficients
-  xact = xact[,!is.na(coef)]
-  xactnew = xactnew[,!is.na(coef)]
+  # remove potentially collinear variables
+  coef = stats::lm.fit(xact, y)$coefficients
+  xact = xact[, !is.na(coef)]
+  xactnew = xactnew[, !is.na(coef)]
 
-  hat_mat = xactnew %*% solve(crossprod(xact),tol=2.225074e-308) %*% t(xact)
+  hat_mat = xactnew %*% solve(crossprod(xact), tol = 2.225074e-308) %*% t(xact)
   fit_plasso = hat_mat %*% y
-  if (weights==FALSE) hat_mat = NULL
+  if (weights == FALSE) hat_mat = NULL
 
   return(
-    list("prediction"=fit_plasso,"weights"=hat_mat)
+    list("prediction" = fit_plasso, "weights" = hat_mat)
   )
 }
 
@@ -283,9 +283,9 @@ predict.plasso_fit = function(plasso_fit,x,y,xnew=NULL,weights=FALSE) {
 #'
 #' @keywords internal
 #'
-forest_grf_fit = function(x,y,args=list()) {
-  rf = do.call(regression_forest,c(list(X=x,Y=y),args))
-  class(output) = "forest_grf_fit"
+forest_grf_fit = function(x, y, args = list()) {
+  rf = do.call(grf::regression_forest, c(list(X = x, Y = y), args))
+  class(rf) = "forest_grf_fit"
   return(rf)
 }
 
@@ -316,19 +316,20 @@ forest_grf_fit = function(x,y,args=list()) {
 #'
 #' @keywords internal
 #'
-predict.forest_grf_fit = function(forest_grf_fit,x,y,xnew=NULL,weights=FALSE) {
+predict.forest_grf_fit = function(forest_grf_fit, x, y, xnew = NULL, weights = FALSE) {
   if (is.null(xnew)) xnew = x
 
-  fit = stats::predict(forest_grf_fit,newdata=xnew)$prediction
+  class(forest_grf_fit) = "regression_forest"
+  fit = predict(forest_grf_fit, newdata = xnew)$prediction
 
-  if (weights==TRUE) {
-    if (utils::packageVersion("grf") < "2.0.0") w = grf::get_sample_weights(forest_grf_fit,newdata=xnew)
-    else  w = grf::get_forest_weights(forest_grf_fit,newdata=xnew)
+  if (weights == TRUE) {
+    if (utils::packageVersion("grf") < "2.0.0") w = grf::get_sample_weights(forest_grf_fit, newdata = xnew)
+    else  w = grf::get_forest_weights(forest_grf_fit, newdata = xnew)
   }
   else w = NULL
 
   return(
-    list("prediction"=fit,"weights"=w)
+    list("prediction" = fit, "weights" = w)
   )
 }
 
@@ -349,9 +350,9 @@ predict.forest_grf_fit = function(forest_grf_fit,x,y,xnew=NULL,weights=FALSE) {
 #'
 #' @keywords internal
 #'
-lasso_fit = function(x,y,args=list()) {
-  lasso = do.call(glmnet::cv.glmnet,c(list(x=x,y=y),args))
-  class(output) = "lasso_fit"
+lasso_fit = function(x, y, args = list()) {
+  lasso = do.call(glmnet::cv.glmnet, c(list(x = x, y = y), args))
+  class(lasso) = "lasso_fit"
   return(lasso)
 }
 
@@ -378,14 +379,15 @@ lasso_fit = function(x,y,args=list()) {
 #'
 #' @keywords internal
 #'
-predict.lasso_fit = function(lasso_fit,x,y,xnew=NULL,weights=FALSE) {
-  f = function() stop("No weighted representation of Lasso available.",call.=FALSE)
-  if (isTRUE(weights)) f()
+predict.lasso_fit = function(lasso_fit, x, y, xnew = NULL, weights = FALSE) {
+
+  if (isTRUE(weights)) stop("No weighted representation of Lasso available.", call. = FALSE)
   if (is.null(xnew)) xnew = x
 
-  fit = glmnet::predict.glmnet(lasso_fit,newx=xnew,type="response",s="lambda.min")
+  class(lasso_fit) = "cv.glmnet"
+  fit = predict(lasso_fit, newx = xnew, type = "response", s = "lambda.min")
 
   return(
-    list("prediction"=fit,"weights"="No weighted representation of Lasso available.")
+    list("prediction" = fit, "weights" = NULL)
   )
 }
