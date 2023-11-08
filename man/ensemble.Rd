@@ -17,7 +17,7 @@ ensemble model}
 \item{xnew}{Covariate matrix of test sample}
 
 \item{nfolds}{Number of folds used in cross-validation of ensemble weights
-(default \code{nfolds=5}).}
+(default \code{nfolds = 5}).}
 
 \item{weights}{If TRUE, the weights underlying the ensemble prediction for
 xnew are calculated}
@@ -30,7 +30,7 @@ Ensemble object containing:
 \item{ensemble}{the predictions of the trained ensemble for the test sample}
 \item{best}{the predictions of the best performing single method for the test sample}
 \item{fit_full}{matrix containing predictions of all considered methods}
-\item{weights}{If \code{weights=TRUE}, smoother matrix of dimension \code{nrow(xnew)} x \code{nrow(x)}
+\item{weights}{If \code{weights = TRUE}, smoother matrix of dimension \code{nrow(xnew)} x \code{nrow(x)}
 containing the weights that deliver
 ensemble predictions where each row gives the weight that each training outcome received in the prediction}
  \item{nnls_weights}{the weights that each method receives in the ensemble}

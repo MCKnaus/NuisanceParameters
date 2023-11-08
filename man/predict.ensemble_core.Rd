@@ -4,10 +4,12 @@
 \alias{predict.ensemble_core}
 \title{Ensemble prediction}
 \usage{
-\method{predict}{ensemble_core}(ml, x_tr, y_tr, x_te, weights = FALSE, quiet = TRUE)
+\method{predict}{ensemble_core}(ml_fit, ml, x_tr, y_tr, x_te, weights = FALSE, quiet = TRUE)
 }
 \arguments{
-\item{ml}{List of trained methods (possibly from \code{\link{ensemble_core}}}
+\item{ml_fit}{List of fitted methods (from \code{\link{ensemble_core}}}
+
+\item{ml}{List of raw methods built via \code{\link{create_method}}}
 
 \item{x_tr}{Covariate matrix of training sample}
 
@@ -24,7 +26,7 @@ console}
 \value{
 Returns list containing:
 \item{predictions}{\code{nrow(x_te)} x \code{length(ml)} matrix with the predictions of each method}
-\item{weights}{If \code{weights=TRUE}, list of length(ml) with smoother matrices of dimension \code{nrow(xnew)} x \code{nrow(x)}
+\item{weights}{If \code{weights = TRUE}, list of length(ml) with smoother matrices of dimension \code{nrow(xnew)} x \code{nrow(x)}
 containing the weights that deliver predictions of each method where each row gives the weight that each training
 outcome received in the prediction}
 }

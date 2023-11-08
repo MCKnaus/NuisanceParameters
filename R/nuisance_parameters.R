@@ -19,36 +19,46 @@
 #'
 #' @export
 #'
-nuisance_e = function(ml,w_mat,x,cf_mat,
-                    cv=5,
-                    path = NULL,
-                    quiet=TRUE) {
+nuisance_e = function(ml,
+                      w_mat, x, cf_mat,
+                      cv = 5,
+                      path = NULL,
+                      quiet = TRUE) {
   if (isFALSE(quiet)) print("Propensity score")
 
-  # Initialize nuisance matrix
-  e_mat = matrix(NA,nrow(w_mat),ncol(w_mat))
+  # initialize nuisance matrix
+  e_mat = matrix(NA, nrow(w_mat), ncol(w_mat))
   colnames(e_mat) = colnames(w_mat)
 
-  ## Calculate treatment probabilities
-  # Binary treatment
+
+
+  ### binary treatment case ###
+
   if (ncol(w_mat) == 2) {
-    if (!is.null(path)) path_tem = paste0(path,"Ensemble_W")
+    if (!is.null(path)) path_tem = paste0(path, "Ensemble_W")
     else path_tem = NULL
-    e_mat[,1] = nuisance_cf(ml,w_mat[,1],x,cf_mat,cv=cv,path=path_tem,quiet=quiet)
-    e_mat[,2] = 1 - e_mat[,1]
+    e_mat[, 1] = nuisance_cf(ml, w_mat[, 1], x, cf_mat, cv = cv, path = path_tem, quiet = quiet)
+    e_mat[, 2] = 1 - e_mat[, 1]
   }
-  # Multiple treatment
+
+
+
+  ### multiple treatment case ###
+
   else if (ncol(w_mat) > 2) {
     for (i in 1:ncol(w_mat)) {
-      if (!is.null(path)) path_tem = paste0(path,"Ensemble_W",toString(i))
+      if (!is.null(path)) path_tem = paste0(path, "Ensemble_W", toString(i))
       else path_tem = NULL
-      e_mat[,i] = nuisance_cf(ml,w_mat[,i],x,cf_mat,cv=cv,path=path_tem,quiet=quiet)
+      e_mat[, i] = nuisance_cf(ml, w_mat[, i], x, cf_mat, cv = cv, path = path_tem, quiet = quiet)
     }
     e_mat = e_mat / rowSums(e_mat)
   }
-  else stop("Provide treatment indicator matrix with at least 2 columns")
+  else {
+    stop("Provide treatment indicator matrix with at least 2 columns")
+  }
 
   return(e_mat)
+
 }
 
 
@@ -78,23 +88,23 @@ nuisance_e = function(ml,w_mat,x,cf_mat,
 #'
 #' @export
 #'
-nuisance_m = function(ml,y,w_mat,x,cf_mat,
-                      cv=5,
-                      weights=FALSE,
-                      path=NULL,
-                      quiet=TRUE) {
+nuisance_m = function(ml, y, w_mat, x, cf_mat,
+                      cv = 5,
+                      weights = FALSE,
+                      path = NULL,
+                      quiet = TRUE) {
 
   if (isFALSE(quiet)) print("Outcome regression")
 
-  # Initialize nuisance matrix
-  m_mat = matrix(NA,nrow(w_mat),ncol(w_mat))
+  # initialize nuisance matrix
+  m_mat = matrix(NA, nrow(w_mat), ncol(w_mat))
   colnames(m_mat) = colnames(w_mat)
 
-  ## Calculate outcome predictions
+  ## calculate outcome predictions
   for (i in 1:ncol(w_mat)) {
-    if (!is.null(path)) path_tem = paste0(path,"Ensemble_Y",toString(i))
+    if (!is.null(path)) path_tem = paste0(path, "Ensemble_Y", toString(i))
     else path_tem = NULL
-    m_mat[,i] = nuisance_cf(ml,y,x,cf_mat,cv=cv,subset=(w_mat[,i]),weights=weights,path=path_tem,quiet=quiet)
+    m_mat[,i] = nuisance_cf(ml, y, x, cf_mat, cv = cv, subset = (w_mat[, i]), weights = weights, path = path_tem, quiet = quiet)
   }
 
   return(m_mat)
@@ -126,24 +136,26 @@ nuisance_m = function(ml,y,w_mat,x,cf_mat,
 #'
 #' @keywords internal
 #'
-nuisance_cf = function(ml,y,x,cf_mat,
-                       cv=5,
-                       subset=NULL,
-                       weights=FALSE,
-                       path=NULL,
-                       quiet=TRUE) {
-  # Checks
+nuisance_cf = function(ml, y, x, cf_mat,
+                       cv = 5,
+                       subset = NULL,
+                       weights = FALSE,
+                       path = NULL,
+                       quiet = TRUE) {
+
+
+  ### Checks ###
+
   if (is.numeric(cf_mat)) {
     if (!all(cf_mat %in% 0:1) | !is.matrix(cf_mat)) stop("Please provide cf_mat as binary indicator matrix. E.g. use function prep_cf_mat")
     if (nrow(cf_mat) != length(y)) stop("cf_mat indicator matrix nrows different from # of obs.")
     if (length(y) != sum(cf_mat)) stop("cf_mat indicator matrix does not sum to number of observations.")
   }
-  if (isTRUE(weights) & is.null(path)) stop("Provide path if weights=TRUE to save ensemble objects with weights for
-                                            later processing or set weights=FALSE.")
+  if (isTRUE(weights) & is.null(path)) stop("Provide path if weights = TRUE to save ensemble objects with weights for later processing or set weights = FALSE.")
 
-  if (is.null(subset)) subset = rep(TRUE,length(y))
+  if (is.null(subset)) subset = rep(TRUE, length(y))
 
-  np = rep(NA,length(y))
+  np = rep(NA, length(y))
 
 
 
@@ -153,57 +165,64 @@ nuisance_cf = function(ml,y,x,cf_mat,
 
     message("Short-stacking is used.")
 
-    fit_cv = matrix(NA,nrow(x),length(ml))
-    colnames(fit_cv) = sprintf("Method%s",seq(1:length(ml)))
+    fit_cv = matrix(NA, nrow(x), length(ml))
+    colnames(fit_cv) = sprintf("Method%s", seq(1:length(ml)))
 
     w = NULL
     if (isTRUE(weights)) w_list = list()
 
     for (i in 1:ncol(cf_mat)) {
 
-      if (isFALSE(quiet)) print(paste("Cross-fitting fold:",toString(i)))
-      fold = cf_mat[,i]
-      x_tr = x[!fold & subset,]
+      if (isFALSE(quiet)) print(paste("Cross-fitting fold:", toString(i)))
+      fold = cf_mat[, i]
+      x_tr = x[!fold & subset, ]
       y_tr = y[!fold & subset]
-      x_te = x[fold,]
+      x_te = x[fold, ]
 
-      ens = ensemble_core(ml,x_tr,y_tr,quiet=quiet)
-      ens_p = predict(ens,x_tr,y_tr,x_te,weights=weights,quiet=quiet)
-      fit_cv[fold,] = ens_p$predictions
-      if (isTRUE(weights)) append(w_list, ens_p$weights)
+      ens = ensemble_core(ml, x_tr, y_tr, quiet = quiet)
+      ens_p = predict(ens, ml, x_tr, y_tr, x_te, weights = weights, quiet = quiet)
+      fit_cv[fold, ] = ens_p$predictions
+      if (isTRUE(weights)) w_list[[i]] = ens_p[["weights"]]
 
-      }
+    }
 
     fit_cv[is.na(fit_cv)] = mean(y)
     mse_cv = colMeans((c(y) - fit_cv)^2)
-    best = fit_cv[,which.min(mse_cv)]
+    best = fit_cv[, which.min(mse_cv)]
 
-    nnls_w = nnls_weights(X=fit_cv, y=y)
+    nnls_w = nnls_weights(X = fit_cv, y = y)
 
     np = fit_cv %*% nnls_w
 
     if (isTRUE(weights)) {
       w = matrix(0, nrow(x), nrow(x))
+      # iterate through folds
       for (i in 1:ncol(cf_mat)) {
-        w_fold = w_list[[i]]
-        fold = cf_mat[,i]
+        # iterate through ml methods
+        fold = cf_mat[, i]
         for (j in 1:length(ml)) {
-          w[fold,fold] = w[fold,fold] + nnls_w[j] * w_fold[[j]]
+          w[fold, !fold] = w[fold, !fold] + nnls_w[j] * as.matrix(w_list[[i]][[j]])
         }
+
       }
-      w = Matrix::Matrix(w,sparse=T)
+      w = Matrix::Matrix(w, sparse = TRUE)
     }
 
     names(mse_cv) = names(nnls_w) = colnames(fit_cv)
 
     output = list(
-      "ensemble" = np, "best" = best, "fit_full" = NULL, "weights" = w,
-      "nnls_weights" = nnls_w, "mse_cv" = mse_cv, "fit_cv" = fit_cv
+      "ensemble" = np,
+      "best" = best,
+      "fit_full" = NULL,
+      "weights" = w,
+      "nnls_weights" = nnls_w,
+      "mse_cv" = mse_cv,
+      "fit_cv" = fit_cv
     )
     class(output) = "ensemble"
 
     if (!is.null(path)) {
-      save(output, file = paste0(path,"_fold",toString(i),".RData"))
+      save(output, file = paste0(path, ".RData"))
     }
 
 
@@ -216,17 +235,19 @@ nuisance_cf = function(ml,y,x,cf_mat,
 
     for (i in 1:ncol(cf_mat)) {
 
-      if (isFALSE(quiet)) print(paste("Cross-fitting fold:",toString(i)))
-      fold = cf_mat[,i]
-      x_tr = x[!fold & subset,]
+      if (isFALSE(quiet)) print(paste("Cross-fitting fold:", toString(i)))
+      fold = cf_mat[, i]
+      x_tr = x[!fold & subset, ]
       y_tr = y[!fold & subset]
-      x_te = x[fold,]
+      x_te = x[fold, ]
 
-      ens = do.call(ensemble,c(list(ml=ml,x=x_tr,y=y_tr,xnew=x_te,nfolds=cv,weights=weights,quiet=quiet)))
+      ens = do.call(ensemble, c(list(ml = ml, x = x_tr, y = y_tr, xnew = x_te, nfolds = cv, weights = weights, quiet = quiet)))
       np[fold] = ens$ensemble
+
       if (!is.null(path)) {
-        save(ens, file = paste0(path,"_fold",toString(i),".RData"))
+        save(ens, file = paste0(path, "_fold" ,toString(i), ".RData"))
       }
+
       rm(ens); invisible(gc());
 
     }

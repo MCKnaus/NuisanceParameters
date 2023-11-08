@@ -12,7 +12,7 @@ create_method(
 )
 }
 \arguments{
-\item{method}{Choose method from \code{c("mean","ols","ridge","plasso","forest_grf","lasso")}.
+\item{method}{Choose method from \code{c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso")}.
 To be continued.}
 
 \item{x_select}{Optional logical vector of length equal to the number of
