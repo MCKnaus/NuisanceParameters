@@ -173,11 +173,11 @@ ridge_fit = function(x, y, args = list()) {
 predict.ridge_fit = function(ridge_fit, x, y, xnew = NULL, weights = FALSE) {
   if (is.null(xnew)) xnew = x
 
-  fit = glmnet::predict.glmnet(ridge_fit, newx = xnew, type = "response")
+  class(ridge_fit) = "cv.glmnet"
+  fit = predict(ridge_fit, newx = xnew, type = "response")
 
   if (weights == FALSE) hat_mat = NULL
   else {
-    # Get covariate matrices
     n = nrow(x)
     p = ncol(x)
     x = scale(x)
@@ -185,7 +185,8 @@ predict.ridge_fit = function(ridge_fit, x, y, xnew = NULL, weights = FALSE) {
     xnew = scale(xnew)
     xnew = cbind(rep(1, nrow(xnew)), xnew)
 
-    # Calculate hat matrix, see also (https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat)
+    # calculate hat matrix
+    # reference: https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat
     hat_mat = xnew %*% solve(crossprod(x) + ridge_fit$lambda.min  * n / stats::sd(y) * diag(x = c(0, rep(1, p)))) %*% t(x)
     fit = hat_mat %*% y
   }
