@@ -4,7 +4,7 @@
 \alias{data_screen}
 \title{Data screening}
 \usage{
-data_screen(data, treat = NULL, bin_cut = 0.01, corr_cut = 0.99, print = FALSE)
+data_screen(data, treat = NULL, bin_cut = 0.01, corr_cut = 0.99, quiet = TRUE)
 }
 \arguments{
 \item{data}{Matrix the variables to be screened}
@@ -15,7 +15,7 @@ data_screen(data, treat = NULL, bin_cut = 0.01, corr_cut = 0.99, print = FALSE)
 
 \item{corr_cut}{Cut-off above which highly correlated variables should be removed. Default 0.99.}
 
-\item{print}{Shows details about the removed variables at each step}
+\item{quiet}{If False, details about the removed variables are shown at each step}
 }
 \value{
 Screened matrix.

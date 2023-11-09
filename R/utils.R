@@ -54,7 +54,7 @@ check_cluster_compatibility = function(cl, cf) {
   cluster_shares = table(cl) / length(cl)
   max_cluster_share = max(cluster_shares)
 
-  if (max_cluster_share > (1/cf) * 0.9) {
+  if (max_cluster_share > (1 / cf) * 0.9) {
     stop(
       "There is a high imbalance in the cluster sizes. This poses a problem for the cross-fitting procedure. Either choose a smaller number of folds or do not specify a cluster vector."
     )
@@ -90,7 +90,7 @@ prep_cf_mat = function(n, cf, w_mat = NULL, cl = NULL) {
   # only one fold (i.e. no cross-fitting)
   if (cf == 1) {
 
-    cf_mat = matrix(rep(1,n), ncol = 1)
+    cf_mat = matrix(rep(1, n), ncol = 1)
 
   # neither treatment matrix nor cluster vector provided
   } else if (is.null(w_mat) & is.null(cl)) {
@@ -113,11 +113,11 @@ prep_cf_mat = function(n, cf, w_mat = NULL, cl = NULL) {
 
       for (j in 1:cf) {
 
-        cf_mat_w[fold == j,j] = TRUE
+        cf_mat_w[fold == j, j] = TRUE
 
       }
 
-      cf_mat[w_mat[,i],] = cf_mat_w
+      cf_mat[w_mat[, i], ] = cf_mat_w
 
     }
 
@@ -133,7 +133,7 @@ prep_cf_mat = function(n, cf, w_mat = NULL, cl = NULL) {
 
     cf_mat_balance = colSums(cf_mat) / nrow(cf_mat)
 
-    if (any(cf_mat_balance < (1/cf) * 0.5)) stop("There is a high imbalance in the cluster sizes. This poses a problem for the cross-fitting procedure. Either choose a smaller number of folds or do not specify a cluster vector.")
+    if (any(cf_mat_balance < (1 / cf) * 0.5)) stop("There is a high imbalance in the cluster sizes. This poses a problem for the cross-fitting procedure. Either choose a smaller number of folds or do not specify a cluster vector.")
 
   } else if (!is.null(w_mat) & !is.null(cl)) {
 
@@ -150,17 +150,17 @@ prep_cf_mat = function(n, cf, w_mat = NULL, cl = NULL) {
 
       for (j in 1:cf) {
 
-        cf_mat_w[fold == j,j] = TRUE
+        cf_mat_w[fold == j, j] = TRUE
 
       }
 
-      cf_mat[w_mat[,i],] = cf_mat_w
+      cf_mat[w_mat[, i], ] = cf_mat_w
 
     }
 
   }
 
-  colnames(cf_mat) = sprintf("CF %d",1:cf)
+  colnames(cf_mat) = sprintf("CF %d", 1:cf)
 
   return(cf_mat)
 
@@ -222,11 +222,11 @@ add_intercept <- function(mat) {
     colnames(mat) = "Var1"
   }
 
-  if (all(mat[,1] == 1)) {
+  if (all(mat[, 1] == 1)) {
     colnames(mat)[1] == "(Intercept)"
     return(mat)
   } else {
-    mat = cbind(rep(1,nrow(mat)),mat)
+    mat = cbind(rep(1, nrow(mat)), mat)
     colnames(mat)[1] = "(Intercept)"
     return(mat)
   }
