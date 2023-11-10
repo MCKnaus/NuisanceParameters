@@ -15,7 +15,7 @@
 
 \item{xnew}{Covariate matrix of test sample}
 
-\item{weights}{Always FALSE as}
+\item{weights}{Always FALSE as no weights can be obtained for this method.}
 }
 \value{
 Returns list containing:
@@ -24,6 +24,6 @@ Returns list containing:
 }
 \description{
 Prediction based on fitted Lasso regression model.
-The method also provides prediction weights if required.
+Unfortunately, from Lasso regression no weights can be obtained.
 }
 \keyword{internal}

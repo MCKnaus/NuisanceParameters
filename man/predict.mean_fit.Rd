@@ -20,7 +20,7 @@
 \value{
 List element containing:
 \item{prediction}{vector of predictions for xnew}
-\item{weights}{if \code{weights=TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
+\item{weights}{if \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
 containing the weights that deliver predictions where each row gives the weight that each training
 outcome received in the prediction for xnew.}
 }
