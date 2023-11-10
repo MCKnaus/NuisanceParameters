@@ -220,7 +220,7 @@ predict.ensemble_core = function(ml_fit, ml,
 #' @description
 #' Creates the methods to be used in the subsequent \code{\link{ensemble}} model.
 #'
-#' @param method Choose method from \code{c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso")}.
+#' @param method Choose method from \code{c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn")}.
 #' To be continued.
 #' @param x_select Optional logical vector of length equal to the number of
 #' columns of the covariate matrix indicating which variables should be used by
@@ -235,7 +235,7 @@ predict.ensemble_core = function(ml_fit, ml,
 #' @export
 #'
 create_method = function(
-    method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso"),
+    method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn"),
     x_select = NULL,
     args = list(),
     name = NULL) {

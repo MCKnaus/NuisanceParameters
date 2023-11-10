@@ -22,5 +22,6 @@ Imports:
     Matrix,
     matrixStats,
     nnls,
-    plasso
+    plasso,
+    FastKNN
 Config/testthat/edition: 3

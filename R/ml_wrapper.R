@@ -35,7 +35,7 @@ mean_fit = function(x, y) {
 #'
 #' @return List element containing:
 #' \item{prediction}{vector of predictions for xnew}
-#' \item{weights}{if \code{weights=TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
+#' \item{weights}{if \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
 #' containing the weights that deliver predictions where each row gives the weight that each training
 #' outcome received in the prediction for xnew.}
 #'
@@ -92,7 +92,7 @@ ols_fit = function(x, y) {
 #'
 #' @return Returns list containing:
 #' \item{prediction}{vector of predictions for xnew}
-#' \item{weights}{If \code{weights=TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
+#' \item{weights}{If \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
 #' containing the weights that deliver predictions where each row gives the weight that each training
 #' outcome received in the prediction for xnew.}
 #'
@@ -159,7 +159,7 @@ ridge_fit = function(x, y, args = list()) {
 #'
 #' @return Returns list containing:
 #' \item{prediction}{vector of predictions for xnew}
-#' \item{weights}{If \code{weights=TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
+#' \item{weights}{If \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
 #' containing the weights that deliver predictions where each row gives the weight that each training
 #' outcome received in the prediction for xnew.}
 #'
@@ -232,7 +232,7 @@ plasso_fit = function(x, y, args = list()) {
 #'
 #' @return Returns list containing:
 #' \item{prediction}{vector of predictions for xnew}
-#' \item{weights}{If \code{weights=TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
+#' \item{weights}{If \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
 #' containing the weights that deliver predictions where each row gives the weight that each training
 #' outcome received in the prediction for xnew.}
 #'
@@ -305,7 +305,7 @@ forest_grf_fit = function(x, y, args = list()) {
 #'
 #' @return Returns list containing:
 #' \item{prediction}{vector of predictions for xnew}
-#' \item{weights}{If \code{weights=TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
+#' \item{weights}{If \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
 #' containing the weights that deliver predictions where each row gives the weight that each training
 #' outcome received in the prediction for xnew.}
 #'
@@ -362,13 +362,13 @@ lasso_fit = function(x, y, args = list()) {
 #'
 #' @description
 #' Prediction based on fitted Lasso regression model.
-#' The method also provides prediction weights if required.
+#' Unfortunately, from Lasso regression no weights can be obtained.
 #'
 #' @param lasso_fit Output of \code{\link{lasso_fit}}
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
 #' @param xnew Covariate matrix of test sample
-#' @param weights Always FALSE as
+#' @param weights Always FALSE as no weights can be obtained for this method.
 #'
 #' @return Returns list containing:
 #' \item{prediction}{vector of predictions for xnew}
@@ -390,5 +390,81 @@ predict.lasso_fit = function(lasso_fit, x, y, xnew = NULL, weights = FALSE) {
 
   return(
     list("prediction" = fit, "weights" = NULL)
+  )
+}
+
+
+#' Pseudo fitting of k-Nearest-Neighbour to training data
+#'
+#' @description
+#' \code{\link{knn_fit}} is a pseudo fitting function where only the kNN object
+#' is initialized but not fitted as the fitting process comes naturally with
+#' the prediction part.
+#'
+#' @param x Matrix of covariates (number of observations times number of covariates matrix)
+#' @param y vector of outcomes
+#' @param args List of arguments passed to \code{\link[FastKNN]{k.nearest.neighbors}}
+#'
+#' @return A list of possible arguments for \code{\link[FastKNN]{k.nearest.neighbors}}
+#'
+#'
+#' @keywords internal
+#'
+knn_fit = function(x, y, args = list()) {
+  class(args) = "knn_fit"
+  return(args)
+}
+
+
+#' Predictions based on the k-Nearest-Neighbor algorithm
+#'
+#' @description
+#' Predictions based on fitted the k-Nearest-Neighbor algorithm. Note that
+#' if no \code{k} is explicitly specified, this evaluates to \code{k = 10} as
+#' default value.
+#' The method also provides prediction weights if required.
+#'
+#' @param args Output of \code{\link{knn_fit}}
+#' @param x Covariate matrix of training sample
+#' @param y Vector of outcomes of training sample
+#' @param xnew Covariate matrix of test sample
+#' @param weights Always FALSE as
+#'
+#' @return Returns list containing:
+#' \item{prediction}{vector of predictions for xnew}
+#' \item{weights}{Binary matrix of dimension nrow(xnew) X nrow(x) that indicates
+#' the nearest neighbors for a given test observation}
+#'
+#' @importFrom FastKNN Distance_for_KNN_test k.nearest.neighbors
+#'
+#' @method predict knn_fit
+#'
+#' @keywords internal
+#'
+predict.knn_fit = function(args, x, y, xnew = NULL, weights = FALSE) {
+
+  if (is.null(xnew)) xnew = x
+  if (is.null(args[["k"]])) {
+    k = 10
+  } else if ( all.equal(args[["k"]], as.integer(args[["k"]])) ) {
+    k = args[["k"]]
+  } else {
+    k = 10
+  }
+
+  distance = as.matrix(FastKNN::Distance_for_KNN_test(xnew, x))
+
+  knn_search = function(row_index, distance_matrix, k) {
+    binary_vector = rep(0, ncol(distance_matrix))
+    indices = FastKNN::k.nearest.neighbors(row_index, distance_matrix, k = k)
+    binary_vector[indices] = 1
+    return(binary_vector)
+  }
+
+  w = t(sapply(1:nrow(distance), FUN = knn_search, distance_matrix = distance, k = k))
+  predictions = (w %*% y) / k
+
+  return(
+    list("prediction" = predictions, "weights" = w)
   )
 }

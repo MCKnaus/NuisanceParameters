@@ -5,14 +5,14 @@
 \title{Method creation for ensemble}
 \usage{
 create_method(
-  method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso"),
+  method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn"),
   x_select = NULL,
   args = list(),
   name = NULL
 )
 }
 \arguments{
-\item{method}{Choose method from \code{c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso")}.
+\item{method}{Choose method from \code{c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn")}.
 To be continued.}
 
 \item{x_select}{Optional logical vector of length equal to the number of
