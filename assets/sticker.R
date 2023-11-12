@@ -10,8 +10,8 @@ hexSticker::sticker(
   spotlight = TRUE,
   l_y = 1.3,
   l_x = 0.95,
-  h_fill = "#EECE63",
-  h_color = "#AD890F",
+  h_fill = "#4D8962",
+  h_color = "#154827",
   dpi = 1200,
   filename = "assets/NuisanceParameters.png"
 )
