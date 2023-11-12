@@ -4,7 +4,7 @@ author:
   - Michael Knaus
   - Stefan Glaisner
 date: "`r format(Sys.time(), '%B %d, %Y')`"
-bibliography: assets/NuisanceParameters_refs.bib
+bibliography: ../assets/NuisanceParameters_refs.bib
 link-citations: true
 output:
   rmarkdown::html_vignette:

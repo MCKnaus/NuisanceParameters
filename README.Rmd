@@ -1,5 +1,5 @@
 ---
-bibliography: vignettes/assets/NuisanceParameters_refs.bib
+bibliography: assets/NuisanceParameters_refs.bib
 output: github_document
 ---
 
