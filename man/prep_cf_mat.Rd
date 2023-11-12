@@ -27,3 +27,10 @@ Logical matrix of cross-fitting folds (n x # folds).
 \code{\link{prep_cf_mat}} creates a matrix of binary cross-fitting fold
 indicators (n x # cross-folds)
 }
+\examples{
+n = 1000
+w_mat = prep_w_mat(sample(3, n, replace = TRUE))
+cf_mat = prep_cf_mat(n, cf = 5, w_mat = w_mat)
+head(cf_mat)
+
+}

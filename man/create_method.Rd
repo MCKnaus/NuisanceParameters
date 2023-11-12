@@ -31,3 +31,12 @@ List object that can be passed as input to \code{\link{ensemble}}
 \description{
 Creates the methods to be used in the subsequent \code{\link{ensemble}} model.
 }
+\examples{
+# create list of ml methods for ensemble
+ml = list(
+ "ols" = create_method("ols"),
+ "forest_grf" = create_method("forest_grf"),
+ "knn" = create_method("knn", args = list("k" = 3))
+)
+
+}

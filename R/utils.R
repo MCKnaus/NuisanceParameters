@@ -16,6 +16,11 @@
 #'
 #' @export
 #'
+#' @examples
+#' w = factor(c("A", "B", "A", "C", "B", "C"))
+#' w_mat = prep_w_mat(w)
+#' head(w_mat)
+#'
 prep_w_mat = function(w) {
   # Checks
   if (length(unique(w)) <= 1) stop("Need at least two values in treatment vector")
@@ -84,6 +89,12 @@ check_cluster_compatibility = function(cl, cf) {
 #' @importFrom stats model.matrix quantile
 #'
 #' @export
+#'
+#' @examples
+#' n = 1000
+#' w_mat = prep_w_mat(sample(3, n, replace = TRUE))
+#' cf_mat = prep_cf_mat(n, cf = 5, w_mat = w_mat)
+#' head(cf_mat)
 #'
 prep_cf_mat = function(n, cf, w_mat = NULL, cl = NULL) {
 
@@ -214,7 +225,13 @@ nnls_weights = function(X, y) {
 #'
 #' @return Matrix with intercept.
 #'
-#' @keywords internal
+#' @export
+#'
+#' @examples
+#' X = matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2, dimnames = list(1:3, c("a", "b")))
+#' X
+#' X_with_intercept = add_intercept(X)
+#' X_with_intercept
 #'
 add_intercept <- function(mat) {
   if (is.null(dim(mat))) {

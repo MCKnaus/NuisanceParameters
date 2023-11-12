@@ -234,6 +234,14 @@ predict.ensemble_core = function(ml_fit, ml,
 #'
 #' @export
 #'
+#' @examples
+#' # create list of ml methods for ensemble
+#' ml = list(
+#'  "ols" = create_method("ols"),
+#'  "forest_grf" = create_method("forest_grf"),
+#'  "knn" = create_method("knn", args = list("k" = 3))
+#' )
+#'
 create_method = function(
     method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn"),
     x_select = NULL,

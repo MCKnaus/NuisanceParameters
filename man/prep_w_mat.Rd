@@ -20,3 +20,9 @@ Logical matrix of treatment indicators (n x T+1).
 where each column contains a binary indicator for one treatment (i.e. one-hot
 encoding).
 }
+\examples{
+w = factor(c("A", "B", "A", "C", "B", "C"))
+w_mat = prep_w_mat(w)
+head(w_mat)
+
+}
