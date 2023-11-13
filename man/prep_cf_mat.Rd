@@ -4,21 +4,22 @@
 \alias{prep_cf_mat}
 \title{Cross-fitting fold indicators}
 \usage{
-prep_cf_mat(n, cf, w_mat = NULL, cl = NULL)
+prep_cf_mat(n, cf, cl = NULL, w_mat = NULL)
 }
 \arguments{
 \item{n}{Number of observations}
 
 \item{cf}{Number of cross-fitting folds}
 
+\item{cl}{Optional vector of cluster variable if cross-fitting should account
+for clusters within the data.}
+
 \item{w_mat}{Optional logical matrix of treatment indicators (n x T+1 with T
 being the number of treatments).
 For example created by \code{\link{prep_w_mat}}.
-If specified, cross-fitting folds will preserve the treatment ratios from full sample.}
-
-\item{cl}{Optional vector of cluster variable if cross-fitting should account for clusters.
-If w_mat is provided, cluster vector is ignored due to computational and feasibility constraints
-for the cross-fitting procedure to work.}
+If specified, cross-fitting folds will preserve the treatment ratios from full sample.
+However, if cluster vector is provided, w_mat is ignored due to computational
+constraints and randomization as well as feasibility issues.}
 }
 \value{
 Logical matrix of cross-fitting folds (n x # folds).
