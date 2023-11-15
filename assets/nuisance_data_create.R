@@ -10,6 +10,7 @@ nuisance_data = DoubleML::make_plr_CCDDHNR2018(
   alpha = alpha,
   return_type = "data.frame"
 )
+nuisance_data$d = ifelse(nuisance_data$d > 0, 1, 0)
 nuisance_data = nuisance_data %>%
   rename(w = d) %>%
   rename_with(tolower) %>%
