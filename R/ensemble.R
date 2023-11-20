@@ -1,38 +1,29 @@
-#' Ensemble learner
+#' Ensemble learner training
 #'
 #' @description
-#' \code{\link{ensemble}} implements an ensemble learner including the
-#' possibility to extract the smoother matrix of linear smoothers.
+#' \code{\link{ensemble}} trains an ensemble learner on the given training data.
 #'
 #' @param ml List of methods built via \code{\link{create_method}} to be used in
 #' ensemble model
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
-#' @param xnew Covariate matrix of test sample
 #' @param nfolds Number of folds used in cross-validation of ensemble weights
-#' (default \code{nfolds = 5}).
-#' @param weights If TRUE, the weights underlying the ensemble prediction for
-#' xnew are calculated
+#' (default \code{nfolds = 5})
 #' @param quiet If FALSE, method that is currently computed is printed into the
 #' console
 #'
 #' @return Ensemble object containing:
-#' \item{ensemble}{the predictions of the trained ensemble for the test sample}
-#' \item{best}{the predictions of the best performing single method for the test sample}
-#' \item{fit_full}{matrix containing predictions of all considered methods}
-#' \item{weights}{If \code{weights = TRUE}, smoother matrix of dimension \code{nrow(xnew)} x \code{nrow(x)}
-#' containing the weights that deliver
-#' ensemble predictions where each row gives the weight that each training outcome received in the prediction}
-#'  \item{nnls_weights}{the weights that each method receives in the ensemble}
-#'  \item{mse_cv}{cross-validated MSEs for each method}
-#'  \item{fit_cv}{matrix containing the cross-validated predictions for each method}
+#' \item{ml_fit}{ensemble_core object fitted on whole training sample}
+#' \item{nnls_weights}{the weights that each method receives in the ensemble}
+#' \item{mse_cv}{cross-validated MSEs for each method}
+#' \item{fit_cv}{matrix containing the cross-validated predictions for each method}
+#' \item{ml}{list of raw methods built via \code{\link{create_method}}}
 #'
 #'  @export
 #'
 ensemble = function(ml,
-                    x, y, xnew,
+                    x, y,
                     nfolds = 5,
-                    weights = FALSE,
                     quiet = TRUE) {
 
   # matrix to store the cross-validated predictions
@@ -62,65 +53,125 @@ ensemble = function(ml,
       fit_cv[fold,] = predict(ml_fit, ml, x_tr, y_tr, x_te, weights = FALSE, quiet = quiet)$predictions
     }
 
-    # cross-validated MSE
-    fit_cv[is.na(fit_cv)] = mean(y) # e.g. glmnet produced sometimes NaN for logistic Ridge
+    # replace potential missing values
+    fit_cv[is.na(fit_cv)] = mean(y)
+    # get MSEs by ml method
     mse_cv = colMeans((c(y) - fit_cv)^2)
 
-    # estimating ensemble weights
+    # estimate ensemble weights
     nnls_w = nnls_weights(X = fit_cv, y = y)
 
     # run all methods on the full sample
     ml_fit_full = ensemble_core(ml, x, y, quiet = quiet)
-    fit_full = predict(ml_fit_full, ml, x, y, xnew, weights = weights, quiet = quiet)
-    best = fit_full$predictions[, which.min(mse_cv)]
-    ensemble = fit_full$predictions %*% nnls_w
 
-    # calculate Smoothing matrix if weights = TRUE
-    w = NULL
-    if (isTRUE(weights)) {
-      w = matrix(0, nrow(xnew), nrow(x))
-      for (i in 1:length(ml)) {
-        w = w + nnls_w[i] * fit_full$weights[[i]]
-      }
-      w = Matrix::Matrix(w, sparse = TRUE)
-    }
-
-    colnames(fit_full$predictions) = names(mse_cv) = names(nnls_w) = colnames(fit_cv)
+    # assign names
+    names(mse_cv) = names(nnls_w) = colnames(fit_cv)
   }
 
 
 
   ### only one ml method specified - no weights needed ###
 
-  else {
+  else if (length(ml) == 1) {
     ml_fit_full = ensemble_core(ml, x, y, quiet = quiet)
-    fit_full = predict(ml_fit_full, ml, x, y, xnew, weights = weights, quiet = quiet)
-    ensemble = best = fit_full$predictions
-    w = nnls_w = mse_cv = fit_cv = NULL
-    if (isTRUE(weights)) w = fit_full$weights[[1]]
+    nnls_w = mse_cv = fit_cv = NULL
   }
 
+
+
   output = list(
-    "ensemble" = ensemble,
-    "best" = best,
-    "fit_full" = fit_full,
-    "weights" = w,
+    "ml_fit" = ml_fit_full,
     "nnls_weights" = nnls_w,
     "mse_cv" = mse_cv,
-    "fit_cv" = fit_cv
+    "fit_cv" = fit_cv,
+    "ml"= ml
   )
 
   class(output) = "ensemble"
 
   return(output)
+
 }
 
 
-#' Ensemble fitting
+#' Ensemble learner prediction
+#'
+#' @description
+#' \code{\link{ensemble}} implements an ensemble learner including the
+#' possibility to extract the smoother matrix of linear smoothers.
+#'
+#' @param object Trained ensemble object from \code{\link{ensemble}}
+#' @param x Covariate matrix of training sample
+#' @param y Vector of outcomes of training sample
+#' @param xnew Covariate matrix of test sample
+#' @param weights If TRUE, the weights underlying the ensemble prediction for
+#' xnew are calculated
+#' @param quiet If FALSE, method that is currently computed is printed into the
+#' console
+#'
+#' @return Predictions on the basis of ensemble object containing:
+#' \item{p_ensemble}{the predictions of the trained ensemble for the test sample}
+#' \item{p_best}{the predictions of the best performing single method for the test sample}
+#' \item{p_all}{matrix containing predictions of all considered methods}
+#' \item{w}{If \code{weights = TRUE}, smoother matrix of dimension
+#' \code{nrow(xnew)} x \code{nrow(x)} containing the weights that deliver
+#' ensemble predictions where each row gives the weight that each training
+#' outcome received in the prediction}
+#'
+#'  @export
+#'
+#'  @method predict ensemble_core
+#'
+predict.ensemble = function(object,
+                            x, y, xnew,
+                            weights = FALSE,
+                            quiet = TRUE) {
+
+  if (length(object$ml) > 1) {
+
+    p_full = predict(object$ml_fit, object$ml, x, y, xnew, weights = weights, quiet = quiet)
+
+    p_best = p_full$predictions[, which.min(object$mse_cv)]
+    p_ensemble = p_full$predictions %*% object$nnls_weights
+
+    w = NULL
+    if (isTRUE(weights)) {
+      w = matrix(0, nrow(xnew), nrow(x))
+      for (i in 1:length(object$ml)) {
+        w = w + object$nnls_weights[i] * p_full$weights[[i]]
+      }
+      w = Matrix::Matrix(w, sparse = TRUE)
+    }
+
+    colnames(p_full$predictions) = names(object$mse_cv)
+
+  } else if (length(object$ml) == 1) {
+
+    p_full = predict(object$ml_fit, object$ml, x, y, xnew, weights = weights, quiet = quiet)
+    p_ensemble = p_best = p_full$predictions
+    w = NULL
+    if (isTRUE(weights)) w = p_full$weights[[1]]
+
+  }
+
+  output = list(
+    "p_ensemble" = p_ensemble,
+    "p_best" = p_best,
+    "p_all" = p_full$predictions,
+    "w" = w
+  )
+
+  return(output)
+}
+
+
+
+#' Ensemble core fitting
 #'
 #' @description
 #' Core function of \code{\link{ensemble}} used for fitting (i.e. training) the
-#' inputted (machine learning) methods for the ensemble model.
+#' inputted (machine learning) methods for the ensemble model for one given set
+#' of covariates and targets.
 #'
 #' @param ml List of methods built via \code{\link{create_method}} to be used in
 #' ensemble model
@@ -162,7 +213,7 @@ ensemble_core = function(ml,
 }
 
 
-#' Ensemble prediction
+#' Ensemble core prediction
 #'
 #' @description
 #' Predicts fitted values for some (new) covariate matrix based on the fully

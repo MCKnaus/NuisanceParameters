@@ -2,7 +2,7 @@
 % Please edit documentation in R/ensemble.R
 \name{ensemble_core}
 \alias{ensemble_core}
-\title{Ensemble fitting}
+\title{Ensemble core fitting}
 \usage{
 ensemble_core(ml, x_tr, y_tr, quiet = TRUE)
 }
@@ -22,6 +22,7 @@ Returns list object containing the trained models of the ensemble.
 }
 \description{
 Core function of \code{\link{ensemble}} used for fitting (i.e. training) the
-inputted (machine learning) methods for the ensemble model.
+inputted (machine learning) methods for the ensemble model for one given set
+of covariates and targets.
 }
 \keyword{internal}

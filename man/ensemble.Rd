@@ -2,9 +2,9 @@
 % Please edit documentation in R/ensemble.R
 \name{ensemble}
 \alias{ensemble}
-\title{Ensemble learner}
+\title{Ensemble learner training}
 \usage{
-ensemble(ml, x, y, xnew, nfolds = 5, weights = FALSE, quiet = TRUE)
+ensemble(ml, x, y, nfolds = 5, quiet = TRUE)
 }
 \arguments{
 \item{ml}{List of methods built via \code{\link{create_method}} to be used in
@@ -14,32 +14,22 @@ ensemble model}
 
 \item{y}{Vector of outcomes of training sample}
 
-\item{xnew}{Covariate matrix of test sample}
-
 \item{nfolds}{Number of folds used in cross-validation of ensemble weights
-(default \code{nfolds = 5}).}
-
-\item{weights}{If TRUE, the weights underlying the ensemble prediction for
-xnew are calculated}
+(default \code{nfolds = 5})}
 
 \item{quiet}{If FALSE, method that is currently computed is printed into the
 console}
 }
 \value{
 Ensemble object containing:
-\item{ensemble}{the predictions of the trained ensemble for the test sample}
-\item{best}{the predictions of the best performing single method for the test sample}
-\item{fit_full}{matrix containing predictions of all considered methods}
-\item{weights}{If \code{weights = TRUE}, smoother matrix of dimension \code{nrow(xnew)} x \code{nrow(x)}
-containing the weights that deliver
-ensemble predictions where each row gives the weight that each training outcome received in the prediction}
- \item{nnls_weights}{the weights that each method receives in the ensemble}
- \item{mse_cv}{cross-validated MSEs for each method}
- \item{fit_cv}{matrix containing the cross-validated predictions for each method}
+\item{ml_fit}{ensemble_core object fitted on whole training sample}
+\item{nnls_weights}{the weights that each method receives in the ensemble}
+\item{mse_cv}{cross-validated MSEs for each method}
+\item{fit_cv}{matrix containing the cross-validated predictions for each method}
+\item{ml}{list of raw methods built via \code{\link{create_method}}}
 
  @export
 }
 \description{
-\code{\link{ensemble}} implements an ensemble learner including the
-possibility to extract the smoother matrix of linear smoothers.
+\code{\link{ensemble}} trains an ensemble learner on the given training data.
 }

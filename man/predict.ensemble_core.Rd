@@ -2,7 +2,7 @@
 % Please edit documentation in R/ensemble.R
 \name{predict.ensemble_core}
 \alias{predict.ensemble_core}
-\title{Ensemble prediction}
+\title{Ensemble core prediction}
 \usage{
 \method{predict}{ensemble_core}(ml_fit, ml, x_tr, y_tr, x_te, weights = FALSE, quiet = TRUE)
 }
