@@ -217,7 +217,7 @@ nnls_weights = function(X, y) {
 #' X_with_intercept = add_intercept(X)
 #' X_with_intercept
 #'
-add_intercept <- function(mat) {
+add_intercept = function(mat) {
   if (is.null(dim(mat))) {
     mat = as.matrix(mat,ncol = 1)
     colnames(mat) = "Var1"
