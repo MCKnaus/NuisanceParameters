@@ -6,12 +6,13 @@
 #'
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
+#' @param ... Ignore unused arguments
 #'
 #' @return Returns list containing mean and number of observations.
 #'
 #' @keywords internal
 #'
-mean_fit = function(x, y) {
+mean_fit = function(x, y, ...) {
   mean_value = mean(y)
   output = list(
     "mean" = mean_value,
@@ -25,34 +26,54 @@ mean_fit = function(x, y) {
 #' Predict after arithmetic mean fitting
 #'
 #' @description
-#' Predicts arithmetic mean and provides prediction weights if required.
+#' Predicts arithmetic mean.
 #'
 #' @param mean_fit Output of \code{\link{mean_fit}}
-#' @param x Covariate matrix of training sample
-#' @param y Vector of outcomes of training sample
-#' @param xnew Covariate matrix of test sample
-#' @param weights If TRUE, weights underlying the prediction for xnew calculated
+#' @param xnew Covariate matrix of test sample. If no test sample provided,
+#' prediction is done for training sample.
+#' @param ... Ignore unused arguments
 #'
-#' @return List element containing:
-#' \item{prediction}{vector of predictions for xnew}
-#' \item{weights}{if \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
-#' containing the weights that deliver predictions where each row gives the weight that each training
-#' outcome received in the prediction for xnew.}
+#' @return Vector of fitted values.
 #'
 #' @method predict mean_fit
 #'
 #' @keywords internal
 #'
-predict.mean_fit = function(mean_fit, x, y, xnew = NULL, weights = FALSE) {
-  if (is.null(xnew)) fit = rep(mean_fit$mean, nrow(x))
-  else fit = rep(mean_fit$mean, nrow(xnew))
+predict.mean_fit = function(mean_fit, xnew = NULL, ...) {
 
-  if (isTRUE(weights)) w = matrix(1 / length(y), nrow(xnew), nrow(x))
-  else w = NULL
+  if (is.null(xnew)) {
+    fit = rep(mean_fit$mean, mean_fit$n)
+  } else {
+    fit = rep(mean_fit$mean, nrow(xnew))
+  }
 
-  return(
-    list("prediction" = fit, "weights" = w)
-  )
+  return(fit)
+
+}
+
+
+#' Arithmetic mean smoother weights
+#'
+#' @description
+#' Returns smoother weights for test sample based on
+#' arithmetic mean fitting of the training sample.
+#'
+#' @param mean_fit Output of \code{\link{mean_fit}}
+#' @param xnew Covariate matrix of test sample
+#' @param ... Ignore unused arguments
+#'
+#' @return Matrix of smoother weights.
+#'
+#' @method weights mean_fit
+#'
+#' @keywords internal
+#'
+weights.mean_fit = function(mean_fit, xnew, ...) {
+
+  w = matrix(1 / mean_fit$n, nrow = nrow(xnew), ncol = mean_fit$n)
+
+  return(w)
+
 }
 
 
@@ -63,6 +84,7 @@ predict.mean_fit = function(mean_fit, x, y, xnew = NULL, weights = FALSE) {
 #'
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
+#' @param ... Ignore unused arguments
 #'
 #' @return Returns OLS coefficients
 #'
@@ -70,8 +92,8 @@ predict.mean_fit = function(mean_fit, x, y, xnew = NULL, weights = FALSE) {
 #'
 #' @keywords internal
 #'
-ols_fit = function(x, y) {
-  x = cbind(rep(1, nrow(x)), x)
+ols_fit = function(x, y, ...) {
+  x = add_intercept(x)
   ols_coef = stats::lm.fit(x, y)$coefficients
   class(ols_coef) = "ols_fit"
   return(ols_coef)
@@ -87,24 +109,50 @@ ols_fit = function(x, y) {
 #' @param ols_fit Output of \code{\link{ols_fit}}
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
-#' @param xnew Covariate matrix of test sample
-#' @param weights If TRUE, weights underlying the prediction for xnew calculated
+#' @param xnew Covariate matrix of test sample. If no test sample provided,
+#' prediction is done for training sample.
+#' @param ... Ignore unused arguments
 #'
-#' @return Returns list containing:
-#' \item{prediction}{vector of predictions for xnew}
-#' \item{weights}{If \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
-#' containing the weights that deliver predictions where each row gives the weight that each training
-#' outcome received in the prediction for xnew.}
+#' @return Vector of fitted values.
 #'
 #' @method predict ols_fit
 #'
 #' @keywords internal
 #'
-predict.ols_fit = function(ols_fit, x, y, xnew = NULL, weights = FALSE) {
+predict.ols_fit = function(ols_fit, x, y, xnew = NULL, ...) {
+
   if (is.null(xnew)) xnew = x
 
-  x = cbind(rep(1, nrow(x)), x)
-  xnew = cbind(rep(1, nrow(xnew)), xnew)
+  xnew = add_intercept(xnew)
+  xnew = xnew[, !is.na(ols_fit)]
+
+  fit = xnew %*% matrix(ols_fit, ncol = 1)
+
+  return(fit)
+
+}
+
+#' Smoother weights from OLS prediction
+#'
+#' @description
+#' Extract smoother weights for test sample from an OLS model.
+#'
+#' @param ols_fit Output of \code{\link{ols_fit}}
+#' @param x Covariate matrix of training sample
+#' @param y Vector of outcomes of training sample
+#' @param xnew Covariate matrix of test sample
+#' @param ... Ignore unused arguments
+#'
+#' @return Matrix of smoother weights.
+#'
+#' @method weights ols_fit
+#'
+#' @keywords internal
+#'
+weights.ols_fit = function(ols_fit, x, y, xnew, ...) {
+
+  x = add_intercept(x)
+  xnew = add_intercept(xnew)
 
   # remove variables that were dropped due to collinearity
   x = x[, !is.na(ols_fit)]
@@ -112,13 +160,9 @@ predict.ols_fit = function(ols_fit, x, y, xnew = NULL, weights = FALSE) {
 
   # calculate hat matrix
   hat_mat = xnew %*% solve(crossprod(x), tol = 2.225074e-308) %*% t(x)
-  fit = hat_mat %*% y
 
-  if (weights == FALSE) hat_mat = NULL
+  return(hat_mat)
 
-  return(
-    list("prediction" = fit, "weights" = hat_mat)
-  )
 }
 
 
@@ -149,51 +193,64 @@ ridge_fit = function(x, y, args = list()) {
 #'
 #' @description
 #' Prediction based on fitted Ridge regression model.
-#' The method also provides prediction weights if required.
 #'
 #' @param ridge_fit Output of \code{\link{ridge_fit}}
-#' @param x Covariate matrix of training sample
-#' @param y Vector of outcomes of training sample
-#' @param xnew Covariate matrix of test sample
-#' @param weights If TRUE, weights underlying the prediction for xnew calculated
+#' @param xnew Covariate matrix of test sample.
+#' If not provided, prediction is done for the training sample.
+#' @param ... Ignore unused arguments
 #'
-#' @return Returns list containing:
-#' \item{prediction}{vector of predictions for xnew}
-#' \item{weights}{If \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
-#' containing the weights that deliver predictions where each row gives the weight that each training
-#' outcome received in the prediction for xnew.}
+#' @return Vector of predictions for xnew.
 #'
-#' @importFrom stats sd
-#' @importFrom glmnet predict.glmnet
+#' @importFrom glmnet cv.glmnet
 #'
 #' @method predict ridge_fit
 #'
 #' @keywords internal
 #'
-predict.ridge_fit = function(ridge_fit, x, y, xnew = NULL, weights = FALSE) {
-  if (is.null(xnew)) xnew = x
+predict.ridge_fit = function(ridge_fit, xnew = NULL, ...) {
 
   class(ridge_fit) = "cv.glmnet"
+  if (is.null(xnew)) xnew = ridge_fit$x
+
   fit = predict(ridge_fit, newx = xnew, type = "response")
 
-  if (weights == FALSE) hat_mat = NULL
-  else {
-    n = nrow(x)
-    p = ncol(x)
-    x = scale(x)
-    x = cbind(rep(1, nrow(x)), x)
-    xnew = scale(xnew)
-    xnew = cbind(rep(1, nrow(xnew)), xnew)
+  return(fit)
+}
 
-    # calculate hat matrix
-    # reference: https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat
-    hat_mat = xnew %*% solve(crossprod(x) + ridge_fit$lambda.min  * n / stats::sd(y) * diag(x = c(0, rep(1, p)))) %*% t(x)
-    fit = hat_mat %*% y
-  }
 
-  return(
-    list("prediction" = fit, "weights" = hat_mat)
-  )
+#' Smoother weights from Ridge regression prediction
+#'
+#' @description
+#' Extract smoother weights for test sample from a Ridge regression model.
+#'
+#' @param ridge_fit Output of \code{\link{ridge_fit}}
+#' @param x Covariate matrix of training sample
+#' @param y Vector of outcomes of training sample
+#' @param xnew Covariate matrix of test sample.
+#' If not provided, prediction is done for the training sample.
+#' @param ... Ignore unused arguments
+#'
+#' @return Matrix of smoother weights.
+#'
+#' @method weights ridge_fit
+#'
+#' @keywords internal
+#'
+weights.ridge_fit = function(ridge_fit, x, y, xnew, ...) {
+  n = nrow(x)
+  p = ncol(x)
+  if (is.null(xnew)) xnew = x
+
+  x = scale(x)
+  x = add_intercept(x)
+  xnew = scale(xnew)
+  xnew = add_intercept(xnew)
+
+  # calculate hat matrix
+  # reference: https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat
+  hat_mat = xnew %*% solve(crossprod(x) + ridge_fit$lambda.min * n / stats::sd(y) * diag(x = c(0, rep(1, p)))) %*% t(x)
+
+  return(hat_mat)
 }
 
 
@@ -222,49 +279,69 @@ plasso_fit = function(x, y, args = list()) {
 #' Predictions based on Post-Lasso regression
 #'
 #' @description
-#' Prediction based on Post-Lasso and provides prediction weights if required.
+#' Prediction of fitted values (for a potentially new set of covaraites xnew)
+#' based on a trained Post-Lasso model.
 #'
 #' @param plasso_fit Output of \code{\link{plasso_fit}}
-#' @param x Covariate matrix of training sample
-#' @param y Vector of outcomes of training sample
-#' @param xnew Covariate matrix of test sample
-#' @param weights If TRUE, weights underlying the prediction for xnew calculated
+#' @param xnew Covariate matrix of test sample.
+#' If not provided, prediction is done for the training sample.
+#' @param ... Ignore unused arguments
 #'
-#' @return Returns list containing:
-#' \item{prediction}{vector of predictions for xnew}
-#' \item{weights}{If \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
-#' containing the weights that deliver predictions where each row gives the weight that each training
-#' outcome received in the prediction for xnew.}
+#' @return Vector of fitted values.
 #'
-#' @importFrom stats lm.fit
+#' @importFrom plasso cv.plasso
 #'
 #' @method predict plasso_fit
 #'
 #' @keywords internal
 #'
-predict.plasso_fit = function(plasso_fit, x, y, xnew = NULL, weights = FALSE) {
+predict.plasso_fit = function(plasso_fit, xnew = NULL, ...) {
+
+  class(plasso_fit) = "cv.plasso"
+  if (is.null(xnew)) xnew = plasso_fit$x
+
+  fit = predict(plasso_fit, newx = xnew, type = "response", s = "optimal", se_rule = 0)
+
+  return(fit)
+}
+
+
+#' Smoother weights from Post-Lasso prediction
+#'
+#' @description
+#' Extract smoother weights for test sample from a Post-Lasso regression model.
+#'
+#' @param ridge_fit Output of \code{\link{plasso_fit}}
+#' @param x Covariate matrix of training sample
+#' @param y Vector of outcomes of training sample
+#' @param xnew Covariate matrix of test sample.
+#' If not provided, prediction is done for the training sample.
+#' @param ... Ignore unused arguments
+#'
+#' @return Matrix of smoother weights.
+#'
+#' @method weights plasso_fit
+#'
+#' @keywords internal
+#'
+weights.plasso_fit = function(plasso_fit, x, y, xnew = NULL, ...) {
+
   if (is.null(xnew)) xnew = x
   x = add_intercept(x)
   xnew = add_intercept(xnew)
 
-  # fitted values for post lasso
   nm_act = names(coef(plasso_fit$lasso_full)[, plasso_fit$ind_min_pl])[which(coef(plasso_fit$lasso_full)[, plasso_fit$ind_min_pl] != 0)]
 
   xact = x[, nm_act, drop = FALSE]
   xactnew = xnew[, nm_act, drop = FALSE]
 
-  # remove potentially collinear variables
   coef = stats::lm.fit(xact, y)$coefficients
   xact = xact[, !is.na(coef)]
   xactnew = xactnew[, !is.na(coef)]
 
   hat_mat = xactnew %*% solve(crossprod(xact), tol = 2.225074e-308) %*% t(xact)
-  fit_plasso = hat_mat %*% y
-  if (weights == FALSE) hat_mat = NULL
 
-  return(
-    list("prediction" = fit_plasso, "weights" = hat_mat)
-  )
+  return(hat_mat)
 }
 
 
@@ -294,44 +371,60 @@ forest_grf_fit = function(x, y, args = list()) {
 #' Predictions based on Random Forest
 #'
 #' @description
-#' Prediction based on Random Forest and provides prediction weights if
-#' required.
+#' Prediction of fitted values (for a potentially new set of covaraites xnew)
+#' from a Random Forest.
 #'
-#' @param forest_grf_fit Output of \code{\link{forest_grf_fit}}
-#' @param x Covariate matrix of training sample
-#' @param y Vector of outcomes of training sample
-#' @param xnew Covariate matrix of test sample
-#' @param weights If TRUE, weights underlying the prediction for xnew calculated
+#' @param plasso_fit Output of \code{\link{forest_grf_fit}}
+#' @param xnew Covariate matrix of test sample.
+#' If not provided, prediction is done for the training sample.
+#' @param ... Ignore unused arguments
 #'
-#' @return Returns list containing:
-#' \item{prediction}{vector of predictions for xnew}
-#' \item{weights}{If \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
-#' containing the weights that deliver predictions where each row gives the weight that each training
-#' outcome received in the prediction for xnew.}
+#' @return Vector of fitted values.
 #'
 #' @import grf
-#' @importFrom utils packageVersion
-#' @importFrom stats predict
 #'
 #' @method predict forest_grf_fit
 #'
 #' @keywords internal
 #'
-predict.forest_grf_fit = function(forest_grf_fit, x, y, xnew = NULL, weights = FALSE) {
+predict.forest_grf_fit = function(forest_grf_fit, xnew = NULL, ...) {
+
   if (is.null(xnew)) xnew = x
 
   class(forest_grf_fit) = "regression_forest"
   fit = predict(forest_grf_fit, newdata = xnew)$prediction
 
-  if (weights == TRUE) {
-    if (utils::packageVersion("grf") < "2.0.0") w = grf::get_sample_weights(forest_grf_fit, newdata = xnew)
-    else  w = grf::get_forest_weights(forest_grf_fit, newdata = xnew)
-  }
-  else w = NULL
+  return(fit)
+}
 
-  return(
-    list("prediction" = fit, "weights" = w)
-  )
+
+#' Smoother weights from Random Forest model
+#'
+#' @description
+#' Extract smoother weights for test sample from a Random Forest model.
+#'
+#' @param ridge_fit Output of \code{\link{forest_grf_fit}}
+#' @param xnew Covariate matrix of test sample.
+#' If not provided, prediction is done for the training sample.
+#' @param ... Ignore unused arguments
+#'
+#' @return Matrix of smoother weights.
+#'
+#' @import grf
+#'
+#' @method weights forest_grf_fit
+#'
+#' @keywords internal
+#'
+weights.forest_grf_fit = function(forest_grf_fit, xnew, ...) {
+
+  if (utils::packageVersion("grf") < "2.0.0") {
+    w = grf::get_sample_weights(forest_grf_fit, newdata = xnew)
+  } else {
+    w = grf::get_forest_weights(forest_grf_fit, newdata = xnew)
+  }
+
+  return(w)
 }
 
 
@@ -358,39 +451,32 @@ lasso_fit = function(x, y, args = list()) {
 }
 
 
-#' Predictions based on Lasso regression
+#' Lasso prediction
 #'
 #' @description
-#' Prediction based on fitted Lasso regression model.
-#' Unfortunately, from Lasso regression no weights can be obtained.
+#' Prediction of fitted values based on fine-tuned Lasso regression model.
 #'
 #' @param lasso_fit Output of \code{\link{lasso_fit}}
-#' @param x Covariate matrix of training sample
-#' @param y Vector of outcomes of training sample
-#' @param xnew Covariate matrix of test sample
-#' @param weights Always FALSE as no weights can be obtained for this method.
+#' @param xnew Covariate matrix of test sample.
+#' If not provided, prediction is done for the training sample.
+#' @param ... Ignore unused arguments
 #'
-#' @return Returns list containing:
-#' \item{prediction}{vector of predictions for xnew}
-#' \item{weights}{Not available for Lasso, only for Post-Lasso}
+#' @return Vector of fitted values.
 #'
-#' @importFrom glmnet predict.glmnet
+#' @importFrom glmnet cv.glmnet
 #'
 #' @method predict lasso_fit
 #'
 #' @keywords internal
 #'
-predict.lasso_fit = function(lasso_fit, x, y, xnew = NULL, weights = FALSE) {
-
-  if (isTRUE(weights)) stop("No weighted representation of Lasso available.", call. = FALSE)
-  if (is.null(xnew)) xnew = x
+predict.lasso_fit = function(lasso_fit, xnew = NULL, ...) {
 
   class(lasso_fit) = "cv.glmnet"
-  fit = predict(lasso_fit, newx = xnew, type = "response", s = "lambda.min")
+  if (is.null(xnew)) xnew = lasso_fit$x
 
-  return(
-    list("prediction" = fit, "weights" = NULL)
-  )
+  fit = predict(lasso_fit, newx = xnew, type = "response")
+
+  return(fit)
 }
 
 
@@ -401,39 +487,34 @@ predict.lasso_fit = function(lasso_fit, x, y, xnew = NULL, weights = FALSE) {
 #' is initialized but not fitted as the fitting process comes naturally with
 #' the prediction part.
 #'
-#' @param x Matrix of covariates (number of observations times number of covariates matrix)
-#' @param y vector of outcomes
 #' @param args List of arguments passed to \code{\link[FastKNN]{k.nearest.neighbors}}
+#' @param ... Ignore unused arguments
 #'
 #' @return A list of possible arguments for \code{\link[FastKNN]{k.nearest.neighbors}}
 #'
 #'
 #' @keywords internal
 #'
-knn_fit = function(x, y, args = list()) {
+knn_fit = function(args = list(), ...) {
   class(args) = "knn_fit"
   return(args)
 }
 
 
-#' Predictions based on the k-Nearest-Neighbor algorithm
+#' Prediction of fitted values based on the k-Nearest-Neighbor algorithm
 #'
 #' @description
-#' Predictions based on fitted the k-Nearest-Neighbor algorithm. Note that
-#' if no \code{k} is explicitly specified, this evaluates to \code{k = 10} as
-#' default value.
-#' The method also provides prediction weights if required.
+#' Predictions by k-Nearest-Neighbor algorithm.
+#' Note that if no \code{k} is explicitly specified, this evaluates to
+#' \code{k = 10} as default value.
 #'
 #' @param args Output of \code{\link{knn_fit}}
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
 #' @param xnew Covariate matrix of test sample
-#' @param weights Always FALSE as
+#' @param ... Ignore unused arguments
 #'
-#' @return Returns list containing:
-#' \item{prediction}{vector of predictions for xnew}
-#' \item{weights}{Binary matrix of dimension nrow(xnew) X nrow(x) that indicates
-#' the nearest neighbors for a given test observation}
+#' @return Vector of fitted values.
 #'
 #' @importFrom FastKNN Distance_for_KNN_test k.nearest.neighbors
 #'
@@ -441,7 +522,38 @@ knn_fit = function(x, y, args = list()) {
 #'
 #' @keywords internal
 #'
-predict.knn_fit = function(args, x, y, xnew = NULL, weights = FALSE) {
+predict.knn_fit = function(args, x, y, xnew = NULL, ...) {
+
+  # get smoother weights
+  w = weights(args, x = x, xnew = xnew)
+  # multiply with training outcome vector
+  fit = (w %*% y) / k
+
+  return(fit)
+}
+
+
+#' Smoother weights from k-Nearest-Neighbor algorithm
+#'
+#' @description
+#' Extract smoother weights for k-Nearest Neighbor algorithm.
+#' This comes quite naturally here as the weight will be \code{1 / k} for all
+#' 'neighbors' and 0 for all 'non-neighbors' (for a given test set observation).
+#'
+#' @param args Output of \code{\link{knn_fit}}
+#' @param x Covariate matrix of training sample
+#' @param xnew Covariate matrix of test sample
+#' @param ... Ignore unused arguments
+#'
+#' @return Matrix of smoother weights.
+#'
+#' @importFrom FastKNN Distance_for_KNN_test k.nearest.neighbors
+#'
+#' @method weights knn_fit
+#'
+#' @keywords internal
+#'
+weights.knn_fit = function(args, x, xnew = NULL, ...) {
 
   if (is.null(xnew)) xnew = x
   if (is.null(args[["k"]])) {
@@ -462,9 +574,6 @@ predict.knn_fit = function(args, x, y, xnew = NULL, weights = FALSE) {
   }
 
   w = t(sapply(1:nrow(distance), FUN = knn_search, distance_matrix = distance, k = k))
-  predictions = (w %*% y) / k
 
-  return(
-    list("prediction" = predictions, "weights" = w)
-  )
+  return(w)
 }
