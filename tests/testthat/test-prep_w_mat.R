@@ -25,11 +25,11 @@ test_that("prep_w_mat function works correctly for mickey mouse example", {
 test_that("prep_w_mat function works correctly for large n", {
 
   n = 10000
-  w = sample(x = 1:4, size = n, replace = TRUE, prob = c(0.5,0.1,0.05,0.35))
+  w = sample(x = 1:4, size = n, replace = TRUE, prob = c(0.5, 0.1, 0.05, 0.35))
 
   w_mat = prep_w_mat(w)
 
-  expect = as.vector(table(w)/n)
+  expect = as.vector(table(w) / n)
   names(expect) = as.character(1:4)
 
   # Check class frequencies

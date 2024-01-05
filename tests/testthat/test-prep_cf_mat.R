@@ -37,7 +37,7 @@ test_that("prep_cf_mat returns correct dimensions", {
   expect_equal(dim(cf_mat2), c(n, cf))
 
   # Test with clusters
-  cl = sample(x = c("a","b","c","d","e","f","g","h","i","j","k","l"), size = n, replace = TRUE, prob = c(rep(0.1,8), rep(0.05,4)))
+  cl = sample(x = c("a","b","c","d","e","f","g","h","i","j","k","l"), size = n, replace = TRUE, prob = c(rep(0.1, 8), rep(0.05, 4)))
   cf_mat3 = prep_cf_mat(n, cf, cl = cl)
   expect_equal(dim(cf_mat3), c(n, cf))
 
@@ -49,18 +49,18 @@ test_that("prep_cf_mat returns correct fold proportions with treatment matrix", 
   n = 1000
   cf = 5
   treatments = c("a","b","c","d")
-  treatment_probs = c(0.5,0.4,0.08,0.02)
+  treatment_probs = c(0.5, 0.4, 0.08, 0.02)
   w_mat = prep_w_mat(sample(x = treatments, size = n, replace = TRUE, prob = treatment_probs))
 
   cf_mat = prep_cf_mat(n, cf, w_mat = w_mat)
 
   # test fold sizes
-  expect_equal(unname(colMeans(cf_mat)), rep(1/cf, cf), tolerance = 0.04)
+  expect_equal(unname(colMeans(cf_mat)), rep(1 / cf, cf), tolerance = 0.04)
 
   # test treatment proportions in different folds
   for (i in 1:cf){
 
-    expect_equal(unname(colMeans(w_mat[cf_mat[,i],])), treatment_probs, tolerance = 0.1)
+    expect_equal(unname(colMeans(w_mat[cf_mat[, i], ])), treatment_probs, tolerance = 0.1)
 
   }
 
@@ -72,7 +72,7 @@ test_that("prep_cf_mat returns warning if both treatment matrix and cluster vect
   n = 1000
   cf = 3
   w_mat = prep_w_mat(sample(x = 1:3, size = n, replace = TRUE))
-  cl = sample(x = c("b","d","o","k", "u", "r"), size = n, replace = TRUE)
+  cl = sample(x = c("b", "d", "o", "k", "u", "r"), size = n, replace = TRUE)
 
   expect_warning(prep_cf_mat(n, cf, w_mat = w_mat, cl = cl), "only cluster vector is considered")
 
@@ -91,7 +91,7 @@ test_that("prep_cf_mat keeps observations from one cluster in the same cross-fit
   cf_mat = prep_cf_mat(n, cf, cl = cl)
 
   # test fold sizes
-  expect_equal(unname(colMeans(cf_mat)), rep(1/cf, cf), tolerance = 0.1)
+  expect_equal(unname(colMeans(cf_mat)), rep(1 / cf, cf), tolerance = 0.1)
 
 
   # test whether obs of a cluster are in the same fold
