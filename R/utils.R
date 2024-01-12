@@ -205,7 +205,7 @@ nnls_weights = function(X, y) {
 #' @description
 #' \code{\link{add_intercept}} adds an intercept to a matrix.
 #'
-#' @param mat Any matrix (with column names).
+#' @param mat Any matrix.
 #'
 #' @return Matrix with intercept.
 #'
@@ -219,16 +219,12 @@ nnls_weights = function(X, y) {
 #'
 add_intercept = function(mat) {
   if (is.null(dim(mat))) {
-    mat = as.matrix(mat,ncol = 1)
-    colnames(mat) = "Var1"
+    mat = as.matrix(mat, ncol = 1)
   }
-
   if (all(mat[, 1] == 1)) {
-    colnames(mat)[1] == "(Intercept)"
     return(mat)
   } else {
     mat = cbind(rep(1, nrow(mat)), mat)
-    colnames(mat)[1] = "(Intercept)"
     return(mat)
   }
 }
