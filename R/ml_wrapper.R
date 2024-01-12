@@ -107,10 +107,7 @@ ols_fit = function(x, y, ...) {
 #' provides prediction weights if required.
 #'
 #' @param ols_fit Output of \code{\link{ols_fit}}
-#' @param x Covariate matrix of training sample
-#' @param y Vector of outcomes of training sample
-#' @param xnew Covariate matrix of test sample. If no test sample provided,
-#' prediction is done for training sample.
+#' @param xnew Covariate matrix of test sample.
 #' @param ... Ignore unused arguments
 #'
 #' @return Vector of fitted values.
@@ -119,14 +116,12 @@ ols_fit = function(x, y, ...) {
 #'
 #' @keywords internal
 #'
-predict.ols_fit = function(ols_fit, x, y, xnew = NULL, ...) {
-
-  if (is.null(xnew)) xnew = x
+predict.ols_fit = function(ols_fit, xnew = NULL, ...) {
 
   xnew = add_intercept(xnew)
   xnew = xnew[, !is.na(ols_fit)]
 
-  fit = xnew %*% matrix(ols_fit, ncol = 1)
+  fit = as.vector(xnew %*% matrix(ols_fit, ncol = 1))
 
   return(fit)
 
@@ -139,7 +134,6 @@ predict.ols_fit = function(ols_fit, x, y, xnew = NULL, ...) {
 #'
 #' @param ols_fit Output of \code{\link{ols_fit}}
 #' @param x Covariate matrix of training sample
-#' @param y Vector of outcomes of training sample
 #' @param xnew Covariate matrix of test sample
 #' @param ... Ignore unused arguments
 #'
@@ -149,7 +143,7 @@ predict.ols_fit = function(ols_fit, x, y, xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-weights.ols_fit = function(ols_fit, x, y, xnew, ...) {
+weights.ols_fit = function(ols_fit, x, xnew, ...) {
 
   x = add_intercept(x)
   xnew = add_intercept(xnew)
@@ -183,7 +177,12 @@ weights.ols_fit = function(ols_fit, x, y, xnew, ...) {
 #' @keywords internal
 #'
 ridge_fit = function(x, y, args = list()) {
-  ridge = do.call(glmnet::cv.glmnet, c(list(x = x, y = y, alpha = 0), args))
+  x_means = matrixStats::colMeans2(x)
+  x_sds = matrixStats::colSds(x)
+  x_std = scale(x, x_means, x_sds)
+  ridge = do.call(glmnet::cv.glmnet, c(list(x = x_std, y = y, alpha = 0, standardize = FALSE, intercept = TRUE), args))
+  ridge[["x_means"]] = x_means
+  ridge[["x_sds"]] = x_sds
   class(ridge) = "ridge_fit"
   return(ridge)
 }
@@ -196,7 +195,6 @@ ridge_fit = function(x, y, args = list()) {
 #'
 #' @param ridge_fit Output of \code{\link{ridge_fit}}
 #' @param xnew Covariate matrix of test sample.
-#' If not provided, prediction is done for the training sample.
 #' @param ... Ignore unused arguments
 #'
 #' @return Vector of predictions for xnew.
@@ -207,12 +205,13 @@ ridge_fit = function(x, y, args = list()) {
 #'
 #' @keywords internal
 #'
-predict.ridge_fit = function(ridge_fit, xnew = NULL, ...) {
+predict.ridge_fit = function(ridge_fit, xnew, ...) {
+
+  xnew = scale(xnew, ridge_fit$x_means, ridge_fit$x_sds)
 
   class(ridge_fit) = "cv.glmnet"
-  if (is.null(xnew)) xnew = ridge_fit$x
 
-  fit = predict(ridge_fit, newx = xnew, type = "response")
+  fit = as.vector(predict(ridge_fit, newx = xnew, s = "lambda.min"))
 
   return(fit)
 }
@@ -237,18 +236,23 @@ predict.ridge_fit = function(ridge_fit, xnew = NULL, ...) {
 #' @keywords internal
 #'
 weights.ridge_fit = function(ridge_fit, x, y, xnew, ...) {
-  n = nrow(x)
-  p = ncol(x)
-  if (is.null(xnew)) xnew = x
 
-  x = scale(x)
+  if (is.null(xnew)) xnew = x
+  n = nrow(x)
+
+  x = scale(x, ridge_fit$x_means, ridge_fit$x_sds)
   x = add_intercept(x)
-  xnew = scale(xnew)
+  xnew = scale(xnew, ridge_fit$x_means, ridge_fit$x_sds)
   xnew = add_intercept(xnew)
+
+  p = ncol(x) - 1
+
+  sd_y = sqrt(var(y) * ((n - 1) / n))[1, 1]
+  lambda = (1 / sd_y) * ridge_fit$lambda.min * n
 
   # calculate hat matrix
   # reference: https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat
-  hat_mat = xnew %*% solve(crossprod(x) + ridge_fit$lambda.min * n / stats::sd(y) * diag(x = c(0, rep(1, p)))) %*% t(x)
+  hat_mat = xnew %*% solve(crossprod(x) + lambda * diag(x = c(0, rep(1, p)))) %*% t(x)
 
   return(hat_mat)
 }
