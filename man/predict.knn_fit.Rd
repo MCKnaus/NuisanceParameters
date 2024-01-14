@@ -2,9 +2,9 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.knn_fit}
 \alias{predict.knn_fit}
-\title{Predictions based on the k-Nearest-Neighbor algorithm}
+\title{Prediction of fitted values based on the k-Nearest-Neighbor algorithm}
 \usage{
-\method{predict}{knn_fit}(args, x, y, xnew = NULL, weights = FALSE)
+\method{predict}{knn_fit}(args, x, y, xnew = NULL, ...)
 }
 \arguments{
 \item{args}{Output of \code{\link{knn_fit}}}
@@ -15,18 +15,14 @@
 
 \item{xnew}{Covariate matrix of test sample}
 
-\item{weights}{Always FALSE as}
+\item{...}{Ignore unused arguments}
 }
 \value{
-Returns list containing:
-\item{prediction}{vector of predictions for xnew}
-\item{weights}{Binary matrix of dimension nrow(xnew) X nrow(x) that indicates
-the nearest neighbors for a given test observation}
+Vector of fitted values.
 }
 \description{
-Predictions based on fitted the k-Nearest-Neighbor algorithm. Note that
-if no \code{k} is explicitly specified, this evaluates to \code{k = 10} as
-default value.
-The method also provides prediction weights if required.
+Predictions by k-Nearest-Neighbor algorithm.
+Note that if no \code{k} is explicitly specified, this evaluates to
+\code{k = 10} as default value.
 }
 \keyword{internal}

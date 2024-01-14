@@ -4,27 +4,20 @@
 \alias{predict.mean_fit}
 \title{Predict after arithmetic mean fitting}
 \usage{
-\method{predict}{mean_fit}(mean_fit, x, y, xnew = NULL, weights = FALSE)
+\method{predict}{mean_fit}(mean_fit, xnew = NULL, ...)
 }
 \arguments{
 \item{mean_fit}{Output of \code{\link{mean_fit}}}
 
-\item{x}{Covariate matrix of training sample}
+\item{xnew}{Covariate matrix of test sample. If no test sample provided,
+prediction is done for training sample.}
 
-\item{y}{Vector of outcomes of training sample}
-
-\item{xnew}{Covariate matrix of test sample}
-
-\item{weights}{If TRUE, weights underlying the prediction for xnew calculated}
+\item{...}{Ignore unused arguments}
 }
 \value{
-List element containing:
-\item{prediction}{vector of predictions for xnew}
-\item{weights}{if \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
-containing the weights that deliver predictions where each row gives the weight that each training
-outcome received in the prediction for xnew.}
+Vector of fitted values.
 }
 \description{
-Predicts arithmetic mean and provides prediction weights if required.
+Predicts arithmetic mean.
 }
 \keyword{internal}

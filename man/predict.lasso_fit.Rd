@@ -2,28 +2,22 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.lasso_fit}
 \alias{predict.lasso_fit}
-\title{Predictions based on Lasso regression}
+\title{Lasso prediction}
 \usage{
-\method{predict}{lasso_fit}(lasso_fit, x, y, xnew = NULL, weights = FALSE)
+\method{predict}{lasso_fit}(lasso_fit, xnew = NULL, ...)
 }
 \arguments{
 \item{lasso_fit}{Output of \code{\link{lasso_fit}}}
 
-\item{x}{Covariate matrix of training sample}
+\item{xnew}{Covariate matrix of test sample.
+If not provided, prediction is done for the training sample.}
 
-\item{y}{Vector of outcomes of training sample}
-
-\item{xnew}{Covariate matrix of test sample}
-
-\item{weights}{Always FALSE as no weights can be obtained for this method.}
+\item{...}{Ignore unused arguments}
 }
 \value{
-Returns list containing:
-\item{prediction}{vector of predictions for xnew}
-\item{weights}{Not available for Lasso, only for Post-Lasso}
+Vector of fitted values.
 }
 \description{
-Prediction based on fitted Lasso regression model.
-Unfortunately, from Lasso regression no weights can be obtained.
+Prediction of fitted values based on fine-tuned Lasso regression model.
 }
 \keyword{internal}

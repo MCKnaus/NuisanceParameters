@@ -4,12 +4,14 @@
 \alias{mean_fit}
 \title{Arithmetic mean}
 \usage{
-mean_fit(x, y)
+mean_fit(x, y, ...)
 }
 \arguments{
 \item{x}{Covariate matrix of training sample}
 
 \item{y}{Vector of outcomes of training sample}
+
+\item{...}{Ignore unused arguments}
 }
 \value{
 Returns list containing mean and number of observations.

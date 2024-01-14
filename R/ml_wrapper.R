@@ -235,7 +235,7 @@ predict.ridge_fit = function(ridge_fit, xnew, ...) {
 #'
 #' @keywords internal
 #'
-weights.ridge_fit = function(ridge_fit, x, y, xnew, ...) {
+weights.ridge_fit = function(ridge_fit, x, y, xnew = NULL, ...) {
 
   if (is.null(xnew)) xnew = x
   n = nrow(x)
@@ -304,7 +304,7 @@ predict.plasso_fit = function(plasso_fit, xnew = NULL, ...) {
   class(plasso_fit) = "cv.plasso"
   if (is.null(xnew)) xnew = plasso_fit$x
 
-  fit = predict(plasso_fit, newx = xnew, type = "response", s = "optimal", se_rule = 0)
+  fit = as.vector(predict(plasso_fit, newx = xnew, type = "response", s = "optimal", se_rule = 0)$plasso)
 
   return(fit)
 }
@@ -315,9 +315,7 @@ predict.plasso_fit = function(plasso_fit, xnew = NULL, ...) {
 #' @description
 #' Extract smoother weights for test sample from a Post-Lasso regression model.
 #'
-#' @param ridge_fit Output of \code{\link{plasso_fit}}
-#' @param x Covariate matrix of training sample
-#' @param y Vector of outcomes of training sample
+#' @param plasso_fit Output of \code{\link{plasso_fit}}
 #' @param xnew Covariate matrix of test sample.
 #' If not provided, prediction is done for the training sample.
 #' @param ... Ignore unused arguments
@@ -328,20 +326,18 @@ predict.plasso_fit = function(plasso_fit, xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-weights.plasso_fit = function(plasso_fit, x, y, xnew = NULL, ...) {
+weights.plasso_fit = function(plasso_fit, xnew = NULL, ...) {
 
-  if (is.null(xnew)) xnew = x
-  x = add_intercept(x)
+  if (is.null(xnew)) xnew = plasso_fit$x
+
+  x = add_intercept(plasso_fit$x)
   xnew = add_intercept(xnew)
 
-  nm_act = names(coef(plasso_fit$lasso_full)[, plasso_fit$ind_min_pl])[which(coef(plasso_fit$lasso_full)[, plasso_fit$ind_min_pl] != 0)]
+  colnames(x)[1] = "(Intercept)"
+  colnames(xnew) = colnames(x)
 
-  xact = x[, nm_act, drop = FALSE]
-  xactnew = xnew[, nm_act, drop = FALSE]
-
-  coef = stats::lm.fit(xact, y)$coefficients
-  xact = xact[, !is.na(coef)]
-  xactnew = xactnew[, !is.na(coef)]
+  xact = x[, plasso_fit$names_pl, drop = FALSE]
+  xactnew = xnew[, plasso_fit$names_pl, drop = FALSE]
 
   hat_mat = xactnew %*% solve(crossprod(xact), tol = 2.225074e-308) %*% t(xact)
 
@@ -392,8 +388,6 @@ forest_grf_fit = function(x, y, args = list()) {
 #' @keywords internal
 #'
 predict.forest_grf_fit = function(forest_grf_fit, xnew = NULL, ...) {
-
-  if (is.null(xnew)) xnew = x
 
   class(forest_grf_fit) = "regression_forest"
   fit = predict(forest_grf_fit, newdata = xnew)$prediction
@@ -531,7 +525,7 @@ predict.knn_fit = function(args, x, y, xnew = NULL, ...) {
   # get smoother weights
   w = weights(args, x = x, xnew = xnew)
   # multiply with training outcome vector
-  fit = (w %*% y) / k
+  fit = as.vector(w %*% y)
 
   return(fit)
 }
@@ -560,24 +554,26 @@ predict.knn_fit = function(args, x, y, xnew = NULL, ...) {
 weights.knn_fit = function(args, x, xnew = NULL, ...) {
 
   if (is.null(xnew)) xnew = x
-  if (is.null(args[["k"]])) {
+  if (is.null(args$k)) {
     k = 10
-  } else if ( all.equal(args[["k"]], as.integer(args[["k"]])) ) {
-    k = args[["k"]]
+  } else if ( all.equal(args$k, as.integer(args$k))) {
+    k = args$k
   } else {
     k = 10
   }
 
   distance = as.matrix(FastKNN::Distance_for_KNN_test(xnew, x))
 
-  knn_search = function(row_index, distance_matrix, k) {
-    binary_vector = rep(0, ncol(distance_matrix))
-    indices = FastKNN::k.nearest.neighbors(row_index, distance_matrix, k = k)
-    binary_vector[indices] = 1
+  get_binary_vector = function(row) {
+    min_indices = order(row)[1:k]
+    binary_vector = rep(0, length(row))
+    binary_vector[min_indices] = 1
+
     return(binary_vector)
   }
 
-  w = t(sapply(1:nrow(distance), FUN = knn_search, distance_matrix = distance, k = k))
+  w = apply(distance, 1, get_binary_vector)
+  w = t(w) / k
 
   return(w)
 }

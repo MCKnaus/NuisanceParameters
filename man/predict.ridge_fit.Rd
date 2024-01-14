@@ -4,28 +4,19 @@
 \alias{predict.ridge_fit}
 \title{Predictions based on Ridge regression}
 \usage{
-\method{predict}{ridge_fit}(ridge_fit, x, y, xnew = NULL, weights = FALSE)
+\method{predict}{ridge_fit}(ridge_fit, xnew, ...)
 }
 \arguments{
 \item{ridge_fit}{Output of \code{\link{ridge_fit}}}
 
-\item{x}{Covariate matrix of training sample}
+\item{xnew}{Covariate matrix of test sample.}
 
-\item{y}{Vector of outcomes of training sample}
-
-\item{xnew}{Covariate matrix of test sample}
-
-\item{weights}{If TRUE, weights underlying the prediction for xnew calculated}
+\item{...}{Ignore unused arguments}
 }
 \value{
-Returns list containing:
-\item{prediction}{vector of predictions for xnew}
-\item{weights}{If \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
-containing the weights that deliver predictions where each row gives the weight that each training
-outcome received in the prediction for xnew.}
+Vector of predictions for xnew.
 }
 \description{
 Prediction based on fitted Ridge regression model.
-The method also provides prediction weights if required.
 }
 \keyword{internal}

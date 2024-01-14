@@ -4,14 +4,12 @@
 \alias{knn_fit}
 \title{Pseudo fitting of k-Nearest-Neighbour to training data}
 \usage{
-knn_fit(x, y, args = list())
+knn_fit(args = list(), ...)
 }
 \arguments{
-\item{x}{Matrix of covariates (number of observations times number of covariates matrix)}
-
-\item{y}{vector of outcomes}
-
 \item{args}{List of arguments passed to \code{\link[FastKNN]{k.nearest.neighbors}}}
+
+\item{...}{Ignore unused arguments}
 }
 \value{
 A list of possible arguments for \code{\link[FastKNN]{k.nearest.neighbors}}

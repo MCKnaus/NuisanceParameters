@@ -4,28 +4,21 @@
 \alias{predict.forest_grf_fit}
 \title{Predictions based on Random Forest}
 \usage{
-\method{predict}{forest_grf_fit}(forest_grf_fit, x, y, xnew = NULL, weights = FALSE)
+\method{predict}{forest_grf_fit}(forest_grf_fit, xnew = NULL, ...)
 }
 \arguments{
-\item{forest_grf_fit}{Output of \code{\link{forest_grf_fit}}}
+\item{xnew}{Covariate matrix of test sample.
+If not provided, prediction is done for the training sample.}
 
-\item{x}{Covariate matrix of training sample}
+\item{...}{Ignore unused arguments}
 
-\item{y}{Vector of outcomes of training sample}
-
-\item{xnew}{Covariate matrix of test sample}
-
-\item{weights}{If TRUE, weights underlying the prediction for xnew calculated}
+\item{plasso_fit}{Output of \code{\link{forest_grf_fit}}}
 }
 \value{
-Returns list containing:
-\item{prediction}{vector of predictions for xnew}
-\item{weights}{If \code{weights = TRUE} prediction weights of dimension \code{nrow(xnew)} x \code{nrow(x)}
-containing the weights that deliver predictions where each row gives the weight that each training
-outcome received in the prediction for xnew.}
+Vector of fitted values.
 }
 \description{
-Prediction based on Random Forest and provides prediction weights if
-required.
+Prediction of fitted values (for a potentially new set of covaraites xnew)
+from a Random Forest.
 }
 \keyword{internal}
