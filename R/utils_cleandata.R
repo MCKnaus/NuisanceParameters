@@ -22,13 +22,13 @@ design_matrix = function(data, int = NULL, int_d = 2, poly = NULL, poly_d = 2, l
 
   # interactions
   if (!is.null(int)) {
-    int = paste0("+(", paste0(int, collapse="+") ,")^", toString(int_d))
+    int = paste0(" + (", paste0(int, collapse = " + "), ")^", toString(int_d))
   }
 
   # polynomials
   if (!is.null(poly)) {
-    poly = paste0("+poly(", paste0(poly, collapse = paste0(",", toString(poly_d), ",raw=TRUE)+poly(")), ",", toString(poly_d), ",raw=TRUE)",
-                   "-(", paste0(paste0(poly, collapse = "+")),")")
+    poly = paste0(" + poly(", paste0(poly, collapse = paste0(",", toString(poly_d), ", raw = TRUE) + poly(")), ",", toString(poly_d), ", raw = TRUE)",
+                   "- (", paste0(paste0(poly, collapse = " + ")),")")
   }
 
   # logs
@@ -39,11 +39,11 @@ design_matrix = function(data, int = NULL, int_d = 2, poly = NULL, poly_d = 2, l
       cat("\n Following variables not modified to be logged because of non-positive values:", paste(colnames(data[, log])[ind_neg]), "\n")
       log = log[!ind_neg]
     }
-    log = paste0("+log(", paste0(log, collapse = ")+log("), ")")
+    log = paste0(" + log(", paste0(log, collapse = ") + log("), ")")
   }
 
   # combine the three parts
-  fmla = stats::as.formula(paste("~0", int, poly, log))
+  fmla = stats::as.formula(paste(" ~ 0", int, poly, log))
 
   # generate matrix
   data = stats::model.matrix(fmla, data = as.data.frame(data))
