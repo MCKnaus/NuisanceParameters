@@ -4,14 +4,14 @@
 \alias{plasso_fit}
 \title{Fits Post-Lasso regression}
 \usage{
-plasso_fit(x, y, args = list())
+plasso_fit(x, y, arguments = list())
 }
 \arguments{
 \item{x}{Matrix of covariates (number of observations times number of covariates matrix)}
 
 \item{y}{vector of outcomes}
 
-\item{args}{List of arguments passed to \code{\link[plasso]{cv.plasso}}}
+\item{arguments}{List of arguments passed to \code{\link[plasso]{cv.plasso}}}
 }
 \value{
 An object with S3 class \code{\link[plasso]{cv.plasso}}

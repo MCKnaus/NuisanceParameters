@@ -25,4 +25,3 @@ Core function of \code{\link{ensemble}} used for fitting (i.e. training) the
 inputted (machine learning) methods for the ensemble model for one given set
 of covariates and targets.
 }
-\keyword{internal}

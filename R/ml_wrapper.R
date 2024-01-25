@@ -88,8 +88,6 @@ weights.mean_fit = function(mean_fit, xnew, ...) {
 #'
 #' @return Returns OLS coefficients
 #'
-#' @importFrom stats lm.fit
-#'
 #' @keywords internal
 #'
 ols_fit = function(x, y, ...) {
@@ -168,19 +166,17 @@ weights.ols_fit = function(ols_fit, x, xnew, ...) {
 #'
 #' @param x Matrix of covariates
 #' @param y vector of outcomes
-#' @param args List of arguments passed to \code{\link[glmnet]{glmnet}}
+#' @param arguments List of arguments passed to \code{\link[glmnet]{glmnet}}
 #'
 #' @return An object with S3 class \code{\link[glmnet]{glmnet}}
 #'
-#' @importFrom glmnet cv.glmnet
-#'
 #' @keywords internal
 #'
-ridge_fit = function(x, y, args = list()) {
+ridge_fit = function(x, y, arguments = list()) {
   x_means = matrixStats::colMeans2(x)
   x_sds = matrixStats::colSds(x)
   x_std = scale(x, x_means, x_sds)
-  ridge = do.call(glmnet::cv.glmnet, c(list(x = x_std, y = y, alpha = 0, standardize = FALSE, intercept = TRUE), args))
+  ridge = do.call(glmnet::cv.glmnet, c(list(x = x_std, y = y, alpha = 0, standardize = FALSE, intercept = TRUE), arguments))
   ridge[["x_means"]] = x_means
   ridge[["x_sds"]] = x_sds
   class(ridge) = "ridge_fit"
@@ -198,8 +194,6 @@ ridge_fit = function(x, y, args = list()) {
 #' @param ... Ignore unused arguments
 #'
 #' @return Vector of predictions for xnew.
-#'
-#' @importFrom glmnet cv.glmnet
 #'
 #' @method predict ridge_fit
 #'
@@ -247,7 +241,7 @@ weights.ridge_fit = function(ridge_fit, x, y, xnew = NULL, ...) {
 
   p = ncol(x) - 1
 
-  sd_y = sqrt(var(y) * ((n - 1) / n))[1, 1]
+  sd_y = sqrt(stats::var(y) * ((n - 1) / n))[1, 1]
   lambda = (1 / sd_y) * ridge_fit$lambda.min * n
 
   # calculate hat matrix
@@ -265,16 +259,14 @@ weights.ridge_fit = function(ridge_fit, x, y, xnew = NULL, ...) {
 #'
 #' @param x Matrix of covariates (number of observations times number of covariates matrix)
 #' @param y vector of outcomes
-#' @param args List of arguments passed to \code{\link[plasso]{cv.plasso}}
-#'
-#' @importFrom plasso cv.plasso
+#' @param arguments List of arguments passed to \code{\link[plasso]{cv.plasso}}
 #'
 #' @return An object with S3 class \code{\link[plasso]{cv.plasso}}
 #'
 #' @keywords internal
 #'
-plasso_fit = function(x, y, args = list()) {
-  p = do.call(plasso::cv.plasso, c(list(x = x, y = y), args))
+plasso_fit = function(x, y, arguments = list()) {
+  p = do.call(plasso::cv.plasso, c(list(x = x, y = y), arguments))
   class(p) = "plasso_fit"
   return(p)
 }
@@ -292,8 +284,6 @@ plasso_fit = function(x, y, args = list()) {
 #' @param ... Ignore unused arguments
 #'
 #' @return Vector of fitted values.
-#'
-#' @importFrom plasso cv.plasso
 #'
 #' @method predict plasso_fit
 #'
@@ -353,16 +343,14 @@ weights.plasso_fit = function(plasso_fit, xnew = NULL, ...) {
 #'
 #' @param x Matrix of covariates
 #' @param y vector of outcomes
-#' @param args List of arguments passed to \code{\link[grf]{regression_forest}}
-#'
-#' @importFrom grf regression_forest
+#' @param arguments List of arguments passed to \code{\link[grf]{regression_forest}}
 #'
 #' @return An object with S3 class \code{\link[grf]{regression_forest}}
 #'
 #' @keywords internal
 #'
-forest_grf_fit = function(x, y, args = list()) {
-  rf = do.call(grf::regression_forest, c(list(X = x, Y = y), args))
+forest_grf_fit = function(x, y, arguments = list()) {
+  rf = do.call(grf::regression_forest, c(list(X = x, Y = y), arguments))
   class(rf) = "forest_grf_fit"
   return(rf)
 }
@@ -380,8 +368,6 @@ forest_grf_fit = function(x, y, args = list()) {
 #' @param ... Ignore unused arguments
 #'
 #' @return Vector of fitted values.
-#'
-#' @import grf
 #'
 #' @method predict forest_grf_fit
 #'
@@ -408,8 +394,6 @@ predict.forest_grf_fit = function(forest_grf_fit, xnew = NULL, ...) {
 #'
 #' @return Matrix of smoother weights.
 #'
-#' @import grf
-#'
 #' @method weights forest_grf_fit
 #'
 #' @keywords internal
@@ -421,6 +405,7 @@ weights.forest_grf_fit = function(forest_grf_fit, xnew, ...) {
   } else {
     w = grf::get_forest_weights(forest_grf_fit, newdata = xnew)
   }
+  w = as.matrix(w)
 
   return(w)
 }
@@ -434,16 +419,14 @@ weights.forest_grf_fit = function(forest_grf_fit, xnew, ...) {
 #'
 #' @param x Matrix of covariates (number of observations times number of covariates matrix)
 #' @param y vector of outcomes
-#' @param args List of arguments passed to \code{\link[glmnet]{cv.glmnet}}
+#' @param arguments List of arguments passed to \code{\link[glmnet]{cv.glmnet}}
 #'
 #' @return An object with S3 class \code{\link[glmnet]{cv.glmnet}}
 #'
-#' @importFrom glmnet cv.glmnet
-#'
 #' @keywords internal
 #'
-lasso_fit = function(x, y, args = list()) {
-  lasso = do.call(glmnet::cv.glmnet, c(list(x = x, y = y), args))
+lasso_fit = function(x, y, arguments = list()) {
+  lasso = do.call(glmnet::cv.glmnet, c(list(x = x, y = y), arguments))
   class(lasso) = "lasso_fit"
   return(lasso)
 }
@@ -460,8 +443,6 @@ lasso_fit = function(x, y, args = list()) {
 #' @param ... Ignore unused arguments
 #'
 #' @return Vector of fitted values.
-#'
-#' @importFrom glmnet cv.glmnet
 #'
 #' @method predict lasso_fit
 #'
@@ -485,49 +466,16 @@ predict.lasso_fit = function(lasso_fit, xnew = NULL, ...) {
 #' is initialized but not fitted as the fitting process comes naturally with
 #' the prediction part.
 #'
-#' @param args List of arguments passed to \code{\link[FastKNN]{k.nearest.neighbors}}
+#' @param arguments arguments of arguments passed to \code{\link[FastKNN]{k.nearest.neighbors}}
 #' @param ... Ignore unused arguments
 #'
-#' @return A list of possible arguments for \code{\link[FastKNN]{k.nearest.neighbors}}
-#'
+#' @return A list of possible arguments for \code{\link[FastKNN]{k.nearest.neighbors}}.
 #'
 #' @keywords internal
 #'
-knn_fit = function(args = list(), ...) {
-  class(args) = "knn_fit"
-  return(args)
-}
-
-
-#' Prediction of fitted values based on the k-Nearest-Neighbor algorithm
-#'
-#' @description
-#' Predictions by k-Nearest-Neighbor algorithm.
-#' Note that if no \code{k} is explicitly specified, this evaluates to
-#' \code{k = 10} as default value.
-#'
-#' @param args Output of \code{\link{knn_fit}}
-#' @param x Covariate matrix of training sample
-#' @param y Vector of outcomes of training sample
-#' @param xnew Covariate matrix of test sample
-#' @param ... Ignore unused arguments
-#'
-#' @return Vector of fitted values.
-#'
-#' @importFrom FastKNN Distance_for_KNN_test k.nearest.neighbors
-#'
-#' @method predict knn_fit
-#'
-#' @keywords internal
-#'
-predict.knn_fit = function(args, x, y, xnew = NULL, ...) {
-
-  # get smoother weights
-  w = weights(args, x = x, xnew = xnew)
-  # multiply with training outcome vector
-  fit = as.vector(w %*% y)
-
-  return(fit)
+knn_fit = function(arguments = list(), ...) {
+  class(arguments) = "knn_fit"
+  return(arguments)
 }
 
 
@@ -538,26 +486,24 @@ predict.knn_fit = function(args, x, y, xnew = NULL, ...) {
 #' This comes quite naturally here as the weight will be \code{1 / k} for all
 #' 'neighbors' and 0 for all 'non-neighbors' (for a given test set observation).
 #'
-#' @param args Output of \code{\link{knn_fit}}
+#' @param arguments Output of \code{\link{knn_fit}}
 #' @param x Covariate matrix of training sample
 #' @param xnew Covariate matrix of test sample
 #' @param ... Ignore unused arguments
 #'
 #' @return Matrix of smoother weights.
 #'
-#' @importFrom FastKNN Distance_for_KNN_test k.nearest.neighbors
-#'
 #' @method weights knn_fit
 #'
 #' @keywords internal
 #'
-weights.knn_fit = function(args, x, xnew = NULL, ...) {
+weights.knn_fit = function(arguments, x, xnew = NULL, ...) {
 
   if (is.null(xnew)) xnew = x
-  if (is.null(args$k)) {
+  if (is.null(arguments$k)) {
     k = 10
-  } else if ( all.equal(args$k, as.integer(args$k))) {
-    k = args$k
+  } else if ( all.equal(arguments$k, as.integer(arguments$k))) {
+    k = arguments$k
   } else {
     k = 10
   }
@@ -577,3 +523,34 @@ weights.knn_fit = function(args, x, xnew = NULL, ...) {
 
   return(w)
 }
+
+
+#' Prediction of fitted values based on the k-Nearest-Neighbor algorithm
+#'
+#' @description
+#' Predictions by k-Nearest-Neighbor algorithm.
+#' Note that if no \code{k} is explicitly specified, this evaluates to
+#' \code{k = 10} as default value.
+#'
+#' @param arguments Output of \code{\link{knn_fit}}
+#' @param x Covariate matrix of training sample
+#' @param y Vector of outcomes of training sample
+#' @param xnew Covariate matrix of test sample
+#' @param ... Ignore unused arguments
+#'
+#' @return Vector of fitted values.
+#'
+#' @method predict knn_fit
+#'
+#' @keywords internal
+#'
+predict.knn_fit = function(arguments, x, y, xnew = NULL, ...) {
+
+  # get smoother weights
+  w = weights.knn_fit(arguments, x = x, xnew = xnew)
+  # multiply with training outcome vector
+  fit = as.vector(w %*% y)
+
+  return(fit)
+}
+

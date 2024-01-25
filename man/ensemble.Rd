@@ -21,14 +21,14 @@ ensemble model}
 console}
 }
 \value{
-Ensemble object containing:
-\item{ml_fit}{ensemble_core object fitted on whole training sample}
-\item{nnls_weights}{the weights that each method receives in the ensemble}
-\item{mse_cv}{cross-validated MSEs for each method}
-\item{fit_cv}{matrix containing the cross-validated predictions for each method}
-\item{ml}{list of raw methods built via \code{\link{create_method}}}
-
- @export
+List object containing:
+\item{fit_cv}{matrix of dimension \code{nrow(x)} x \code{length(ml)} containing
+the cross-fitted predictions of the machine learning methods from the ensemble}
+\item{nnls_weights}{the weights that each machine learning method receives in
+the ensemble}
+\item{mse_cv}{cross-validated MSEs for each machine learning  method}
+\item{ml}{list of fitted machine learning models from all cross-fitting folds
+(if storeModels is not set to "No")}
 }
 \description{
 \code{\link{ensemble}} trains an ensemble learner on the given training data.

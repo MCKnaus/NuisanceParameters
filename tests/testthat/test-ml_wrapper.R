@@ -59,7 +59,7 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   expect_equal(p, p_s, tolerance = 1e-9)
 
   # knn
-  m = knn_fit(args = list("k" = 5))
+  m = knn_fit(arguments = list("k" = 5))
   p = predict(m, x = X, y = y, xnew = Xnew)
   w = weights(m, x = X, xnew = Xnew)
   p_s = as.vector(w %*% y)
@@ -95,7 +95,7 @@ test_that("knn mickey mouse check", {
     nrow = 2, byrow = TRUE
   ) / k
 
-  m = knn_fit(args = list("k" = k))
+  m = knn_fit(arguments = list("k" = k))
   w = weights(m, x = X, xnew = Xnew)
 
   expect_identical(w_exp, w)
@@ -123,7 +123,7 @@ test_that("knn weight matrix plausibility check", {
   y = X %*% pi + rnorm(n, 0, 1)
 
   k = 9
-  m = knn_fit(args = list("k" = k))
+  m = knn_fit(arguments = list("k" = k))
   p = predict(m, x = X, y = y, xnew = Xnew)
   expect_true(all(p >= min(y) & p <= max(y)))
 
@@ -134,7 +134,7 @@ test_that("knn weight matrix plausibility check", {
 })
 
 
-test_that("equality of plasso and ols prediction solution for clear cut dgp", {
+test_that("(rough) equality of plasso and ols prediction solution for clear cut dgp", {
 
   library(mvtnorm)
 

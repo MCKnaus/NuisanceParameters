@@ -12,14 +12,16 @@
 #' @param quiet If FALSE, method that is currently computed is printed into the
 #' console
 #'
-#' @return Ensemble object containing:
-#' \item{ml_fit}{ensemble_core object fitted on whole training sample}
-#' \item{nnls_weights}{the weights that each method receives in the ensemble}
-#' \item{mse_cv}{cross-validated MSEs for each method}
-#' \item{fit_cv}{matrix containing the cross-validated predictions for each method}
-#' \item{ml}{list of raw methods built via \code{\link{create_method}}}
+#' @return List object containing:
+#' \item{fit_cv}{matrix of dimension \code{nrow(x)} x \code{length(ml)} containing
+#' the cross-fitted predictions of the machine learning methods from the ensemble}
+#' \item{nnls_weights}{the weights that each machine learning method receives in
+#' the ensemble}
+#' \item{mse_cv}{cross-validated MSEs for each machine learning  method}
+#' \item{ml}{list of fitted machine learning models from all cross-fitting folds
+#' (if storeModels is not set to "No")}
 #'
-#'  @export
+#' @export
 #'
 ensemble = function(ml,
                     x, y,
@@ -32,25 +34,23 @@ ensemble = function(ml,
   for (i in 1:length(ml)) {
     if (!is.null(ml[[i]]$name)) colnames(fit_cv)[i] = ml[[i]]$name
   }
-
-  # establish cross-validation folds
-  cvf = prep_cf_mat(length(y), nfolds)
-
+  cf_mat = prep_cf_mat(length(y), nfolds)
 
 
   ### multiple ml methods specified - cross-validation of ensemble weights ###
 
   if (length(ml) > 1) {
     # loop over different folds for cross-validation of weights
-    for (i in 1:nfolds) {
+    for (i in 1:ncol(cf_mat)) {
 
-      fold = cvf[, i]
+      fold = cf_mat[, i]
       x_tr = x[!fold, ]
       y_tr = y[!fold]
       x_te = x[fold, ]
 
-      ml_fit = ensemble_core(ml, x_tr, y_tr, quiet = quiet)
-      fit_cv[fold,] = predict(ml_fit, ml, x_tr, y_tr, x_te, weights = FALSE, quiet = quiet)$predictions
+      ml_fit = ensemble_core(ml, x_tr, y_tr, quiet = TRUE)
+      fit_cv[fold, ] = predict.ensemble_core(ml_fit, ml, x_tr, y_tr, x_te, quiet = TRUE)
+
     }
 
     # replace potential missing values
@@ -77,14 +77,11 @@ ensemble = function(ml,
     nnls_w = mse_cv = fit_cv = NULL
   }
 
-
-
   output = list(
-    "ml_fit" = ml_fit_full,
+    "fit_cv" = fit_cv,
     "nnls_weights" = nnls_w,
     "mse_cv" = mse_cv,
-    "fit_cv" = fit_cv,
-    "ml"= ml
+    "ml_fit"= ml_fit_full
   )
 
   class(output) = "ensemble"
@@ -94,76 +91,92 @@ ensemble = function(ml,
 }
 
 
-#' Ensemble learner prediction
+#' Prediction of fitted values by cross-validated ensemble learner
 #'
 #' @description
-#' \code{\link{ensemble}} implements an ensemble learner including the
-#' possibility to extract the smoother matrix of linear smoothers.
+#' \code{\link{predict.ensemble}} makes prediction of fitted values for a cross-
+#' validated ensemble learner.
 #'
 #' @param object Trained ensemble object from \code{\link{ensemble}}
+#' @param ml List of raw methods built via \code{\link{create_method}}
 #' @param x Covariate matrix of training sample
 #' @param y Vector of outcomes of training sample
 #' @param xnew Covariate matrix of test sample
-#' @param weights If TRUE, the weights underlying the ensemble prediction for
-#' xnew are calculated
 #' @param quiet If FALSE, method that is currently computed is printed into the
-#' console
+#' console.
+#' @param ... Ignore unused arguments
 #'
-#' @return Predictions on the basis of ensemble object containing:
-#' \item{p_ensemble}{the predictions of the trained ensemble for the test sample}
-#' \item{p_best}{the predictions of the best performing single method for the test sample}
-#' \item{p_all}{matrix containing predictions of all considered methods}
-#' \item{w}{If \code{weights = TRUE}, smoother matrix of dimension
-#' \code{nrow(xnew)} x \code{nrow(x)} containing the weights that deliver
-#' ensemble predictions where each row gives the weight that each training
-#' outcome received in the prediction}
+#' @return Vector containing ensemble predictions.
 #'
-#'  @export
+#' @export
 #'
-#'  @method predict ensemble_core
+#' @method predict ensemble
 #'
 predict.ensemble = function(object,
+                            ml,
                             x, y, xnew,
-                            weights = FALSE,
-                            quiet = TRUE) {
+                            quiet = TRUE,
+                            ...) {
 
   if (length(object$ml) > 1) {
 
-    p_full = predict(object$ml_fit, object$ml, x, y, xnew, weights = weights, quiet = quiet)
-
-    p_best = p_full$predictions[, which.min(object$mse_cv)]
-    p_ensemble = p_full$predictions %*% object$nnls_weights
-
-    w = NULL
-    if (isTRUE(weights)) {
-      w = matrix(0, nrow(xnew), nrow(x))
-      for (i in 1:length(object$ml)) {
-        w = w + object$nnls_weights[i] * p_full$weights[[i]]
-      }
-      w = Matrix::Matrix(w, sparse = TRUE)
-    }
-
-    colnames(p_full$predictions) = names(object$mse_cv)
+    pred = predict.ensemble_core(object = object$ml_fit, ml = ml, x_tr = x, y_tr = y, x_te = xnew, quiet = quiet)
+    np = as.vector(pred %*% object$nnls_weights)
 
   } else if (length(object$ml) == 1) {
 
-    p_full = predict(object$ml_fit, object$ml, x, y, xnew, weights = weights, quiet = quiet)
-    p_ensemble = p_best = p_full$predictions
-    w = NULL
-    if (isTRUE(weights)) w = p_full$weights[[1]]
+    pred = predict.ensemble_core(object = object$ml_fit, ml = ml, x_tr = x, y_tr = y, x_te = xnew, quiet = quiet)
+    np = as.vector(pred)
 
   }
 
-  output = list(
-    "p_ensemble" = p_ensemble,
-    "p_best" = p_best,
-    "p_all" = p_full$predictions,
-    "w" = w
-  )
-
-  return(output)
+  return(np)
 }
 
+
+#' Smoother weights from cross-validated ensemble learner
+#'
+#' @description
+#' \code{\link{weights.ensemble}} extract ensemble smoother weights for some
+#' (new) covariate matrix based on a fitted and cross-validated ensemble model from
+#' \code{\link{ensemble}}.
+#'
+#' @param object Trained ensemble object from \code{\link{ensemble}}
+#' @param ml List of raw methods built via \code{\link{create_method}}
+#' @param x Covariate matrix of training sample
+#' @param y Vector of outcomes of training sample
+#' @param xnew Covariate matrix of test sample
+#' @param quiet If FALSE, method that is currently computed is printed into the
+#' console
+#' @param ... Ignore unused arguments
+#'
+#' @return Matrix of dimension \code{nrow(xnew)} x \code{nrow(x)} containing
+#' ensemble smoother weights.
+#'
+#' @export
+#'
+#' @method weights ensemble
+#'
+weights.ensemble = function(object,
+                            ml,
+                            x, y, xnew,
+                            quiet = TRUE,
+                            ...) {
+
+  if (length(object$ml) > 1) {
+
+    w_array = weights.ensemble_core(object = object$ml_fit, ml = ml, x_tr = x, y_tr = y, x_te = xnew, quiet)
+    smoother_weights = apply(w_array, c(1, 2), function(x) sum(x * object$nnls_weights))
+
+  } else if (length(object$ml) == 1) {
+
+    w_array = weights.ensemble_core(object = object$ml_fit, ml = ml, x_tr = x, y_tr = y, x_te = xnew, quiet)
+    smoother_weights = array(w_array[, , 1], dim = dim(w_array)[-3])
+
+  }
+
+  return(smoother_weights)
+}
 
 
 #' Ensemble core fitting
@@ -182,7 +195,7 @@ predict.ensemble = function(object,
 #'
 #' @return Returns list object containing the trained models of the ensemble.
 #'
-#' @keywords internal
+#' @export
 #'
 ensemble_core = function(ml,
                          x_tr, y_tr,
@@ -196,11 +209,12 @@ ensemble_core = function(ml,
     if (isFALSE(quiet)) print(paste0("Fitting: ", ml[[i]]$method))
     wrapper = paste0(ml[[i]]$method, "_fit")
 
-    # check whether subset of variables specified and/or additional arguments are defined and run method
-    if (is.null(ml[[i]]$x_select) & length(ml[[i]]$args) == 0)          fit = do.call(wrapper, list(x = x_tr, y = y_tr))
-    else if (is.null(ml[[i]]$x_select) & !(length(ml[[i]]$args) == 0))  fit = do.call(wrapper, list(x = x_tr, y = y_tr, args = ml[[i]]$args))
-    else if (!is.null(ml[[i]]$x_select) & length(ml[[i]]$args) == 0)    fit = do.call(wrapper, list(x = x_tr[, ml[[i]]$x_select], y = y_tr))
-    else                                                                fit = do.call(wrapper, list(x = x_tr[, ml[[i]]$x_select], y = y_tr, args = ml[[i]]$args))
+    # check whether subset of variables specified and run method accordingly
+    if (is.null(ml[[i]]$x_select)) {
+      fit = do.call(wrapper, list(x = x_tr, y = y_tr, arguments = ml[[i]]$arguments))
+    } else {
+      fit = do.call(wrapper, list(x = x_tr[, ml[[i]]$x_select], y = y_tr, arguments = ml[[i]]$arguments))
+    }
 
     # add models to list object
     ml_fit[[wrapper]] = fit
@@ -213,55 +227,104 @@ ensemble_core = function(ml,
 }
 
 
-#' Ensemble core prediction
+#' Prediction of fitted values for ensemble
 #'
 #' @description
 #' Predicts fitted values for some (new) covariate matrix based on the fully
 #' trained models of the ensemble model from \code{\link{ensemble_core}}.
 #'
-#' @param ml_fit List of fitted methods (from \code{\link{ensemble_core}}
+#' @param object List of fitted methods (from \code{\link{ensemble_core}}
 #' @param ml List of raw methods built via \code{\link{create_method}}
 #' @param x_tr Covariate matrix of training sample
 #' @param y_tr Vector of outcomes of training sample
 #' @param x_te Covariate matrix of test sample
-#' @param weights If TRUE, the weights underlying the ensemble prediction for x_te
-#' are calculated
 #' @param quiet If FALSE, method that is currently computed is printed into the
 #' console
+#' @param ... Ignore unused arguments
 #'
-#' @return Returns list containing:
-#' \item{predictions}{\code{nrow(x_te)} x \code{length(ml)} matrix with the predictions of each method}
-#' \item{weights}{If \code{weights = TRUE}, list of length(ml) with smoother matrices of dimension \code{nrow(xnew)} x \code{nrow(x)}
-#' containing the weights that deliver predictions of each method where each row gives the weight that each training
-#' outcome received in the prediction}
+#' @return Returns matrix of dimension \code{nrow(x_te)} x \code{length(ml)}
+#' that contains the predictions of fitted values for each method in the ensemble.
+#'
+#' @export
 #'
 #' @method predict ensemble_core
 #'
-#' @keywords internal
-#'
-predict.ensemble_core = function(ml_fit, ml,
+predict.ensemble_core = function(object, ml,
                                  x_tr, y_tr, x_te,
-                                 weights = FALSE, quiet = TRUE) {
+                                 quiet = TRUE,
+                                 ...) {
 
-  # initialize objects to be filled
-  fit_mat = matrix(NA, nrow(x_te), length(ml_fit))
-  weights_list = vector("list", length(ml_fit))
+  # initialize matrix to be filled
+  fit_mat = matrix(NA, nrow(x_te), length(object))
 
   # loop over all trained models
-  for (i in 1:length(ml_fit)) {
+  for (i in 1:length(object)) {
     if (isFALSE(quiet)) print(paste0("Prediction: ", ml[[i]]$method))
 
     # extract predictions
-    if (is.null(ml[[i]]$x_select))  temp = do.call(paste0("predict.", names(ml_fit)[i]), list(ml_fit[[i]], x = x_tr, y = y_tr, xnew = x_te, weights = weights))
-    else                            temp = do.call(paste0("predict.", names(ml_fit)[i]), list(ml_fit[[i]], x = x_tr[, ml[[i]]$x_select], y = y_tr, xnew = x_te[, ml[[i]]$x_select], weights = weights))
-
-    fit_mat[,i] = temp$prediction
-    weights_list[[i]] = temp$weights
+    if (is.null(ml[[i]]$x_select)) {
+      temp = do.call(paste0("predict.", names(object)[i]), list(object[[i]], x = x_tr, y = y_tr, xnew = x_te))
+    } else {
+      temp = do.call(paste0("predict.", names(object)[i]), list(object[[i]], x = x_tr[, ml[[i]]$x_select], y = y_tr, xnew = x_te[, ml[[i]]$x_select]))
+    }
+    fit_mat[,i] = temp
   }
 
-  output = list("predictions" = fit_mat, "weights" = weights_list)
+  return(fit_mat)
 
-  return(output)
+}
+
+
+#' Ensemble smoother weights
+#'
+#' @description
+#' Extract smoother weights for some (new) covariate matrix based on the fully
+#' trained models of the ensemble model from \code{\link{ensemble_core}}.
+#'
+#' @param object List of fitted methods (from \code{\link{ensemble_core}}
+#' @param ml List of raw methods built via \code{\link{create_method}}
+#' @param x_tr Covariate matrix of training sample
+#' @param y_tr Vector of outcomes of training sample
+#' @param x_te Covariate matrix of test sample
+#' @param quiet If FALSE, method that is currently computed is printed into the
+#' console
+#' @param ... Ignore unused arguments
+#'
+#' @return Returns a three-dimensional array of dimension
+#' \code{nrow(xnew)} x \code{nrow(x)} x \code{length(ml)}
+#' containing the smoother weights that deliver predictions of each method
+#' where each row gives the weight that each training outcome received in the
+#' prediction of the respective test set observation.
+#'
+#' @export
+#'
+#' @method weights ensemble_core
+#'
+weights.ensemble_core = function(object, ml,
+                                 x_tr, y_tr, x_te,
+                                 quiet = TRUE,
+                                 ...) {
+
+  # initialize 3D array to be filled
+  w_array = array(data = 0, dim = c(nrow(x_te), nrow(x_tr), length(object)))
+
+  # loop over all trained models
+  for (i in 1:length(object)) {
+
+    if (isFALSE(quiet)) print(paste0("Smoother weights: ", ml[[i]]$method))
+
+    # extract smoother weights
+    if (is.null(ml[[i]]$x_select)) {
+      temp = do.call(paste0("weights.", names(object)[i]), list(object[[i]], x = x_tr, y = y_tr, xnew = x_te))
+    } else {
+      temp = do.call(paste0("weights.", names(object)[i]), list(object[[i]], x = x_tr[, ml[[i]]$x_select], y = y_tr, xnew = x_te[, ml[[i]]$x_select]))
+    }
+
+    w_array[, , i] = temp
+
+  }
+
+  return(w_array)
 
 }
 
@@ -277,7 +340,7 @@ predict.ensemble_core = function(ml_fit, ml,
 #' columns of the covariate matrix indicating which variables should be used by
 #' this method. E.g. tree-based methods usually should not be provided with the
 #' interactions that Lasso is using.
-#' @param args Optional list containing the additional arguments that should be
+#' @param arguments Optional list containing the additional arguments that should be
 #' passed to the underlying method.
 #' @param name Optional string naming the method.
 #'
@@ -290,21 +353,21 @@ predict.ensemble_core = function(ml_fit, ml,
 #' ml = list(
 #'  "ols" = create_method("ols"),
 #'  "forest_grf" = create_method("forest_grf"),
-#'  "knn" = create_method("knn", args = list("k" = 3))
+#'  "knn" = create_method("knn", arguments = list("k" = 3))
 #' )
 #'
 create_method = function(
     method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn"),
     x_select = NULL,
-    args = list(),
+    arguments = list(),
     name = NULL) {
 
   # check if method is valid
   method = match.arg(method)
   # check if other inputs are valid
-  if (!(is.null(args) | is.list(args))) stop("Provide either NULL or list for args.")
+  if (!(is.null(arguments) | is.list(arguments))) stop("Provide either NULL or list for arguments.")
   if (!(is.null(x_select) | is.logical(x_select))) stop("Provide either NULL or logical for x_select.")
   if (!((is.character(name) & length(name) == 1) | is.null(name))) stop("Provide single string to name method.")
 
-  list(method = method, args = args, x_select = x_select, name = name)
+  list(method = method, arguments = arguments, x_select = x_select, name = name)
 }

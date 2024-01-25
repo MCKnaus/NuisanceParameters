@@ -4,14 +4,14 @@
 \alias{ridge_fit}
 \title{Fits Ridge regression}
 \usage{
-ridge_fit(x, y, args = list())
+ridge_fit(x, y, arguments = list())
 }
 \arguments{
 \item{x}{Matrix of covariates}
 
 \item{y}{vector of outcomes}
 
-\item{args}{List of arguments passed to \code{\link[glmnet]{glmnet}}}
+\item{arguments}{List of arguments passed to \code{\link[glmnet]{glmnet}}}
 }
 \value{
 An object with S3 class \code{\link[glmnet]{glmnet}}

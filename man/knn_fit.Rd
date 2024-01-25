@@ -4,15 +4,15 @@
 \alias{knn_fit}
 \title{Pseudo fitting of k-Nearest-Neighbour to training data}
 \usage{
-knn_fit(args = list(), ...)
+knn_fit(arguments = list(), ...)
 }
 \arguments{
-\item{args}{List of arguments passed to \code{\link[FastKNN]{k.nearest.neighbors}}}
+\item{arguments}{arguments of arguments passed to \code{\link[FastKNN]{k.nearest.neighbors}}}
 
 \item{...}{Ignore unused arguments}
 }
 \value{
-A list of possible arguments for \code{\link[FastKNN]{k.nearest.neighbors}}
+A list of possible arguments for \code{\link[FastKNN]{k.nearest.neighbors}}.
 }
 \description{
 \code{\link{knn_fit}} is a pseudo fitting function where only the kNN object

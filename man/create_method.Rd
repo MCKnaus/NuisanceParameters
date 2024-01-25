@@ -7,7 +7,7 @@
 create_method(
   method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn"),
   x_select = NULL,
-  args = list(),
+  arguments = list(),
   name = NULL
 )
 }
@@ -20,7 +20,7 @@ columns of the covariate matrix indicating which variables should be used by
 this method. E.g. tree-based methods usually should not be provided with the
 interactions that Lasso is using.}
 
-\item{args}{Optional list containing the additional arguments that should be
+\item{arguments}{Optional list containing the additional arguments that should be
 passed to the underlying method.}
 
 \item{name}{Optional string naming the method.}
@@ -36,7 +36,7 @@ Creates the methods to be used in the subsequent \code{\link{ensemble}} model.
 ml = list(
  "ols" = create_method("ols"),
  "forest_grf" = create_method("forest_grf"),
- "knn" = create_method("knn", args = list("k" = 3))
+ "knn" = create_method("knn", arguments = list("k" = 3))
 )
 
 }

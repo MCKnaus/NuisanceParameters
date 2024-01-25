@@ -165,69 +165,12 @@ nuisance_cf = function(ml, y, x, cf_mat,
 
     message("Short-stacking is used.")
 
-    fit_cv = matrix(NA, nrow(x), length(ml))
-    colnames(fit_cv) = sprintf("Method%s", seq(1:length(ml)))
-
-    w = NULL
-    if (isTRUE(weights)) w_list = list()
-
-    for (i in 1:ncol(cf_mat)) {
-
-      if (isFALSE(quiet)) print(paste("Cross-fitting fold:", toString(i)))
-      fold = cf_mat[, i]
-      x_tr = x[!fold & subset, ]
-      y_tr = y[!fold & subset]
-      x_te = x[fold, ]
-
-      ens = ensemble_core(ml, x_tr, y_tr, quiet = quiet)
-      ens_p = predict(ens, ml, x_tr, y_tr, x_te, weights = weights, quiet = quiet)
-      fit_cv[fold, ] = ens_p$predictions
-      if (isTRUE(weights)) w_list[[i]] = ens_p[["weights"]]
-
-    }
-
-    fit_cv[is.na(fit_cv)] = mean(y)
-    mse_cv = colMeans((c(y) - fit_cv)^2)
-    best = fit_cv[, which.min(mse_cv)]
-
-    nnls_w = nnls_weights(X = fit_cv, y = y)
-
-    np = fit_cv %*% nnls_w
-
-    if (isTRUE(weights)) {
-      w = matrix(0, nrow(x), nrow(x))
-      # iterate through folds
-      for (i in 1:ncol(cf_mat)) {
-        # iterate through ml methods
-        fold = cf_mat[, i]
-        for (j in 1:length(ml)) {
-          w[fold, !fold] = w[fold, !fold] + nnls_w[j] * as.matrix(w_list[[i]][[j]])
-        }
-
-      }
-      w = Matrix::Matrix(w, sparse = TRUE)
-    }
-
-    names(mse_cv) = names(nnls_w) = colnames(fit_cv)
-
-    output = list(
-      "ensemble" = np,
-      "best" = best,
-      "fit_full" = NULL,
-      "weights" = w,
-      "nnls_weights" = nnls_w,
-      "mse_cv" = mse_cv,
-      "fit_cv" = fit_cv
-    )
-    class(output) = "ensemble"
-
-    if (!is.null(path)) {
-      save(output, file = paste0(path, ".RData"))
-    }
+    ens = ensemble_short(ml = ml, x = x, y = y, cf_mat = cf_mat, quiet = quiet)
+    np = predict(ens)
 
 
 
-    ### Standard-Stacking ###
+  ### Standard-Stacking ###
 
   } else if (cv > 1) {
 
@@ -241,14 +184,10 @@ nuisance_cf = function(ml, y, x, cf_mat,
       y_tr = y[!fold & subset]
       x_te = x[fold, ]
 
-      ens = do.call(ensemble, c(list(ml = ml, x = x_tr, y = y_tr, xnew = x_te, nfolds = cv, weights = weights, quiet = quiet)))
-      np[fold] = ens$ensemble
+      ens = ensemble(ml = ml, x = x_tr, y = y_tr, nfolds = cv, quiet = quiet)
+      ens_p = predict(ens, x_tr, y_tr, xnew = x_te, quiet = quiet)
 
-      if (!is.null(path)) {
-        save(ens, file = paste0(path, "_fold" ,toString(i), ".RData"))
-      }
-
-      rm(ens); invisible(gc());
+      np[fold] = ens_p$p_ensemble
 
     }
 

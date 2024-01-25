@@ -4,14 +4,14 @@
 \alias{forest_grf_fit}
 \title{Fits Random Forest}
 \usage{
-forest_grf_fit(x, y, args = list())
+forest_grf_fit(x, y, arguments = list())
 }
 \arguments{
 \item{x}{Matrix of covariates}
 
 \item{y}{vector of outcomes}
 
-\item{args}{List of arguments passed to \code{\link[grf]{regression_forest}}}
+\item{arguments}{List of arguments passed to \code{\link[grf]{regression_forest}}}
 }
 \value{
 An object with S3 class \code{\link[grf]{regression_forest}}
