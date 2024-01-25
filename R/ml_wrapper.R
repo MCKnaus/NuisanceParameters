@@ -359,10 +359,10 @@ forest_grf_fit = function(x, y, arguments = list()) {
 #' Predictions based on Random Forest
 #'
 #' @description
-#' Prediction of fitted values (for a potentially new set of covaraites xnew)
+#' Prediction of fitted values (for a potentially new set of covariates xnew)
 #' from a Random Forest.
 #'
-#' @param plasso_fit Output of \code{\link{forest_grf_fit}}
+#' @param forest_grf_fit Output of \code{\link{forest_grf_fit}}
 #' @param xnew Covariate matrix of test sample.
 #' If not provided, prediction is done for the training sample.
 #' @param ... Ignore unused arguments
@@ -374,6 +374,8 @@ forest_grf_fit = function(x, y, arguments = list()) {
 #' @keywords internal
 #'
 predict.forest_grf_fit = function(forest_grf_fit, xnew = NULL, ...) {
+
+  if(is.null(xnew)) xnew = forest_grf_fit$X.orig
 
   class(forest_grf_fit) = "regression_forest"
   fit = predict(forest_grf_fit, newdata = xnew)$prediction
@@ -387,7 +389,7 @@ predict.forest_grf_fit = function(forest_grf_fit, xnew = NULL, ...) {
 #' @description
 #' Extract smoother weights for test sample from a Random Forest model.
 #'
-#' @param ridge_fit Output of \code{\link{forest_grf_fit}}
+#' @param forest_grf_fit Output of \code{\link{forest_grf_fit}}
 #' @param xnew Covariate matrix of test sample.
 #' If not provided, prediction is done for the training sample.
 #' @param ... Ignore unused arguments
@@ -398,7 +400,9 @@ predict.forest_grf_fit = function(forest_grf_fit, xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-weights.forest_grf_fit = function(forest_grf_fit, xnew, ...) {
+weights.forest_grf_fit = function(forest_grf_fit, xnew = NULL, ...) {
+
+  if(is.null(xnew)) xnew = forest_grf_fit$X.orig
 
   if (utils::packageVersion("grf") < "2.0.0") {
     w = grf::get_sample_weights(forest_grf_fit, newdata = xnew)
@@ -554,3 +558,80 @@ predict.knn_fit = function(arguments, x, y, xnew = NULL, ...) {
   return(fit)
 }
 
+
+#' Fits Distributional Random Forest
+#'
+#' @description
+#' \code{\link{forest_drf_fit}} fits a distributional random forest using the
+#' \code{\link{drf}} package.
+#'
+#' @param x Matrix of covariates
+#' @param y vector of outcomes
+#' @param arguments List of arguments passed to \code{\link[drf]{drf}}
+#'
+#' @return An object with S3 class \code{\link[drf]{drf}}
+#'
+#' @keywords internal
+#'
+forest_drf_fit = function(x, y, arguments = list()) {
+  rf = do.call(drf::drf, c(list(X = x, Y = y, splitting.rule = "FourierMMD"), arguments))
+  class(rf) = "forest_drf_fit"
+  return(rf)
+}
+
+
+#' Predictions based on Distributional Random Forest
+#'
+#' @description
+#' Prediction of fitted values (for a new set of covariates)
+#' from a Random Forest.
+#'
+#' @param forest_drf_fit Output of \code{\link{forest_drf_fit}}
+#' @param xnew Covariate matrix of test sample.
+#' If not provided, prediction is done for the training sample.
+#' @param ... Ignore unused arguments
+#'
+#' @return Vector of fitted values.
+#'
+#' @method predict forest_drf_fit
+#'
+#' @keywords internal
+#'
+predict.forest_drf_fit = function(forest_drf_fit, xnew = NULL, functional = "mean", ...) {
+
+  if(is.null(xnew)) xnew = forest_drf_fit$X.orig
+
+  class(forest_drf_fit) = "drf"
+  pred = predict(forest_drf_fit, newdata = xnew, functional = functional)
+  fit = as.vector(pred[[functional]])
+
+  return(fit)
+}
+
+
+#' Smoother weights from Distributional Random Forest model
+#'
+#' @description
+#' Extract smoother (or adaptive nearest neighbor) weights for test sample from
+#' Distributional Random Forest model.
+#'
+#' @param ridge_fit Output of \code{\link{forest_drf_fit}}
+#' @param xnew Covariate matrix of test sample.
+#' If not provided, prediction is done for the training sample.
+#' @param ... Ignore unused arguments
+#'
+#' @return Matrix of smoother weights.
+#'
+#' @method weights forest_drf_fit
+#'
+#' @keywords internal
+#'
+weights.forest_drf_fit = function(forest_drf_fit, xnew = NULL, ...) {
+
+  if(is.null(xnew)) xnew = forest_drf_fit$X.orig
+
+  class(forest_drf_fit) = "drf"
+  w = as.matrix(predict(forest_drf_fit, newdata = xnew)$weights)
+
+  return(w)
+}

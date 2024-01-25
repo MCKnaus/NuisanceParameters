@@ -334,7 +334,7 @@ weights.ensemble_core = function(object, ml,
 #' @description
 #' Creates the methods to be used in the subsequent \code{\link{ensemble}} model.
 #'
-#' @param method Choose method from \code{c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn")}.
+#' @param method Choose method from \code{c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf")}.
 #' To be continued.
 #' @param x_select Optional logical vector of length equal to the number of
 #' columns of the covariate matrix indicating which variables should be used by
@@ -357,7 +357,7 @@ weights.ensemble_core = function(object, ml,
 #' )
 #'
 create_method = function(
-    method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn"),
+    method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf"),
     x_select = NULL,
     arguments = list(),
     name = NULL) {

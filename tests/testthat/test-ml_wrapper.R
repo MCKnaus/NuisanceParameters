@@ -67,6 +67,15 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   expect_true(all(w >= 0 & w <= 1))
   expect_equal(p, p_s, tolerance = 1e-9)
 
+  # distributional random forest
+  m = forest_drf_fit(x = X, y = y)
+  p = predict(m, xnew = Xnew)
+  w = weights(m, xnew = Xnew)
+  p_s = as.vector(w %*% y)
+  expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
+  expect_true(all(w >= 0 & w <= 1))
+  expect_equal(p, p_s, tolerance = 1e-9)
+
 })
 
 

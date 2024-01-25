@@ -4,15 +4,15 @@
 \alias{weights.forest_grf_fit}
 \title{Smoother weights from Random Forest model}
 \usage{
-\method{weights}{forest_grf_fit}(forest_grf_fit, xnew, ...)
+\method{weights}{forest_grf_fit}(forest_grf_fit, xnew = NULL, ...)
 }
 \arguments{
+\item{forest_grf_fit}{Output of \code{\link{forest_grf_fit}}}
+
 \item{xnew}{Covariate matrix of test sample.
 If not provided, prediction is done for the training sample.}
 
 \item{...}{Ignore unused arguments}
-
-\item{ridge_fit}{Output of \code{\link{forest_grf_fit}}}
 }
 \value{
 Matrix of smoother weights.
