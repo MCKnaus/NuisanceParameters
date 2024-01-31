@@ -10,6 +10,7 @@ ensemble_short(
   y,
   cf_mat,
   storeModels = c("No", "Memory", "Disk"),
+  path = NULL,
   quiet = TRUE
 )
 }
@@ -28,7 +29,10 @@ ensemble model.}
 If smoother weights should be computed in a second step (using the weights method),
 the models need to be stored somewhere (either in memory or on disk).
 Value has to be an item from \code{c("No", "Memory", "Disk")} with "No" being
-the default.}
+the default value.}
+
+\item{path}{Optional path to save the list containing the ensemble models
+from each cross-fitting fold to. Only considered, if \code{storeModels = "Disk"}.}
 
 \item{quiet}{If FALSE, method that is currently computed is printed into the
 console.}

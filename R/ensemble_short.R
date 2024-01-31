@@ -14,7 +14,9 @@
 #' If smoother weights should be computed in a second step (using the weights method),
 #' the models need to be stored somewhere (either in memory or on disk).
 #' Value has to be an item from \code{c("No", "Memory", "Disk")} with "No" being
-#' the default.
+#' the default value.
+#' @param path Optional path to save the list containing the ensemble models
+#' from each cross-fitting fold to. Only considered, if \code{storeModels = "Disk"}.
 #' @param quiet If FALSE, method that is currently computed is printed into the
 #' console.
 #'
@@ -33,6 +35,7 @@ ensemble_short = function(ml,
                           x, y,
                           cf_mat,
                           storeModels = c("No", "Memory", "Disk"),
+                          path = NULL,
                           quiet = TRUE) {
 
   # storage configuration
@@ -51,6 +54,8 @@ ensemble_short = function(ml,
 
   for (i in 1:ncol(cf_mat)) {
 
+    if (isFALSE(quiet)) print(paste("Cross-fitting fold: ", toString(i)))
+
     fold = cf_mat[, i]
     x_tr = x[!fold, ]
     y_tr = y[!fold]
@@ -61,6 +66,13 @@ ensemble_short = function(ml,
 
     if(saveModels) s[[i]] = ml_fit
 
+  }
+
+  if(storeModels == "Disk") {
+    if(is.null(path)) path = getwd()
+    file_name = paste0(path, "/ensemble_short_", format(Sys.time(), "%Y%m%d%H%M%S"), ".rds")
+    saveRDS(s, file_name)
+    s = file_name
   }
 
   fit_cv[is.na(fit_cv)] = mean(y)
@@ -136,6 +148,14 @@ weights.ensemble_short = function(object,
                                   quiet = TRUE,
                                   ...) {
 
+  if(is.null(object$ml)) {
+    stop("Ensemble models were not saved after training.")
+  } else if (is.character(object$ml) & length(object$ml) == 1) {
+    ml_fit = readRDS(object$ml)
+  } else {
+    ml_fit = object$ml
+  }
+
   smoother_weights = matrix(0, nrow = nrow(x), ncol = nrow(x))
 
   for (i in 1:ncol(cf_mat)) {
@@ -145,10 +165,11 @@ weights.ensemble_short = function(object,
     y_tr = y[!fold]
     x_te = x[fold, ]
 
-    w_array = weights.ensemble_core(object = object$ml[[i]], ml = ml, x_tr = x_tr, y_tr = y_tr, x_te = x_te, quiet)
-    smoother_weights[fold, !fold] = apply(w_array, c(1, 2), function(x) sum(x * object$nnls_weights))
+    w_array = weights.ensemble_core(object = ml_fit[[i]], ml = ml, x_tr = x_tr, y_tr = y_tr, x_te = x_te, quiet)
+    smoother_weights[fold, !fold] = agg_array(w_array, object$nnls_weights)
 
   }
 
   return(smoother_weights)
+
 }

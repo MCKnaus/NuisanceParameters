@@ -128,11 +128,11 @@ nuisance_m = function(ml, y, w_mat, x, cf_mat,
 #' is computationally less demanding than standard stacking.
 #' @param subset Optional logical vector if only subset of data should be used for prediction
 #' @param weights If TRUE, prediction weights of the outcome nuisance extracted and saved (requires to provide a path)
-#' @param path Optional path to save the \code{\link{ensemble}} of each fold for later processing.
-#' Saved as path + "_foldi" where i is the fold number.
+#' @param path Optional path to save the smoother weights of the ensemble model to.
+#' Only considered, if \code{weights = TRUE}.
 #' @param quiet If FALSE, method that is currently running is printed into console.
 #'
-#' @return Returns a n x 1 matrix of nuisance parameters.
+#' @return Returns a vector of length n containing nuisance parameters.
 #'
 #' @keywords internal
 #'
@@ -165,10 +165,16 @@ nuisance_cf = function(ml, y, x, cf_mat,
 
     message("Short-stacking is used.")
 
-    ens = ensemble_short(ml = ml, x = x, y = y, cf_mat = cf_mat, quiet = quiet)
+    if(isTRUE(weights)) storeModels = "Memory" else storeModels = "No"
+
+    ens = ensemble_short(ml = ml, x = x, y = y, cf_mat = cf_mat, storeModels = storeModels, path = path, quiet = quiet)
     np = predict(ens)
 
-
+    if(isTRUE(weights)) {
+      w = weights(ens, ml = ml, x = x, y = y, cf_mat = cf_mat)
+      if(is.null(path)) path = paste0(getwd(), "/weights.rds")
+      saveRDS(w, path); rm(w);
+    }
 
   ### Standard-Stacking ###
 
@@ -176,19 +182,30 @@ nuisance_cf = function(ml, y, x, cf_mat,
 
     message("Standard-stacking is used.")
 
+    if(isTRUE(weights)) w = matrix(0, nrow = nrow(x), ncol = nrow(x))
+
     for (i in 1:ncol(cf_mat)) {
 
-      if (isFALSE(quiet)) print(paste("Cross-fitting fold:", toString(i)))
+      if (isFALSE(quiet)) print(paste("Cross-fitting fold: ", toString(i)))
+
       fold = cf_mat[, i]
       x_tr = x[!fold & subset, ]
       y_tr = y[!fold & subset]
       x_te = x[fold, ]
 
       ens = ensemble(ml = ml, x = x_tr, y = y_tr, nfolds = cv, quiet = quiet)
-      ens_p = predict(ens, x_tr, y_tr, xnew = x_te, quiet = quiet)
+      np[fold] = predict(ens, ml, x = x_tr, y = y_tr, xnew = x_te, quiet = quiet)
 
-      np[fold] = ens_p$p_ensemble
+      if(isTRUE(weights)) {
+        w_array = weights(ens, ml, x = x_tr, y = y_tr, xnew = x_te, quiet = quiet)
+        w[fold, !fold] = apply(w_array, c(1, 2), function(x) sum(x * ens$nnls_weights))
+      }
 
+    }
+
+    if(isTRUE(weights)) {
+      if(is.null(path)) path = paste0(getwd(), "/weights.rds")
+      saveRDS(w, path); rm(w);
     }
 
   }

@@ -15,10 +15,4 @@ Matrix with intercept.
 \description{
 \code{\link{add_intercept}} adds an intercept to a matrix.
 }
-\examples{
-X = matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2, dimnames = list(1:3, c("a", "b")))
-X
-X_with_intercept = add_intercept(X)
-X_with_intercept
-
-}
+\keyword{internal}

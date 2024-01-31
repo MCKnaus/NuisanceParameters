@@ -209,13 +209,7 @@ nnls_weights = function(X, y) {
 #'
 #' @return Matrix with intercept.
 #'
-#' @export
-#'
-#' @examples
-#' X = matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2, dimnames = list(1:3, c("a", "b")))
-#' X
-#' X_with_intercept = add_intercept(X)
-#' X_with_intercept
+#' @keywords internal
 #'
 add_intercept = function(mat) {
   if (is.null(dim(mat))) {
@@ -227,4 +221,23 @@ add_intercept = function(mat) {
     mat = cbind(rep(1, nrow(mat)), mat)
     return(mat)
   }
+}
+
+
+#' Aggregate 3D array
+#'
+#' @description
+#' This function computes the weighted sum along the third dimension of a
+#' three dimensional array.
+#'
+#' @param a A 3D array
+#' @param w A numeric vector.
+#' The length of w should match the third dimension of a.
+#'
+#' @return A matrix of the same dimension as the first two dimensions of a.
+#'
+#' @keywords internal
+#'
+agg_array = function(a, w) {
+  return(apply(a, c(1, 2), function(x) sum(x * w)))
 }

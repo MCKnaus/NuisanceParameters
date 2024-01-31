@@ -166,7 +166,7 @@ weights.ensemble = function(object,
   if (length(object$ml) > 1) {
 
     w_array = weights.ensemble_core(object = object$ml_fit, ml = ml, x_tr = x, y_tr = y, x_te = xnew, quiet)
-    smoother_weights = apply(w_array, c(1, 2), function(x) sum(x * object$nnls_weights))
+    smoother_weights = agg_array(w_array, object$nnls_weights)
 
   } else if (length(object$ml) == 1) {
 

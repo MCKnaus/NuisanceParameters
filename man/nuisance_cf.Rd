@@ -35,13 +35,13 @@ is computationally less demanding than standard stacking.}
 
 \item{weights}{If TRUE, prediction weights of the outcome nuisance extracted and saved (requires to provide a path)}
 
-\item{path}{Optional path to save the \code{\link{ensemble}} of each fold for later processing.
-Saved as path + "_foldi" where i is the fold number.}
+\item{path}{Optional path to save the smoother weights of the ensemble model to.
+Only considered, if \code{weights = TRUE}.}
 
 \item{quiet}{If FALSE, method that is currently running is printed into console.}
 }
 \value{
-Returns a n x 1 matrix of nuisance parameters.
+Returns a vector of length n containing nuisance parameters.
 }
 \description{
 \code{\link{nuisance_cf}} makes a cross-fitted ensemble prediction using
