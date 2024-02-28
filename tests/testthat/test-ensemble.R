@@ -12,7 +12,7 @@ test_that("check predictions and smoother weights of ensemble function", {
 
   X = mvtnorm::rmvnorm(n = n, mean = rep(0, p), sigma = cov_mat)
   Xnew = mvtnorm::rmvnorm(n = n_test, mean = rep(0, p), sigma = cov_mat)
-  y = X %*% pi + rnorm(n, 0, 1)
+  y = as.vector(X %*% pi + rnorm(n, 0, 1))
 
   ml = list("ols" = create_method("ols"),
             "forest_grf" = create_method("forest_grf"),

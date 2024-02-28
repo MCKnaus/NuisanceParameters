@@ -4,10 +4,13 @@
 \alias{predict.ensemble_short}
 \title{Prediction of fitted values for short-stacked ensemble learner}
 \usage{
-\method{predict}{ensemble_short}(object, ...)
+\method{predict}{ensemble_short}(object, w = NULL, ...)
 }
 \arguments{
-\item{object}{Short-stacked ensemble learner from \code{\link{ensemble_short}}.}
+\item{object}{Short-stacked ensemble learner from \code{\link{ensemble_short}}}
+
+\item{w}{Ensemble weights to aggregate predictions from different learners (optional).
+Needs to be a vector of length \code{ncol(object$fit_cv)}.}
 
 \item{...}{Ignore unused arguments}
 }

@@ -9,6 +9,8 @@
 #' @param y Vector of outcomes of training sample
 #' @param nfolds Number of folds used in cross-validation of ensemble weights
 #' (default \code{nfolds = 5})
+#' @param subset Logical vector indicating which observations to use for determining
+#' ensemble weights. If not provided, all observations are used.
 #' @param quiet If FALSE, method that is currently computed is printed into the
 #' console
 #'
@@ -17,7 +19,6 @@
 #' the cross-fitted predictions of the machine learning methods from the ensemble}
 #' \item{nnls_weights}{the weights that each machine learning method receives in
 #' the ensemble}
-#' \item{mse_cv}{cross-validated MSEs for each machine learning  method}
 #' \item{ml}{list of fitted machine learning models from all cross-fitting folds
 #' (if storeModels is not set to "No")}
 #'
@@ -25,16 +26,18 @@
 #'
 ensemble = function(ml,
                     x, y,
+                    subset = NULL,
                     nfolds = 5,
                     quiet = TRUE) {
 
   # matrix to store the cross-validated predictions
-  fit_cv = matrix(NA, nrow(x), length(ml))
-  colnames(fit_cv) = sprintf("Method%s", seq(1:length(ml)))
-  for (i in 1:length(ml)) {
-    if (!is.null(ml[[i]]$name)) colnames(fit_cv)[i] = ml[[i]]$name
-  }
+  fit_cv = make_fit_cv(ml = ml, n = nrow(x),  learner = "t")
+
+  # cross-validation matrix
   cf_mat = prep_cf_mat(length(y), nfolds)
+
+  # check if subset vector is provided
+  if(is.null(subset)) subset = rep(TRUE, nrow(x))
 
 
   ### multiple ml methods specified - cross-validation of ensemble weights ###
@@ -53,19 +56,11 @@ ensemble = function(ml,
 
     }
 
-    # replace potential missing values
-    fit_cv[is.na(fit_cv)] = mean(y)
-    # get MSEs by ml method
-    mse_cv = colMeans((c(y) - fit_cv)^2)
-
     # estimate ensemble weights
-    nnls_w = nnls_weights(X = fit_cv, y = y)
+    nnls_w = nnls_weights(X = fit_cv[subset, ], y = y[subset])
 
     # run all methods on the full sample
     ml_fit_full = ensemble_core(ml, x, y, quiet = quiet)
-
-    # assign names
-    names(mse_cv) = names(nnls_w) = colnames(fit_cv)
   }
 
 
@@ -74,13 +69,12 @@ ensemble = function(ml,
 
   else if (length(ml) == 1) {
     ml_fit_full = ensemble_core(ml, x, y, quiet = quiet)
-    nnls_w = mse_cv = fit_cv = NULL
+    nnls_w = fit_cv = NULL
   }
 
   output = list(
     "fit_cv" = fit_cv,
     "nnls_weights" = nnls_w,
-    "mse_cv" = mse_cv,
     "ml_fit"= ml_fit_full
   )
 

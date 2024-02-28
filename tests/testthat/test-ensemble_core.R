@@ -12,7 +12,7 @@ test_that("check prediction and weights method of ensemble_core", {
 
   x_tr = mvtnorm::rmvnorm(n = n, mean = rep(0, p), sigma = cov_mat)
   x_te = mvtnorm::rmvnorm(n = n_test, mean = rep(0, p), sigma = cov_mat)
-  y_tr = x_tr %*% pi + rnorm(n, 0, 1)
+  y_tr = as.vector(x_tr %*% pi + rnorm(n, 0, 1))
 
   # first ensemble
   ml_a = list("ols" = create_method("ols"),

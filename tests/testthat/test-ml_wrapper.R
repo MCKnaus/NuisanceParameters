@@ -12,7 +12,7 @@ test_that("smoother weights lead to correct prediction of fitted values", {
 
   X = mvtnorm::rmvnorm(n = n, mean = rep(0, p), sigma = cov_mat)
   Xnew = mvtnorm::rmvnorm(n = n_test, mean = rep(0, p), sigma = cov_mat)
-  y = X %*% pi + rnorm(n, 0, 1)
+  y = as.vector(X %*% pi + rnorm(n, 0, 1))
 
   w_rows = rep(1, n_test)
 

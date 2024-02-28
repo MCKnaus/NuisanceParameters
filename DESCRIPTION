@@ -17,6 +17,7 @@ Suggests:
 Imports:
     utils,
     stats,
+    abind,
     glmnet,
     grf,
     Matrix,

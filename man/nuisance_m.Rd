@@ -10,6 +10,7 @@ nuisance_m(
   w_mat,
   x,
   cf_mat,
+  learner = c("t", "s", "both"),
   cv = 5,
   weights = FALSE,
   path = NULL,
@@ -21,25 +22,28 @@ nuisance_m(
 propensity score.
 Methods can be created by \code{\link{create_method}}.}
 
-\item{y}{Numerical vector containing the outcome variable}
+\item{y}{Numerical vector containing the outcome variable.}
 
 \item{w_mat}{Logical matrix of treatment indicators (n x T+1). For example
 created by \code{\link{prep_w_mat}}.}
 
-\item{x}{Covariate matrix}
+\item{x}{Covariate matrix.}
 
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
 (for example created by \code{\link{prep_cf_mat}})}
 
-\item{cv}{Number of cross-validation when estimating ensemble (default 5)}
+\item{learner}{Vector of characters indicating whether to use S or T learner
+or a combination of the two.}
+
+\item{cv}{Number of cross-validation when estimating ensemble (default 5).}
 
 \item{weights}{If TRUE, prediction weights of the outcome nuisance extracted
-and saved (requires to provide a path)}
+and saved (requires to provide a path).}
 
 \item{path}{Optional path to save the \code{\link{ensemble}} objects for later processing.
 Saved as Ensemble_Yi where i is the number of the treatment in multiple treatment settings.}
 
-\item{quiet}{If FALSE, method that is currently running is printed into console}
+\item{quiet}{If FALSE, method that is currently running is printed into console.}
 }
 \value{
 Returns n x T+1 matrix with each column containing the predicted outcome for the treatment corresponding to w_mat.

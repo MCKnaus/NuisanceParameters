@@ -7,13 +7,13 @@
 #' @param ml List of methods to be used in \code{\link{ensemble}} estimation of propensity score.
 #' Methods can be created by \code{\link{create_method}}.
 #' @param w_mat Logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.
-#' @param x Covariate matrix
+#' @param x Covariate matrix.
 #' @param cf_mat Logical matrix with k columns of indicators representing the different folds
-#' (for example created by \code{\link{prep_cf_mat}})
+#' (for example created by \code{\link{prep_cf_mat}}).
 #' @param cv Number of cross-validation when estimating ensemble (default 5)
 #' @param path Optional path to save the \code{\link{ensemble}} objects for later inspection.
 #' Saved as Ensemble_Wi where i is the number of the treatment in multiple treatment settings.
-#' @param quiet If FALSE, method that is currently running is printed into console
+#' @param quiet If FALSE, method that is currently running is printed into console.
 #'
 #' @return Returns n x T+1 matrix with each column containing the propensity score for the treatment corresponding to w_mat.
 #'
@@ -24,7 +24,13 @@ nuisance_e = function(ml,
                       cv = 5,
                       path = NULL,
                       quiet = TRUE) {
-  if (isFALSE(quiet)) print("Propensity score")
+
+  if (isFALSE(quiet)) message("Propensity score")
+  if (isFALSE(quiet)) which_stacking(cv)
+
+  # define path if not provided
+  if (is.null(path)) path = getwd()
+
 
   # initialize nuisance matrix
   e_mat = matrix(NA, nrow(w_mat), ncol(w_mat))
@@ -35,9 +41,9 @@ nuisance_e = function(ml,
   ### binary treatment case ###
 
   if (ncol(w_mat) == 2) {
-    if (!is.null(path)) path_tem = paste0(path, "Ensemble_W")
-    else path_tem = NULL
-    e_mat[, 1] = nuisance_cf(ml, w_mat[, 1], x, cf_mat, cv = cv, path = path_tem, quiet = quiet)
+    path_temp = paste0(path, "/Ensemble_W")
+    e_mat[, 1] = nuisance_cf(ml = ml, y = w_mat[, 1], x = x, cf_mat = cf_mat, cv = cv, path = path_temp, quiet = quiet,
+                             learner = "t", subset = NULL, weights = FALSE)
     e_mat[, 2] = 1 - e_mat[, 1]
   }
 
@@ -46,13 +52,14 @@ nuisance_e = function(ml,
   ### multiple treatment case ###
 
   else if (ncol(w_mat) > 2) {
+    path_temp = paste0(path, "/Ensemble_W", 1:ncol(w_mat))
     for (i in 1:ncol(w_mat)) {
-      if (!is.null(path)) path_tem = paste0(path, "Ensemble_W", toString(i))
-      else path_tem = NULL
-      e_mat[, i] = nuisance_cf(ml, w_mat[, i], x, cf_mat, cv = cv, path = path_tem, quiet = quiet)
+      e_mat[, i] = nuisance_cf(ml = ml, y = w_mat[, i], x = x, cf_mat = cf_mat, cv = cv, path = path_temp[i], quiet = quiet,
+                               learner = "t", subset = NULL, weights = FALSE)
     }
     e_mat = e_mat / rowSums(e_mat)
   }
+
   else {
     stop("Provide treatment indicator matrix with at least 2 columns")
   }
@@ -71,40 +78,52 @@ nuisance_e = function(ml,
 #' @param ml List of methods to be used in \code{\link{ensemble}} estimation of
 #' propensity score.
 #' Methods can be created by \code{\link{create_method}}.
-#' @param y Numerical vector containing the outcome variable
+#' @param y Numerical vector containing the outcome variable.
 #' @param w_mat Logical matrix of treatment indicators (n x T+1). For example
 #' created by \code{\link{prep_w_mat}}.
-#' @param x Covariate matrix
+#' @param x Covariate matrix.
 #' @param cf_mat Logical matrix with k columns of indicators representing the different folds
 #' (for example created by \code{\link{prep_cf_mat}})
-#' @param cv Number of cross-validation when estimating ensemble (default 5)
+#' @param learner Vector of characters indicating whether to use S or T learner
+#' or a combination of the two.
+#' @param cv Number of cross-validation when estimating ensemble (default 5).
 #' @param weights If TRUE, prediction weights of the outcome nuisance extracted
-#' and saved (requires to provide a path)
+#' and saved (requires to provide a path).
 #' @param path Optional path to save the \code{\link{ensemble}} objects for later processing.
 #' Saved as Ensemble_Yi where i is the number of the treatment in multiple treatment settings.
-#' @param quiet If FALSE, method that is currently running is printed into console
+#' @param quiet If FALSE, method that is currently running is printed into console.
 #'
 #' @return Returns n x T+1 matrix with each column containing the predicted outcome for the treatment corresponding to w_mat.
 #'
 #' @export
 #'
 nuisance_m = function(ml, y, w_mat, x, cf_mat,
+                      learner = c("t", "s", "both"),
                       cv = 5,
                       weights = FALSE,
                       path = NULL,
                       quiet = TRUE) {
 
-  if (isFALSE(quiet)) print("Outcome regression")
+  if (isFALSE(quiet)) message("Outcome regression")
+  if (isFALSE(quiet)) which_stacking(cv)
+
+  # define path if not provided
+  if (is.null(path)) path = getwd()
+  path_temp = paste0(path, "/Ensemble_Y", 1:ncol(w_mat))
+
+  # learner configuration
+  learner = match.arg(learner)
 
   # initialize nuisance matrix
   m_mat = matrix(NA, nrow(w_mat), ncol(w_mat))
   colnames(m_mat) = colnames(w_mat)
 
-  ## calculate outcome predictions
+  # calculate outcome predictions
   for (i in 1:ncol(w_mat)) {
-    if (!is.null(path)) path_tem = paste0(path, "Ensemble_Y", toString(i))
-    else path_tem = NULL
-    m_mat[,i] = nuisance_cf(ml, y, x, cf_mat, cv = cv, subset = (w_mat[, i]), weights = weights, path = path_tem, quiet = quiet)
+
+    m_mat[,i] = nuisance_cf(ml = ml, y = y, x = x, cf_mat = cf_mat, learner = learner, cv = cv,
+                            subset = (w_mat[, i]), weights = weights, path = path_temp[i], quiet = quiet)
+
   }
 
   return(m_mat)
@@ -119,17 +138,19 @@ nuisance_m = function(ml, y, w_mat, x, cf_mat,
 #'
 #' @param ml List of methods to be used in \code{\link{ensemble}} estimation.
 #' Methods can be created by \code{\link{create_method}}.
-#' @param y Vector of variable to be predicted
-#' @param x Matrix of covariates
+#' @param y Vector of variable to be predicted.
+#' @param x Matrix of covariates.
 #' @param cf_mat Logical matrix with k columns of indicators representing the different folds
-#' (for example created by \code{\link{prep_cf_mat}})
+#' (for example created by \code{\link{prep_cf_mat}}).
+#' @param learner Vector of characters indicating whether to use S or T learner
+#' or a combination of the two.
 #' @param cv Number of cross-validation folds when estimating ensemble model.
 #' Default value is 1 which then evaluates to a short-stacking procedure which
 #' is computationally less demanding than standard stacking.
-#' @param subset Optional logical vector if only subset of data should be used for prediction
-#' @param weights If TRUE, prediction weights of the outcome nuisance extracted and saved (requires to provide a path)
-#' @param path Optional path to save the smoother weights of the ensemble model to.
-#' Only considered, if \code{weights = TRUE}.
+#' @param subset Optional logical vector if only subset of data should be used for prediction.
+#' @param weights If TRUE, prediction weights of the outcome nuisance extracted and saved.
+#' @param path Path to save fit_cv matrix and non-negative least square weights to.
+#' Optionally, weights as well.
 #' @param quiet If FALSE, method that is currently running is printed into console.
 #'
 #' @return Returns a vector of length n containing nuisance parameters.
@@ -137,11 +158,18 @@ nuisance_m = function(ml, y, w_mat, x, cf_mat,
 #' @keywords internal
 #'
 nuisance_cf = function(ml, y, x, cf_mat,
+                       learner = c("t", "s", "both"),
                        cv = 5,
                        subset = NULL,
                        weights = FALSE,
-                       path = NULL,
+                       path,
                        quiet = TRUE) {
+
+
+  ### Parameter Configuration ###
+
+  learner = match.arg(learner)
+
 
 
   ### Checks ###
@@ -163,26 +191,26 @@ nuisance_cf = function(ml, y, x, cf_mat,
 
   if (cv == 1) {
 
-    message("Short-stacking is used.")
-
     if(isTRUE(weights)) storeModels = "Memory" else storeModels = "No"
 
-    ens = ensemble_short(ml = ml, x = x, y = y, cf_mat = cf_mat, storeModels = storeModels, path = path, quiet = quiet)
-    np = predict(ens)
+    ens = ensemble_short(ml = ml, x = x, y = y, subset = subset, cf_mat = cf_mat, learner = learner, storeModels = storeModels, path = path, quiet = quiet)
+    nnls_w = nnls_weights(ens$fit_cv[subset, ], y[subset])
+    np = predict(ens, w = nnls_w)
+
+    saveRDS(list("fit_cv" = ens$fit_cv, "nnls_w" = nnls_w), paste0(path, ".rds"))
 
     if(isTRUE(weights)) {
-      w = weights(ens, ml = ml, x = x, y = y, cf_mat = cf_mat)
-      if(is.null(path)) path = paste0(getwd(), "/weights.rds")
-      saveRDS(w, path); rm(w);
+      w = weights(ens, ml = ml, x = x, y = y, cf_mat = cf_mat, w = nnls_w)
+      saveRDS(w, paste0(path, "_Weights.rds")); rm(w);
     }
 
   ### Standard-Stacking ###
 
   } else if (cv > 1) {
 
-    message("Standard-stacking is used.")
-
     if(isTRUE(weights)) w = matrix(0, nrow = nrow(x), ncol = nrow(x))
+
+    fit_sub = list()
 
     for (i in 1:ncol(cf_mat)) {
 
@@ -192,9 +220,12 @@ nuisance_cf = function(ml, y, x, cf_mat,
       x_tr = x[!fold & subset, ]
       y_tr = y[!fold & subset]
       x_te = x[fold, ]
+      subset_tr = subset[!fold]
 
-      ens = ensemble(ml = ml, x = x_tr, y = y_tr, nfolds = cv, quiet = quiet)
+      ens = ensemble(ml = ml, x = x_tr, y = y_tr, subset = subset_tr, nfolds = cv, quiet = quiet)
       np[fold] = predict(ens, ml, x = x_tr, y = y_tr, xnew = x_te, quiet = quiet)
+
+      fit_sub[[i]] = list("fit_cv" = ens$fit_cv, "nnls_w" = ens$nnls_weights)
 
       if(isTRUE(weights)) {
         w_array = weights(ens, ml, x = x_tr, y = y_tr, xnew = x_te, quiet = quiet)
@@ -203,9 +234,10 @@ nuisance_cf = function(ml, y, x, cf_mat,
 
     }
 
+    saveRDS(fit_sub, paste0(path, ".rds")); rm(fit_sub)
+
     if(isTRUE(weights)) {
-      if(is.null(path)) path = paste0(getwd(), "/weights.rds")
-      saveRDS(w, path); rm(w);
+      saveRDS(w, paste0(path, "_Weights.rds")); rm(w);
     }
 
   }

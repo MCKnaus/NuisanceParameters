@@ -9,7 +9,7 @@ ridge_fit(x, y, arguments = list())
 \arguments{
 \item{x}{Matrix of covariates}
 
-\item{y}{vector of outcomes}
+\item{y}{Vector of outcomes}
 
 \item{arguments}{List of arguments passed to \code{\link[glmnet]{glmnet}}}
 }

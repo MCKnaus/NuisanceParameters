@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{nnls_weights}
 \alias{nnls_weights}
-\title{Non-linear least weights function}
+\title{Non-negative least squares function for estimation of ensemble weights}
 \usage{
 nnls_weights(X, y)
 }
@@ -13,11 +13,12 @@ and each row represents an observation}
 \item{y}{A numeric vector of actual target values}
 }
 \value{
-A numeric vector of non-linear least weights.
+A numeric vector of the non-negative least weights.
 }
 \description{
-\code{\link{nnls_weights}} calculates the non-linear least weights on the
-basis of the non-negative least squares algorithm.
+\code{\link{nnls_weights}} estimates ensemble weights for a prediction problem
+on the basis of the non-negative least squares algorithm that puts a positive
+constraint on the regression coefficients.
 }
 \examples{
 X = matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2)

@@ -9,10 +9,11 @@ nuisance_cf(
   y,
   x,
   cf_mat,
+  learner = c("t", "s", "both"),
   cv = 5,
   subset = NULL,
   weights = FALSE,
-  path = NULL,
+  path,
   quiet = TRUE
 )
 }
@@ -20,23 +21,26 @@ nuisance_cf(
 \item{ml}{List of methods to be used in \code{\link{ensemble}} estimation.
 Methods can be created by \code{\link{create_method}}.}
 
-\item{y}{Vector of variable to be predicted}
+\item{y}{Vector of variable to be predicted.}
 
-\item{x}{Matrix of covariates}
+\item{x}{Matrix of covariates.}
 
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
-(for example created by \code{\link{prep_cf_mat}})}
+(for example created by \code{\link{prep_cf_mat}}).}
+
+\item{learner}{Vector of characters indicating whether to use S or T learner
+or a combination of the two.}
 
 \item{cv}{Number of cross-validation folds when estimating ensemble model.
 Default value is 1 which then evaluates to a short-stacking procedure which
 is computationally less demanding than standard stacking.}
 
-\item{subset}{Optional logical vector if only subset of data should be used for prediction}
+\item{subset}{Optional logical vector if only subset of data should be used for prediction.}
 
-\item{weights}{If TRUE, prediction weights of the outcome nuisance extracted and saved (requires to provide a path)}
+\item{weights}{If TRUE, prediction weights of the outcome nuisance extracted and saved.}
 
-\item{path}{Optional path to save the smoother weights of the ensemble model to.
-Only considered, if \code{weights = TRUE}.}
+\item{path}{Path to save fit_cv matrix and non-negative least square weights to.
+Optionally, weights as well.}
 
 \item{quiet}{If FALSE, method that is currently running is printed into console.}
 }

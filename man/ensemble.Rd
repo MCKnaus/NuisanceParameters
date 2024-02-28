@@ -4,7 +4,7 @@
 \alias{ensemble}
 \title{Ensemble learner training}
 \usage{
-ensemble(ml, x, y, nfolds = 5, quiet = TRUE)
+ensemble(ml, x, y, subset = NULL, nfolds = 5, quiet = TRUE)
 }
 \arguments{
 \item{ml}{List of methods built via \code{\link{create_method}} to be used in
@@ -13,6 +13,9 @@ ensemble model}
 \item{x}{Covariate matrix of training sample}
 
 \item{y}{Vector of outcomes of training sample}
+
+\item{subset}{Logical vector indicating which observations to use for determining
+ensemble weights. If not provided, all observations are used.}
 
 \item{nfolds}{Number of folds used in cross-validation of ensemble weights
 (default \code{nfolds = 5})}
@@ -26,7 +29,6 @@ List object containing:
 the cross-fitted predictions of the machine learning methods from the ensemble}
 \item{nnls_weights}{the weights that each machine learning method receives in
 the ensemble}
-\item{mse_cv}{cross-validated MSEs for each machine learning  method}
 \item{ml}{list of fitted machine learning models from all cross-fitting folds
 (if storeModels is not set to "No")}
 }

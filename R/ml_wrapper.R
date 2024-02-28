@@ -165,7 +165,7 @@ weights.ols_fit = function(ols_fit, x, xnew, ...) {
 #' the \code{\link{glmnet}} package.
 #'
 #' @param x Matrix of covariates
-#' @param y vector of outcomes
+#' @param y Vector of outcomes
 #' @param arguments List of arguments passed to \code{\link[glmnet]{glmnet}}
 #'
 #' @return An object with S3 class \code{\link[glmnet]{glmnet}}
@@ -241,7 +241,7 @@ weights.ridge_fit = function(ridge_fit, x, y, xnew = NULL, ...) {
 
   p = ncol(x) - 1
 
-  sd_y = sqrt(stats::var(y) * ((n - 1) / n))[1, 1]
+  sd_y = sqrt(stats::var(y) * ((n - 1) / n))
   lambda = (1 / sd_y) * ridge_fit$lambda.min * n
 
   # calculate hat matrix

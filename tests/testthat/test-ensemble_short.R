@@ -2,7 +2,7 @@ test_that("check predictions and smoother weights of ensemble_short function", {
 
   library(mvtnorm)
 
-  n = 1000
+  n = 200
   p = 12
   p_act = 4
 
@@ -38,7 +38,7 @@ test_that("check storage of ensemble models and smoother weights production", {
 
   n = 300
   p = 6
-  p_act = 3
+  p_act = 4
 
   pi = c(seq(1, 0.1, -(1 / p_act)) * rep(c(1, -1), p_act / 2), rep(0, p - p_act))
   cov_mat = toeplitz(0.7^(0:(p - 1)))
@@ -66,5 +66,64 @@ test_that("check storage of ensemble models and smoother weights production", {
   expect_identical(w_mat_mem, w_mat_disk)
 
   file.remove(ens_disk$ml)
+
+})
+
+
+test_that("check t, s leaner and their combination", {
+
+  library(mvtnorm)
+
+  quiet = TRUE
+  n = 2000
+  p = 7
+  p_act = 4
+
+  pi = c(seq(1, 0.1, -(1 / p_act)) * rep(c(1, -1), floor(p_act / 2)), rep(0, p - p_act))
+  cov_mat = toeplitz(0.7^(0:(p - 1)))
+
+  x = mvtnorm::rmvnorm(n = n, mean = rep(0, p), sigma = cov_mat)
+  y = x %*% pi + rnorm(n, 2, 3)
+
+  cf_mat = prep_cf_mat(n, cf = 3)
+
+  subset = sample(c(TRUE, FALSE), length(y), replace = TRUE)
+
+  ml = list("ols" = create_method("ols"),
+            "ridge" = create_method("ridge"),
+            "forest_drf" = create_method("forest_drf"))
+
+  ens_t = ensemble_short(ml, x = x, y = y, subset = subset, cf_mat = cf_mat, learner = "t", storeModels = "Memory")
+  nnls_w_t = nnls_weights(ens_t$fit_cv[subset, ], y[subset])
+  ens_s = ensemble_short(ml, x = x, y = y, subset = subset, cf_mat = cf_mat, learner = "s", storeModels = "Memory")
+  nnls_w_s = nnls_weights(ens_s$fit_cv[subset, ], y[subset])
+  ens_both = ensemble_short(ml, x = x, y = y, subset = subset, cf_mat = cf_mat, learner = "both", storeModels = "Memory")
+  nnls_w_both = nnls_weights(ens_both$fit_cv[subset, ], y[subset])
+
+  expect_identical(ncol(ens_t$fit_cv), length(ml))
+  expect_identical(ncol(ens_s$fit_cv), length(ml))
+  expect_identical(ncol(ens_both$fit_cv), as.integer(length(ml)*2))
+
+  pred_t = predict(ens_t, nnls_w_t)
+  w_mat_t = weights(ens_t, ml = ml, x = x, y = y, subset = subset, w = nnls_w_t, cf_mat = cf_mat)
+  pred_s_t = as.vector(w_mat_t %*% y)
+
+  pred_s = predict(ens_s, nnls_w_s)
+  w_mat_s = weights(ens_s, ml = ml, x = x, y = y, subset = subset, w = nnls_w_s, cf_mat = cf_mat)
+  pred_s_s = as.vector(w_mat_s %*% y)
+
+  pred_both = predict(ens_both, nnls_w_both)
+  w_mat_both = weights(ens_both, ml = ml, x = x, y = y, subset = subset, w = nnls_w_both, cf_mat = cf_mat)
+  pred_s_both = as.vector(w_mat_both %*% y)
+
+  w_rows = rep(1, n)
+
+  expect_equal(w_rows, Matrix::rowSums(w_mat_t), tolerance = 1e-5)
+  expect_equal(w_rows, Matrix::rowSums(w_mat_s), tolerance = 1e-5)
+  expect_equal(w_rows, Matrix::rowSums(w_mat_both), tolerance = 1e-5)
+
+  expect_equal(pred_t, pred_s_t, tolerance = 1e-5)
+  expect_equal(pred_s, pred_s_s, tolerance = 1e-5)
+  expect_equal(pred_both, pred_s_both, tolerance = 1e-5)
 
 })

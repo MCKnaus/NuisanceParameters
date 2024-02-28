@@ -4,7 +4,7 @@
 \alias{weights.ensemble_short}
 \title{Extraction of smoother weights for short-stacked ensemble learner}
 \usage{
-\method{weights}{ensemble_short}(object, ml, x, y, cf_mat, quiet = TRUE, ...)
+\method{weights}{ensemble_short}(object, ml, x, y, subset, w = NULL, cf_mat, quiet = TRUE, ...)
 }
 \arguments{
 \item{object}{Short-stacked ensemble learner from \code{\link{ensemble_short}}.}
@@ -15,6 +15,12 @@ input for \code{\link{ensemble_short}}.}
 \item{x}{Covariate matrix of training sample.}
 
 \item{y}{Vector of outcomes of training sample.}
+
+\item{subset}{Logical vector indicating which observations to use for determining
+ensemble weights. If not provided, all observations are used.}
+
+\item{w}{Ensemble weights to aggregate predictions from different learners (optional).
+Needs to be a vector of length \code{ncol(object$fit_cv)}.}
 
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
 (for example created by \code{\link{prep_cf_mat}}).}

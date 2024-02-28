@@ -162,17 +162,18 @@ prep_cf_mat = function(n, cf, cl = NULL, w_mat = NULL) {
 }
 
 
-#' Non-linear least weights function
+#' Non-negative least squares function for estimation of ensemble weights
 #'
 #' @description
-#' \code{\link{nnls_weights}} calculates the non-linear least weights on the
-#' basis of the non-negative least squares algorithm.
+#' \code{\link{nnls_weights}} estimates ensemble weights for a prediction problem
+#' on the basis of the non-negative least squares algorithm that puts a positive
+#' constraint on the regression coefficients.
 #'
 #' @param X A matrix where each column represents a different predictor variable
 #' and each row represents an observation
 #' @param y A numeric vector of actual target values
 #'
-#' @return A numeric vector of non-linear least weights.
+#' @return A numeric vector of the non-negative least weights.
 #'
 #' @importFrom nnls nnls
 #'
@@ -195,6 +196,9 @@ nnls_weights = function(X, y) {
 
   # normalize weights
   nnls_w = nnls_w / sum(nnls_w)
+
+  # assign names to weights
+  if(!is.null(colnames(X))) names(nnls_w) = colnames(X)
 
   return(nnls_w)
 }
@@ -240,4 +244,65 @@ add_intercept = function(mat) {
 #'
 agg_array = function(a, w) {
   return(apply(a, c(1, 2), function(x) sum(x * w)))
+}
+
+
+#' Prepare fit_cv matrix
+#'
+#' @description
+#' This function creates a matrix to store cross-fitted ensemble predictions.
+#'
+#' @param ml List of methods built via \code{\link{create_method}} to be used in
+#' ensemble model
+#' @param n Number of observations.
+#' @param learner Vector of characters indicating whether to use S or T learner
+#' or both.
+#'
+#' @return A matrix of NAs with dimensions \code{n} x \code{length(ml)}
+#'
+#' @keywords internal
+#'
+make_fit_cv = function(ml, n, learner = c("t", "s", "both")) {
+
+  learner = match.arg(learner)
+
+  fit_cv = matrix(NA, n, length(ml))
+  colnames(fit_cv) = sprintf("method%s", seq(1:length(ml)))
+  for (i in 1:length(ml)) {
+    if (!is.null(ml[[i]]$name)) colnames(fit_cv)[i] = ml[[i]]$name
+  }
+
+  if(learner == "t") {
+    colnames(fit_cv) = paste0("t-", colnames(fit_cv))
+  } else if (learner == "s") {
+    colnames(fit_cv) = paste0("s-", colnames(fit_cv))
+  } else if (learner == "both") {
+    ml_names = colnames(fit_cv)
+    fit_cv = cbind(fit_cv, fit_cv)
+    colnames(fit_cv) = c(paste0("t-", ml_names), paste0("s-", ml_names))
+  }
+
+  return(fit_cv)
+
+}
+
+
+#' Short- or Standard-stacking message
+#'
+#' @description
+#' This function prints a message into the console whether short- or standard-
+#' stacking is used.
+#'
+#' @param cv Cross-validation value for ensemble weights.
+#'
+#' @return Message in console. No object is returned.
+#'
+#' @keywords internal
+#'
+which_stacking = function(cv = 1) {
+  if (cv == 1) {
+    message("Short-stacking is used.")
+  } else if (cv > 1) {
+    message("Standard-stacking is used")
+  }
 }

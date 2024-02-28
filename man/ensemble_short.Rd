@@ -9,6 +9,8 @@ ensemble_short(
   x,
   y,
   cf_mat,
+  subset = NULL,
+  learner = c("t", "s", "both"),
   storeModels = c("No", "Memory", "Disk"),
   path = NULL,
   quiet = TRUE
@@ -24,6 +26,12 @@ ensemble model.}
 
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
 (for example created by \code{\link{prep_cf_mat}}).}
+
+\item{subset}{Logical vector indicating which observations to use for determining
+ensemble weights. If not provided, all observations are used.}
+
+\item{learner}{Vector of characters indicating whether to use S or T learner
+or a combination of the two.}
 
 \item{storeModels}{Specifies whether and where to store the models.
 If smoother weights should be computed in a second step (using the weights method),
@@ -41,9 +49,6 @@ console.}
 List object containing:
 \item{fit_cv}{matrix of dimension \code{nrow(x)} x \code{length(ml)} containing
 the cross-fitted predictions of the machine learning methods from the ensemble}
-\item{nnls_weights}{the weights that each machine learning method receives in
-the ensemble}
-\item{mse_cv}{cross-validated MSEs for each machine learning  method}
 \item{ml}{list of fitted machine learning models from all cross-fitting folds
 (if storeModels is not set to "No")}
 }
