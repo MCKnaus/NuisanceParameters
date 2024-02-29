@@ -18,12 +18,10 @@ test_that("check nuisance_cf", {
             "forest_drf" = create_method("forest_drf"),
             "mean" = create_method("mean"))
 
-  path = paste0(gsub("\\\\", "/",tempdir()), "/Ensemble_Y")
+  path = paste0(gsub("\\\\", "/", tempdir()), "/Ensemble_Y")
   path_rds = paste0(path, ".rds")
   path_weights = paste0(path, "_Weights.rds")
-
-  files = list.files(path = dirname(path), pattern = "\\.rds$", full.names = TRUE)
-  sapply(files, unlink)
+  unlink(paste0(dirname(path), "/*"))
 
 
   t = Sys.time()
@@ -32,7 +30,7 @@ test_that("check nuisance_cf", {
   t_standard = (Sys.time() - t) %>% as.numeric(units = "secs")
   expect_true(file.exists(path_rds))
   expect_false(file.exists(path_weights))
-  file.remove(path_rds)
+  unlink(paste0(dirname(path), "/*"))
 
 
   t = Sys.time()
@@ -41,7 +39,7 @@ test_that("check nuisance_cf", {
   t_short = (Sys.time() - t) %>% as.numeric(units = "secs")
   expect_true(file.exists(path_rds))
   expect_false(file.exists(path_weights))
-  file.remove(path_rds)
+  unlink(paste0(dirname(path), "/*"))
 
 
   t = Sys.time()
@@ -53,8 +51,7 @@ test_that("check nuisance_cf", {
   fold = cf_mat[, 1]
   expect_identical(as.vector(w[fold, fold]), rep(0, sum(fold)^2))
   expect_equal(np_standard_w, as.vector(w %*% y), tolerance = 1e-5)
-  files = list.files(path = dirname(path), pattern = "\\.rds$", full.names = TRUE)
-  sapply(files, unlink)
+  unlink(paste0(dirname(path), "/*"))
 
 
   t = Sys.time()
@@ -66,8 +63,7 @@ test_that("check nuisance_cf", {
   fold = cf_mat[, 1]
   expect_identical(as.vector(w[fold, fold]), rep(0, sum(fold)^2))
   expect_equal(np_short_w, as.vector(w %*% y), tolerance = 1e-5)
-  files = list.files(path = dirname(path), pattern = "\\.rds$", full.names = TRUE)
-  sapply(files, unlink)
+  unlink(paste0(dirname(path), "/*"))
 
 
   # check computational time
@@ -123,7 +119,9 @@ test_that("check nuisance_w", {
             "forest_grf" = create_method("forest_grf"),
             "ridge" = create_method("ridge"))
 
-  path = gsub("\\\\", "/",tempdir())
+  path = gsub("\\\\", "/", tempdir())
+  unlink(paste0(path, "/*"))
+
 
   ### Short-Stacking ###
   expect_message(np_e_short <- nuisance_e(ml = ml, w_mat = w_mat, x = X, cf_mat = cf_mat, cv = 1,
@@ -150,7 +148,7 @@ test_that("check nuisance_w", {
   # check if probabilities sum up to 1 for every obs
   expect_equal(rep(1, n), rowSums(np_e_short), tolerance = 1e-9)
 
-  file.remove(files)
+  unlink(paste0(path, "/*"))
 
 
   ### Standard-Stacking ###
@@ -169,7 +167,7 @@ test_that("check nuisance_w", {
   ens = readRDS(files[1])
   expect_length(ens, ncol(cf_mat))
   expect_named(ens[[1]]$nnls_w)
-  expect_equal(dim(ens[[1]]$fit_cv), c(n - sum(cf_mat[, 1]), length(ml)))
+  expect_equal(dim(ens[[1]]$fit_cv), c(sum(cf_mat[, 1]), length(ml)))
   expect_true(all(substr(colnames(ens[[1]]$fit_cv), 1, 1) == "t"))
 
   # check for correct dimension
@@ -178,7 +176,7 @@ test_that("check nuisance_w", {
   # check if probabilities sum up to 1 for every obs
   expect_equal(rep(1, n), rowSums(np_e_standard), tolerance = 1e-9)
 
-  file.remove(files)
+  unlink(paste0(path, "/*"))
 
 })
 
@@ -186,6 +184,7 @@ test_that("check nuisance_w", {
 test_that("check nuisance_m", {
 
  library(mvtnorm)
+  set.seed(79)
 
   n = 1000
   p = 8
@@ -201,14 +200,16 @@ test_that("check nuisance_m", {
   w = sample(1:w_mods, n, replace = TRUE)
   w_mat = prep_w_mat(w)
 
-  cf = 3
+  cf = 4
   cf_mat = prep_cf_mat(n, cf = cf, w_mat = w_mat)
 
   ml = list("ridge" = create_method("ridge"),
             "forest_grf" = create_method("forest_grf"),
             "mean" = create_method("mean"))
 
-  path = gsub("\\\\", "/",tempdir())
+  path = gsub("\\\\", "/", tempdir())
+
+
 
   ### Short-Stacking ###
   expect_message(np_m_short <- nuisance_m(ml = ml, y = y, w_mat = w_mat, x = x, cf_mat = cf_mat,
@@ -232,8 +233,94 @@ test_that("check nuisance_m", {
   # check for correct dimension
   expect_identical(dim(np_m_short), dim(w_mat))
 
-  file.remove(files)
+  unlink(paste0(path, "/*"))
 
+
+
+  ### Short-Stacking with Smoother Weights ###
+  expect_message(np_m_short_w <- nuisance_m(ml = ml, y = y, w_mat = w_mat, x = x, cf_mat = cf_mat,
+                                            cv = 1, learner = "both", path = path, quiet = FALSE,
+                                            weights = TRUE), "Short-stacking is used.")
+
+
+  files = paste0(path, "/Ensemble_Y", 1:w_mods, ".rds")
+  files_w = paste0(path, "/Ensemble_Y", 1:w_mods, "_Weights.rds")
+
+  # check if ensemble output is stored in files
+  expect_true(all(file.exists(files)))
+  expect_true(all(file.exists(files_w)))
+
+  # check if ensemble output contains correct info
+  ens = readRDS(files[1])
+  expect_length(ens, 2)
+  expect_named(ens$nnls_w)
+  expect_equal(dim(ens$fit_cv), c(n, length(ml)*2))
+  expect_true(all(substr(colnames(ens$fit_cv), 1, 1) %in% c("t", "s")))
+
+  # check for correct dimension
+  expect_identical(dim(np_m_short_w), dim(w_mat))
+
+  # check smoother weights
+  w = readRDS(files_w[1])
+  expect_equal(np_m_short_w[, 1], as.vector(w %*% y), tolerance = 1e-3)
+
+
+  unlink(paste0(path, "/*"))
+
+
+  ### Standard-Stacking ###
+  expect_message(np_m_standard <- nuisance_m(ml = ml, y = y, w_mat = w_mat, x = x, cf_mat = cf_mat,
+                                             cv = 3, path = path, quiet = FALSE), "Standard-stacking is used.")
+
+
+  files = paste0(path, "/Ensemble_Y", 1:w_mods, ".rds")
+  files_w = paste0(path, "/Ensemble_Y", 1:w_mods, "_Weights.rds")
+
+  # check if ensemble output is stored in files
+  expect_true(all(file.exists(files)))
+  expect_false(any(file.exists(files_w)))
+
+  # check if ensemble output contains correct info
+  ens = readRDS(files[1])
+  expect_length(ens, cf)
+  expect_named(ens[[1]]$nnls_w)
+  expect_equal(dim(ens[[1]]$fit_cv), c(sum(cf_mat[, 1]), length(ml)))
+  expect_true(all(substr(colnames(ens[[1]]$fit_cv), 1, 1) == "t"))
+
+  # check for correct dimension
+  expect_identical(dim(np_m_standard), dim(w_mat))
+
+  unlink(paste0(path, "/*"))
+
+
+  ### Standard-Stacking with Smoother Weights ###
+  expect_message(np_m_standard_w <- nuisance_m(ml = ml, y = y, w_mat = w_mat, x = x, cf_mat = cf_mat,
+                                               cv = 3, path = path, quiet = FALSE,
+                                               weights = TRUE), "Standard-stacking is used.")
+
+
+  files = paste0(path, "/Ensemble_Y", 1:w_mods, ".rds")
+  files_w = paste0(path, "/Ensemble_Y", 1:w_mods, "_Weights.rds")
+
+  # check if ensemble output is stored in files
+  expect_true(all(file.exists(files)))
+  expect_true(all(file.exists(files_w)))
+
+  # check if ensemble output contains correct info
+  ens = readRDS(files[1])
+  expect_length(ens, cf)
+  expect_named(ens[[1]]$nnls_w)
+  expect_equal(dim(ens[[1]]$fit_cv), c(sum(cf_mat[, 1]), length(ml)))
+  expect_true(all(substr(colnames(ens[[1]]$fit_cv), 1, 1) == "t"))
+
+  # check for correct dimension
+  expect_identical(dim(np_m_standard_w), dim(w_mat))
+
+  # check smoother weights
+  w = readRDS(files_w[1])
+  expect_equal(np_m_standard_w[, 1], as.vector(w %*% y), tolerance = 1e-3)
+
+  unlink(paste0(path, "/*"))
 
 })
 

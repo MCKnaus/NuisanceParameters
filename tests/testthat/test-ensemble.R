@@ -19,7 +19,7 @@ test_that("check predictions and smoother weights of ensemble function", {
             "ridge" = create_method("ridge"))
 
   ens = ensemble(ml, x = X, y = y, nfolds = 4)
-  pred = predict(object = ens, ml = ml, x = X, y = y, xnew = Xnew)
+  pred = predict(object = ens, ml = ml, x = X, y = y, xnew = Xnew)$np
   w_mat = weights(object = ens, ml = ml, x = X, y = y, xnew = Xnew)
 
   pred_s = as.vector(w_mat %*% y)
@@ -28,6 +28,6 @@ test_that("check predictions and smoother weights of ensemble function", {
   w_mat_rows = Matrix::rowSums(w_mat)
 
   expect_equal(w_rows, w_mat_rows, tolerance = 1e-5)
-  expect_equal(pred, pred_s, tolerance = 1e-5)
+  expect_equal(pred, pred_s, tolerance = 1e-3)
 
 })

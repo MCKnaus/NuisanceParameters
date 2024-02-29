@@ -9,8 +9,6 @@
 #' @param y Vector of outcomes of training sample
 #' @param nfolds Number of folds used in cross-validation of ensemble weights
 #' (default \code{nfolds = 5})
-#' @param subset Logical vector indicating which observations to use for determining
-#' ensemble weights. If not provided, all observations are used.
 #' @param quiet If FALSE, method that is currently computed is printed into the
 #' console
 #'
@@ -26,7 +24,6 @@
 #'
 ensemble = function(ml,
                     x, y,
-                    subset = NULL,
                     nfolds = 5,
                     quiet = TRUE) {
 
@@ -36,8 +33,6 @@ ensemble = function(ml,
   # cross-validation matrix
   cf_mat = prep_cf_mat(length(y), nfolds)
 
-  # check if subset vector is provided
-  if(is.null(subset)) subset = rep(TRUE, nrow(x))
 
 
   ### multiple ml methods specified - cross-validation of ensemble weights ###
@@ -57,7 +52,7 @@ ensemble = function(ml,
     }
 
     # estimate ensemble weights
-    nnls_w = nnls_weights(X = fit_cv[subset, ], y = y[subset])
+    nnls_w = nnls_weights(X = fit_cv, y = y)
 
     # run all methods on the full sample
     ml_fit_full = ensemble_core(ml, x, y, quiet = quiet)
@@ -124,7 +119,8 @@ predict.ensemble = function(object,
 
   }
 
-  return(np)
+  return(list("fit_cv" = pred, "np" = np))
+
 }
 
 

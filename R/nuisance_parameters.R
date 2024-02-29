@@ -200,7 +200,7 @@ nuisance_cf = function(ml, y, x, cf_mat,
     saveRDS(list("fit_cv" = ens$fit_cv, "nnls_w" = nnls_w), paste0(path, ".rds"))
 
     if(isTRUE(weights)) {
-      w = weights(ens, ml = ml, x = x, y = y, cf_mat = cf_mat, w = nnls_w)
+      w = weights(ens, ml = ml, x = x, y = y, subset = subset, w = nnls_w, cf_mat = cf_mat, quiet = FALSE)
       saveRDS(w, paste0(path, "_Weights.rds")); rm(w);
     }
 
@@ -220,16 +220,16 @@ nuisance_cf = function(ml, y, x, cf_mat,
       x_tr = x[!fold & subset, ]
       y_tr = y[!fold & subset]
       x_te = x[fold, ]
-      subset_tr = subset[!fold]
 
-      ens = ensemble(ml = ml, x = x_tr, y = y_tr, subset = subset_tr, nfolds = cv, quiet = quiet)
-      np[fold] = predict(ens, ml, x = x_tr, y = y_tr, xnew = x_te, quiet = quiet)
+      ens = ensemble(ml = ml, x = x_tr, y = y_tr, nfolds = cv, quiet = quiet)
+      ens_pred = predict(ens, ml, x = x_tr, y = y_tr, xnew = x_te, quiet = quiet)
+      np[fold] = ens_pred$np
 
-      fit_sub[[i]] = list("fit_cv" = ens$fit_cv, "nnls_w" = ens$nnls_weights)
+      fit_sub[[i]] = list("fit_cv" = ens_pred$fit_cv, "nnls_w" = ens$nnls_weights)
 
       if(isTRUE(weights)) {
         w_array = weights(ens, ml, x = x_tr, y = y_tr, xnew = x_te, quiet = quiet)
-        w[fold, !fold] = apply(w_array, c(1, 2), function(x) sum(x * ens$nnls_weights))
+        w[fold, !fold & subset] = apply(w_array, c(1, 2), function(x) sum(x * ens$nnls_weights))
       }
 
     }
