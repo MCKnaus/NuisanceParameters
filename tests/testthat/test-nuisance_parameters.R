@@ -94,7 +94,7 @@ test_that("check nuisance_w", {
   library(mvtnorm)
   set.seed(234)
 
-  n = 500
+  n = 1000
   p = 6
   cov_mat = toeplitz(0.7^(0:(6 - 1)))
 
@@ -115,9 +115,10 @@ test_that("check nuisance_w", {
   w_mat = prep_w_mat(w)
   cf_mat = prep_cf_mat(n, cf = 2, w_mat = w_mat)
 
-  ml = list("ols" = create_method("ols"),
-            "forest_grf" = create_method("forest_grf"),
-            "ridge" = create_method("ridge"))
+  ml = list("ols" = create_method("ols", name = "OLS"),
+            "forest_grf" = create_method("forest_grf", name = "GRF"),
+            "ridge" = create_method("ridge", name = "Ridge"),
+            "knn" = create_method("knn", name = "KNN"))
 
   path = gsub("\\\\", "/", tempdir())
   unlink(paste0(path, "/*"))
@@ -213,7 +214,7 @@ test_that("check nuisance_m", {
 
   ### Short-Stacking ###
   expect_message(np_m_short <- nuisance_m(ml = ml, y = y, w_mat = w_mat, x = x, cf_mat = cf_mat,
-                                          cv = 1, learner = "both", path = path, quiet = FALSE), "Short-stacking is used.")
+                                          cv = 1, learner = "t", path = path, quiet = FALSE), "Short-stacking is used.")
 
 
   files = paste0(path, "/Ensemble_Y", 1:w_mods, ".rds")
@@ -227,8 +228,8 @@ test_that("check nuisance_m", {
   ens = readRDS(files[1])
   expect_length(ens, 2)
   expect_named(ens$nnls_w)
-  expect_equal(dim(ens$fit_cv), c(n, length(ml)*2))
-  expect_true(all(substr(colnames(ens$fit_cv), 1, 1) %in% c("t", "s")))
+  expect_equal(dim(ens$fit_cv), c(n, length(ml)))
+  expect_true(all(substr(colnames(ens$fit_cv), 1, 1) == "t"))
 
   # check for correct dimension
   expect_identical(dim(np_m_short), dim(w_mat))
@@ -239,7 +240,7 @@ test_that("check nuisance_m", {
 
   ### Short-Stacking with Smoother Weights ###
   expect_message(np_m_short_w <- nuisance_m(ml = ml, y = y, w_mat = w_mat, x = x, cf_mat = cf_mat,
-                                            cv = 1, learner = "both", path = path, quiet = FALSE,
+                                            cv = 1, learner = "t", path = path, quiet = FALSE,
                                             weights = TRUE), "Short-stacking is used.")
 
 
@@ -254,8 +255,8 @@ test_that("check nuisance_m", {
   ens = readRDS(files[1])
   expect_length(ens, 2)
   expect_named(ens$nnls_w)
-  expect_equal(dim(ens$fit_cv), c(n, length(ml)*2))
-  expect_true(all(substr(colnames(ens$fit_cv), 1, 1) %in% c("t", "s")))
+  expect_equal(dim(ens$fit_cv), c(n, length(ml)))
+  expect_true(all(substr(colnames(ens$fit_cv), 1, 1) == "t"))
 
   # check for correct dimension
   expect_identical(dim(np_m_short_w), dim(w_mat))
@@ -321,6 +322,33 @@ test_that("check nuisance_m", {
   expect_equal(np_m_standard_w[, 1], as.vector(w %*% y), tolerance = 1e-3)
 
   unlink(paste0(path, "/*"))
+
+
+  ### S-Learner ###
+
+  expect_error(
+    nuisance_m(ml = ml, y = y, w_mat = w_mat, x = x, cf_mat = cf_mat,
+               cv = 3, path = path, quiet = FALSE, weights = TRUE,
+               learner = "s"),
+    "S-Learner cannot be combined")
+
+  expect_error(
+    nuisance_m(ml = ml, y = y, w_mat = w_mat, x = x, cf_mat = cf_mat,
+               cv = 1, path = path, quiet = FALSE, weights = FALSE,
+               learner = "s"),
+    "S-Learner cannot be combined")
+
+  expect_error(
+    nuisance_m(ml = ml, y = y, w_mat = w_mat, x = x, cf_mat = cf_mat,
+               cv = 5, path = path, quiet = FALSE, weights = TRUE,
+               learner = "both"),
+    "S-Learner cannot be combined")
+
+  expect_error(
+    nuisance_m(ml = ml, y = y, w_mat = w_mat, x = x, cf_mat = cf_mat,
+               cv = 2, path = path, quiet = FALSE, weights = FALSE,
+               learner = "both"),
+    "S-Learner cannot be combined")
 
 })
 

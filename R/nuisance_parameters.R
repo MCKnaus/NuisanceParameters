@@ -104,15 +104,17 @@ nuisance_m = function(ml, y, w_mat, x, cf_mat,
                       path = NULL,
                       quiet = TRUE) {
 
+  # learner configuration
+  learner = match.arg(learner)
+
+  if((learner %in% c("s", "both")) & (ncol(w_mat) > 2)) stop("S-Learner cannot be combined with more than two treatments.")
+
   if (isFALSE(quiet)) message("Outcome regression")
   if (isFALSE(quiet)) which_stacking(cv)
 
   # define path if not provided
   if (is.null(path)) path = getwd()
   path_temp = paste0(path, "/Ensemble_Y", 1:ncol(w_mat))
-
-  # learner configuration
-  learner = match.arg(learner)
 
   # initialize nuisance matrix
   m_mat = matrix(NA, nrow(w_mat), ncol(w_mat))
@@ -197,7 +199,10 @@ nuisance_cf = function(ml, y, x, cf_mat,
     nnls_w = nnls_weights(ens$fit_cv[subset, ], y[subset])
     np = predict(ens, w = nnls_w)
 
-    saveRDS(list("fit_cv" = ens$fit_cv, "nnls_w" = nnls_w), paste0(path, ".rds"))
+    fit_sub = list("fit_cv" = ens$fit_cv, "nnls_w" = nnls_w)
+    class(fit_sub) = "ens.learner"
+
+    saveRDS(fit_sub, paste0(path, ".rds"))
 
     if(isTRUE(weights)) {
       w = weights(ens, ml = ml, x = x, y = y, subset = subset, w = nnls_w, cf_mat = cf_mat, quiet = FALSE)
@@ -234,6 +239,7 @@ nuisance_cf = function(ml, y, x, cf_mat,
 
     }
 
+    class(fit_sub) = "ens.learner"
     saveRDS(fit_sub, paste0(path, ".rds")); rm(fit_sub)
 
     if(isTRUE(weights)) {

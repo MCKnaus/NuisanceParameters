@@ -306,3 +306,57 @@ which_stacking = function(cv = 1) {
     message("Standard-stacking is used")
   }
 }
+
+
+#' Visualize ensemble weights
+#'
+#' @description
+#' This function plots the non-negative ensemble learner weights for both either
+#' a short-stacked or standard-stacked ensemble learner.
+#'
+#' @param x Object containing predictions by ensemble learner (fit_cv)
+#' and the cross-validated ensemble weights.
+#' @param methods Vector of method names. In order of initial \code{\link{create_method}}
+#' specification.
+#' @param legend_pos Legend position.
+#' @param legend_size Font size of legend.
+#' @param ... Pass generic \code{\link[base]{plot}} options.
+#' @return Plot object.
+#'
+#' @export
+#'
+#' @method plot ens.learner
+#'
+plot.ens.learner = function(x,
+                            methods = NULL,
+                            legend_pos = c("center", "bottomright", "bottom", "bottomleft", "left", "topleft", "top", "topright", "right"),
+                            legend_size = 1,
+                            ...) {
+
+  legend_pos = match.arg(legend_pos)
+
+  if (is.null(names(x[[1]]))) {
+    w = matrix(x$nnls_w, nrow = 1)
+    colnames(w) = names(x$nnls_w)
+    xlab = ""
+    x_labels = NULL
+  } else {
+    w = do.call(rbind, lapply(x, function(l) l$nnls_w))
+    xlab = "Cross-Fitting Fold"
+    x_labels = 1:nrow(w)
+  }
+
+  if(!is.null(methods)) colnames(w) = methods
+  w_t = t(w)
+
+  colors = grDevices::rainbow(ncol(w))
+  names(colors) = colnames(w)
+
+  graphics::barplot(w_t, beside = FALSE, col = colors,
+                    names.arg = x_labels,
+                    xlab = xlab, ylab = "Ensemble Weight", main = "Cross-Validated Ensemble Weights",
+                    ...)
+  graphics::legend(x = legend_pos, title = "Method", xpd = NA, legend = names(colors), col = colors,
+                   ncol = 1, cex = legend_size, lty = 1)
+
+}
