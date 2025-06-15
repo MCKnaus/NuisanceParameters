@@ -360,3 +360,35 @@ plot.ens.learner = function(x,
                    ncol = 1, cex = legend_size, lty = 1)
 
 }
+
+
+#' Update progress bar
+#' 
+#' @description
+#' This function updates progress bar with standardized formatting
+#' 
+#' @param pb Progress bar object from `progress` package
+#' @param pb_np Current nuisance parameter (character)
+#' @param pb_cf Current cross-fitting fold number (integer)
+#' @param pb_cv Current cross-validation fold number (integer)
+#' @param task Task description (character)
+#' @param method Method name (character)
+#' @keywords internal
+update_progress <- function(pb, pb_np, pb_cf, pb_cv, task, method) {
+  if (is.null(pb)) return(invisible(NULL))
+  
+  # Center-align formatter with padding
+  format_center <- function(x, width) {
+    x <- substr(as.character(x), 1, width)
+    pad <- width - nchar(x)
+    paste0(strrep(" ", ceiling(pad / 2)), x, strrep(" ", floor(pad / 2)))
+  }
+  
+  pb$tick(tokens = list(
+    nuisance = format_center(pb_np, 11),
+    pb_cf    = format_center(pb_cf, 2),
+    pb_cv    = format_center(pb_cv, 2), 
+    task     = format_center(task, 7),
+    model    = format_center(method, 10)
+  ))
+}

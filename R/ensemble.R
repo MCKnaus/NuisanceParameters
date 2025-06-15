@@ -25,14 +25,15 @@
 ensemble = function(ml,
                     x, y,
                     nfolds = 5,
-                    quiet = TRUE) {
+                    quiet = TRUE, 
+                    pb = NULL, pb_np = NULL, pb_cf = NULL, pb_cv = NULL
+                    ) {
 
   # matrix to store the cross-validated predictions
   fit_cv = make_fit_cv(ml = ml, n = nrow(x),  learner = "t")
 
   # cross-validation matrix
   cf_mat = prep_cf_mat(length(y), nfolds)
-
 
 
   ### multiple ml methods specified - cross-validation of ensemble weights ###
@@ -46,24 +47,23 @@ ensemble = function(ml,
       y_tr = y[!fold]
       x_te = x[fold, ]
 
-      ml_fit = ensemble_core(ml, x_tr, y_tr, quiet = TRUE)
-      fit_cv[fold, ] = predict.ensemble_core(ml_fit, ml, x_tr, y_tr, x_te, quiet = TRUE)
+      ml_fit = ensemble_core(ml, x_tr, y_tr, quiet = TRUE, pb = pb, pb_cf = pb_cf, pb_cv = i, pb_np = pb_np)
+      fit_cv[fold, ] = predict.ensemble_core(ml_fit, ml, x_tr, y_tr, x_te, quiet = TRUE, pb = pb, pb_cf = pb_cf, pb_cv = i, pb_np = pb_np)
 
     }
 
     # estimate ensemble weights
     nnls_w = nnls_weights(X = fit_cv, y = y)
 
-    # run all methods on the full sample
-    ml_fit_full = ensemble_core(ml, x, y, quiet = quiet)
+    # run all methods on the full sample (fs)
+    ml_fit_full = ensemble_core(ml, x, y, quiet = quiet, pb = pb, pb_cf = pb_cf, pb_cv = "fs", pb_np = pb_np)
   }
-
 
 
   ### only one ml method specified - no weights needed ###
 
   else if (length(ml) == 1) {
-    ml_fit_full = ensemble_core(ml, x, y, quiet = quiet)
+    ml_fit_full = ensemble_core(ml, x, y, quiet = quiet, pb = pb, pb_cf = pb_cf, pb_cv = ".", pb_np = pb_np)
     nnls_w = fit_cv = NULL
   }
 
@@ -104,17 +104,17 @@ ensemble = function(ml,
 predict.ensemble = function(object,
                             ml,
                             x, y, xnew,
-                            quiet = TRUE,
+                            quiet = TRUE, pb = NULL, pb_cf = NULL, pb_np = NULL, 
                             ...) {
 
   if (length(object$ml) > 1) {
 
-    pred = predict.ensemble_core(object = object$ml_fit, ml = ml, x_tr = x, y_tr = y, x_te = xnew, quiet = quiet)
+    pred = predict.ensemble_core(object = object$ml_fit, ml = ml, x_tr = x, y_tr = y, x_te = xnew, quiet = quiet, pb = pb, pb_cf = pb_cf, pb_cv = "op", pb_np = pb_np)
     np = as.vector(pred %*% object$nnls_weights)
 
   } else if (length(object$ml) == 1) {
 
-    pred = predict.ensemble_core(object = object$ml_fit, ml = ml, x_tr = x, y_tr = y, x_te = xnew, quiet = quiet)
+    pred = predict.ensemble_core(object = object$ml_fit, ml = ml, x_tr = x, y_tr = y, x_te = xnew, quiet = quiet, pb = pb, pb_cf = pb_cf, pb_cv = "op", pb_np = pb_np)
     np = as.vector(pred)
 
   }
@@ -189,14 +189,16 @@ weights.ensemble = function(object,
 #'
 ensemble_core = function(ml,
                          x_tr, y_tr,
-                         quiet = TRUE) {
+                         quiet = TRUE, pb = NULL, pb_cf = NULL, pb_cv = NULL, pb_np = NULL
+                         ) {
 
   # initialize list object to be filled
   ml_fit = list()
 
   # loop over specified methods
   for (i in 1:length(ml)) {
-    if (isFALSE(quiet)) print(paste0("Fitting: ", ml[[i]]$method))
+    update_progress(pb = pb, pb_np = pb_np, pb_cf = pb_cf, pb_cv = pb_cv, task = "Fitting", method = ml[[i]]$method)
+
     wrapper = paste0(ml[[i]]$method, "_fit")
 
     # check whether subset of variables specified and run method accordingly
@@ -241,7 +243,7 @@ ensemble_core = function(ml,
 #'
 predict.ensemble_core = function(object, ml,
                                  x_tr, y_tr, x_te,
-                                 quiet = TRUE,
+                                 quiet = TRUE, pb = NULL, pb_cf = NULL, pb_cv = NULL, pb_np = NULL,
                                  ...) {
 
   # initialize matrix to be filled
@@ -249,7 +251,7 @@ predict.ensemble_core = function(object, ml,
 
   # loop over all trained models
   for (i in 1:length(object)) {
-    if (isFALSE(quiet)) print(paste0("Prediction: ", ml[[i]]$method))
+    update_progress(pb = pb, pb_np = pb_np, pb_cf = pb_cf, pb_cv = pb_cv, task = "Predict", method = ml[[i]]$method)
 
     # extract predictions
     if (is.null(ml[[i]]$x_select)) {

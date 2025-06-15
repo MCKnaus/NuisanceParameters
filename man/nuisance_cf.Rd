@@ -12,9 +12,11 @@ nuisance_cf(
   learner = c("t", "s", "both"),
   cv = 5,
   subset = NULL,
-  weights = FALSE,
+  storeModels = c("No", "Memory", "Disk"),
   path,
-  quiet = TRUE
+  quiet = TRUE,
+  pb = NULL,
+  pb_np = NULL
 )
 }
 \arguments{
@@ -37,12 +39,13 @@ is computationally less demanding than standard stacking.}
 
 \item{subset}{Optional logical vector if only subset of data should be used for prediction.}
 
-\item{weights}{If TRUE, prediction weights of the outcome nuisance extracted and saved.}
+\item{storeModels}{Vector of characters indicating where to save individual 
+models for future processing (default "No").}
 
 \item{path}{Path to save fit_cv matrix and non-negative least square weights to.
 Optionally, weights as well.}
 
-\item{quiet}{If FALSE, method that is currently running is printed into console.}
+\item{quiet}{If FALSE, progress output is printed into console.}
 }
 \value{
 Returns a vector of length n containing nuisance parameters.

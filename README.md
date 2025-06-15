@@ -1,18 +1,141 @@
 
-# NuisanceParameters <img src='assets/NuisanceParameters.png' align="right" height="139" />
+# NuisanceParameters <img src="assets/temp_logo.png" align="right" height="139"/>
+
+<!-- # NuisanceParameters <img src='assets/NuisanceParameters.png' align="right" height="139" /> -->
 
 <!-- badges: start -->
+
 <!-- [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/NuisanceParameters)](https://CRAN.R-project.org/package=NuisanceParameters) -->
 
 [![License](https://img.shields.io/badge/license-GPL--3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 [![Project_Status](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 <!-- [![Downloads_Total](https://cranlogs.r-pkg.org/badges/grand-total/NuisanceParameters)](https://CRAN.R-project.org/package=NuisanceParameters) -->
 <!-- [![Downloads_Monthly](https://cranlogs.r-pkg.org/badges/NuisanceParameters)](https://CRAN.R-project.org/package=NuisanceParameters) -->
+
 <!-- badges: end -->
 
-Using some of the most popular prediction functions in R, the
-`NuisanceParameters` package estimates nuisance parameters that can be
-put into practice for causal inference as shown in Knaus (2022).
+`NuisanceParameters` lets you estimate conditional expectations that can
+later be used to estimate target causal parameters of interest. A
+defining feature of the package is its use of supervised machine
+learning (“grey box”) algorithms, which—following a general framework
+established in [Knaus (2024)](https://arxiv.org/abs/2411.11559)—have a
+representation as a linear combination of observed outcomes.
+
+$$
+\begin{align}
+\hat{\tau} &= \sum_{i=1}^N \omega_i Y_i = \underbrace{{\omega'}}_{1 \times N} \underbrace{{Y}}_{N \times 1}
+\end{align}
+$$
+
+This package is part of an envisaged trilogy, where each package can be
+seamlessly integrated with the previous one but can also be used as a
+stand-alone unit:
+
+1.  `NuisanceParameters` – estimates $m(X):=\mathbb{E}[Y \mid X]$,
+    $m_w(w,X):=\mathbb{E}[Y \mid W = w, X]$,
+    $e(X) := \mathbb{P}[W \mid X]$, etc.
+2.  `MLeffects` – combines estimated nuisance parameters ($\hat{m}(X)$,
+    $\hat{m}_w(w,X)$, $\hat{e}(X)$..) in the doubly robust (DR) score to
+    obtain a target parameter $\tau$.
+3.  `OutcomeWeights` – lets you extract the smoother matrices $\omega$
+    behind the nuisance and target parameters. The weights can be used
+    to access the estimator properties or to check the covariate balance
+    (see [Knaus, 2024](https://arxiv.org/abs/2411.11559)).
+
+Among other features, `NuisanceParameters` offers ensemble estimation
+(using short and standard stacking), allows for clustering, and saves
+all necessary models that can be used downstream.
+
+The package is work in progress. Find here the current state
+(suggestions welcome):
+
+### In progress
+
+- [ ] Compatibility with
+  [`OutcomeWeights`](https://github.com/MCKnaus/OutcomeWeights) package
+  - [ ] Make `OutcomeWeights` able to extract NxN smoother matrices for
+    all outcome regressions produced in `NuisanceParameters`, or raise a
+    flag (e.g., for Lasso).
+- [ ] Storage options
+  - [x] Allow the user to choose where to store the models: “No” (just
+    the nuisance parameters in the output), “Memory” (keep all trained
+    models in the object), or “Disk” (write them to disk).
+  - [ ] To save space: make use of sparse matrices or save exactly what
+    is needed for `get_outcome_weights`
+- [x] Implement a progress bar
+  - <img src="assets/progress_bar.gif" width="485" />
+- [ ] Create vignettes
+  - [ ] Explainer for different types of stacking
+  - [ ] Explainer for different learners and ML methods
+  - [ ] Explainer for clustering
+
+### Envisioned features
+
+- [ ] Hyperparameter tuning: both on the fold and in the full sample
+- [ ] Add support for more smoothers (e.g., XGBoost)
+- [ ] Add more Double ML estimators (RD and DiD are first priority)
+
+Currently supported nuisance parameters and their respective target
+parameters:
+
+<p align="center">
+
+<img src="assets/dml_mindmap.png" width="200"/>
+
+</p>
+
+The following code shows how desired nuisance parameters can be flexibly
+estimated. The data was used in Chernozhukov and Hansen (2004), who
+investigated the effect of participation in the employer-sponsored
+401(k) retirement savings plan (`p401`) on net assets (`net_tfa`).
+
+``` r
+if (!require("NuisanceParameters")) install.packages("NuisanceParameters", dependencies = TRUE)
+library(NuisanceParameters)
+library(hdm, estimatr) # 401(k) dataset, lm_robust
+
+set.seed(123)
+idx <- sample(nrow(pension), size = round(1 * nrow(pension)))
+sub <- pension[idx, ]
+
+# subset
+W <- sub$p401
+Z <- sub$e401
+Y <- sub$net_tfa
+X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc + male + marr + pira + twoearn, 
+                  data = sub)
+
+# cross-fitting folds
+cf = 5 
+# ensemble learning with short stacking
+cv = 1
+
+ml = list(
+ "ols" = create_method("ols"),
+ "forest_grf" = create_method("forest_grf"),
+ "knn" = create_method("knn", arguments = list("k" = 3))
+)
+
+np <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat", "W.hat", "Wz.hat", "Z.hat"), 
+                          ml = ml, x = X, y = Y, w = W, z = Z, cf = cf, cl = NULL, cv = cv,
+                          learner = c("t"), storeModels = "Memory", 
+                          path = NULL, quiet = FALSE
+)
+
+# Hand-coded Double ML for partially linear model
+res_y = Y-np$nuisance_parameters$Y.hat
+res_w = W-np$nuisance_parameters$W.hat
+plr = lm_robust(res_y ~ 0+res_w)
+summary(plr)
+```
+
+The development version will be soon available using the `devtools`
+package:
+
+``` r
+library(devtools)
+install_github(repo="MCKnaus/NuisanceParameters")
+```
 
 ### Bug reports & support
 
@@ -23,15 +146,5 @@ michael.knaus@uni-tuebingen.de.
 
 ### References
 
-<div id="refs" class="references csl-bib-body hanging-indent">
-
-<div id="ref-knaus" class="csl-entry">
-
-Knaus, Michael C. 2022. “<span class="nocase">Double machine
-learning-based programme evaluation under unconfoundedness</span>.” *The
-Econometrics Journal* 25 (3): 602–27.
-<https://doi.org/10.1093/ectj/utac015>.
-
-</div>
-
-</div>
+Knaus, M. C. (2024). Treatment effect estimators as weighted outcomes,
+[arXiv:2411.11559](https://arxiv.org/abs/2411.11559)

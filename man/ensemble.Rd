@@ -4,7 +4,17 @@
 \alias{ensemble}
 \title{Ensemble learner training}
 \usage{
-ensemble(ml, x, y, nfolds = 5, quiet = TRUE)
+ensemble(
+  ml,
+  x,
+  y,
+  nfolds = 5,
+  quiet = TRUE,
+  pb = NULL,
+  pb_np = NULL,
+  pb_cf = NULL,
+  pb_cv = NULL
+)
 }
 \arguments{
 \item{ml}{List of methods built via \code{\link{create_method}} to be used in

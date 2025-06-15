@@ -4,7 +4,19 @@
 \alias{predict.ensemble_core}
 \title{Prediction of fitted values for ensemble}
 \usage{
-\method{predict}{ensemble_core}(object, ml, x_tr, y_tr, x_te, quiet = TRUE, ...)
+\method{predict}{ensemble_core}(
+  object,
+  ml,
+  x_tr,
+  y_tr,
+  x_te,
+  quiet = TRUE,
+  pb = NULL,
+  pb_cf = NULL,
+  pb_cv = NULL,
+  pb_np = NULL,
+  ...
+)
 }
 \arguments{
 \item{object}{List of fitted methods (from \code{\link{ensemble_core}}}

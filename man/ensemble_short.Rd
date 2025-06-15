@@ -13,7 +13,9 @@ ensemble_short(
   learner = c("t", "s", "both"),
   storeModels = c("No", "Memory", "Disk"),
   path = NULL,
-  quiet = TRUE
+  quiet = TRUE,
+  pb = NULL,
+  pb_np = NULL
 )
 }
 \arguments{

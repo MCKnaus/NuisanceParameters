@@ -9,11 +9,11 @@
 Estimation of nuisance parameters using different prediction algorithms.
 }
 \author{
-\strong{Maintainer}: Glaisner Stefan \email{stefan.glaisner@student.uni-tuebingen.de}
+\strong{Maintainer}: Knaus Michael C. \email{michael.knaus@uni-tuebingen.de} (\href{https://orcid.org/0000-0002-7328-1363}{ORCID})
 
 Other contributors:
 \itemize{
-  \item Knaus Michael C. \email{michael.knaus@uni-tuebingen.de} (\href{https://orcid.org/0000-0002-7328-1363}{ORCID}) [contributor]
+  \item Glaisner Stefan \email{stefanglaisner@gmail.com} [contributor]
 }
 
 }

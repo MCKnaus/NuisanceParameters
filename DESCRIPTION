@@ -11,7 +11,7 @@ License: GPL-3
 VignetteBuilder: knitr
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Suggests:
     testthat (>= 3.0.0), knitr, rmarkdown, xfun, mvtnorm
 Imports:
@@ -25,7 +25,8 @@ Imports:
     nnls,
     plasso,
     FastKNN,
-    drf
+    drf,
+    progress
 Config/testthat/edition: 3
 Depends: 
     R (>= 2.10)

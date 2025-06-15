@@ -39,7 +39,9 @@ ensemble_short = function(ml,
                           learner = c("t", "s", "both"),
                           storeModels = c("No", "Memory", "Disk"),
                           path = NULL,
-                          quiet = TRUE) {
+                          quiet = TRUE, pb = NULL, pb_np = NULL
+                          ) {
+
 
   # check if subset vector is provided
   if(is.null(subset)) subset = rep(TRUE, nrow(x))
@@ -58,7 +60,7 @@ ensemble_short = function(ml,
 
   for (i in 1:ncol(cf_mat)) {
 
-    if (isFALSE(quiet)) print(paste("Cross-fitting fold: ", toString(i)))
+    #if (isFALSE(quiet)) print(paste("Cross-fitting fold: ", toString(i)))
 
     fold = cf_mat[, i]
     x_tr = x[!fold, ]
@@ -69,8 +71,8 @@ ensemble_short = function(ml,
 
     if (learner %in% c("t", "both")) {
 
-      ml_fit = ensemble_core(ml, x_tr, y_tr, quiet = quiet)
-      fit_cv[fold, grepl("^t", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml, x_tr, y_tr, x_te, quiet = quiet)
+      ml_fit = ensemble_core(ml, x_tr, y_tr, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+      fit_cv[fold, grepl("^t", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml, x_tr, y_tr, x_te, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
 
       if(saveModels) s[[i]] = ml_fit
 
@@ -81,8 +83,8 @@ ensemble_short = function(ml,
       x_tr_s = cbind(x_tr, subset_tr*1)
       x_te_s = cbind(x_te, rep(1, nrow(x_te)))
 
-      ml_fit = ensemble_core(ml, x_tr_s, y_tr, quiet = quiet)
-      fit_cv[fold, grepl("^s", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml, x_tr_s, y_tr, x_te_s, quiet = quiet)
+      ml_fit = ensemble_core(ml, x_tr_s, y_tr, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+      fit_cv[fold, grepl("^s", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml, x_tr_s, y_tr, x_te_s, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
 
       if(saveModels) s[[ncol(cf_mat) + i]] = ml_fit
 
@@ -90,12 +92,12 @@ ensemble_short = function(ml,
 
   }
 
-  if(storeModels == "Disk") {
-    if(is.null(path)) path = getwd()
-    file_name = paste0(path, "/ensemble_short_", format(Sys.time(), "%Y%m%d%H%M%S"), ".rds")
-    saveRDS(s, file_name)
-    s = file_name
-  }
+  # if(storeModels == "Disk") {
+  #   if(is.null(path)) path = getwd()
+  #   file_name = paste0(path, "/ensemble_short_", format(Sys.time(), "%Y%m%d%H%M%S"), ".rds")
+  #   saveRDS(s, file_name)
+  #   s = file_name
+  # }
 
   output = list(
     "fit_cv" = fit_cv,

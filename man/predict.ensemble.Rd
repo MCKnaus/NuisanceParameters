@@ -4,7 +4,18 @@
 \alias{predict.ensemble}
 \title{Prediction of fitted values by cross-validated ensemble learner}
 \usage{
-\method{predict}{ensemble}(object, ml, x, y, xnew, quiet = TRUE, ...)
+\method{predict}{ensemble}(
+  object,
+  ml,
+  x,
+  y,
+  xnew,
+  quiet = TRUE,
+  pb = NULL,
+  pb_cf = NULL,
+  pb_np = NULL,
+  ...
+)
 }
 \arguments{
 \item{object}{Trained ensemble object from \code{\link{ensemble}}}

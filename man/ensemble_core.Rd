@@ -4,7 +4,16 @@
 \alias{ensemble_core}
 \title{Ensemble core fitting}
 \usage{
-ensemble_core(ml, x_tr, y_tr, quiet = TRUE)
+ensemble_core(
+  ml,
+  x_tr,
+  y_tr,
+  quiet = TRUE,
+  pb = NULL,
+  pb_cf = NULL,
+  pb_cv = NULL,
+  pb_np = NULL
+)
 }
 \arguments{
 \item{ml}{List of methods built via \code{\link{create_method}} to be used in
