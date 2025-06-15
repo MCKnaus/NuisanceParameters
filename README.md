@@ -20,10 +20,7 @@ defining feature of the package is its use of supervised machine
 learning (“grey box”) algorithms, which—following a general framework
 established in [Knaus (2024)](https://arxiv.org/abs/2411.11559)—have a
 representation as a linear combination of observed outcomes:
-
-$$
-\hat{\tau} = \sum_{i=1}^N \omega_i Y_i = \underbrace{{\omega'}}_{1 \times N} \underbrace{{Y}}_{N \times 1}
-$$
+$\hat{\tau} = \sum_{i=1}^N \omega_i Y_i = \underbrace{{\omega'}}_{1 \times N} \underbrace{{Y}}_{N \times 1}$
 
 This package is part of an envisaged trilogy, where each package can be
 seamlessly integrated with the previous one but can also be used as a
