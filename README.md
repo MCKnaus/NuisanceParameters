@@ -50,13 +50,13 @@ The package is work in progress. Find here the current state
   [`OutcomeWeights`](https://github.com/MCKnaus/OutcomeWeights) package
   - [ ] Make `OutcomeWeights` able to extract NxN smoother matrices for
     all outcome regressions produced in `NuisanceParameters`, or raise a
-    flag (e.g., for Lasso).
+    flag (e.g., for Lasso)
 - [ ] Storage options
   - [x] Allow the user to choose where to store the models: “No” (just
     the nuisance parameters in the output), “Memory” (keep all trained
     models in the object), or “Disk” (write them to disk).
-  - [ ] To save space: make use of sparse matrices or save exactly what
-    is needed for `get_outcome_weights`
+  - [ ] Store more efficiently: use sparse matrices or save only what’s
+    needed for `get_outcome_weights`
 - [x] Implement a progress bar
   - <img src="assets/progress_bar.gif" width="485" />
 - [ ] Create vignettes
@@ -66,22 +66,27 @@ The package is work in progress. Find here the current state
 
 ### Envisioned features
 
-- [ ] Hyperparameter tuning: both on the fold and in the full sample
+- [ ] Hyperparameter tuning: both on the fold and in full sample
 - [ ] Add support for more smoothers (e.g., XGBoost)
-- [ ] Add more Double ML estimators (RD and DiD are first priority)
+- [ ] Add more Double ML estimators (DiD is a first priority)
+- [ ] Allow for more general treatment types
+  - [x] Binary
+  - [ ] Multivalued
+  - [ ] Continuous
 
 Currently supported nuisance parameters and their respective target
 parameters:
 
 <p align="center">
 
-<img src="assets/dml_mindmap.png" width="200"/>
+<img src="assets/dml_mindmap.png" width="220"/>
 
 </p>
 
 The following code shows how desired nuisance parameters can be flexibly
-estimated. The data was used in Chernozhukov and Hansen (2004), who
-investigated the effect of participation in the employer-sponsored
+estimated. The data was used in [Chernozhukov and Hansen
+(2004)](https://econpapers.repec.org/article/tprrestat/v_3a86_3ay_3a2004_3ai_3a3_3ap_3a735-751.htm),
+who investigated the effect of participation in the employer-sponsored
 401(k) retirement savings plan (`p401`) on net assets (`net_tfa`).
 
 ``` r
