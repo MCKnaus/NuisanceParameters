@@ -306,7 +306,7 @@ nuisance_cf = function(ml, y, x, cf_mat,
       }
       
       if (storeModels == "Memory") {
-        models_output <- fit_sub
+        models <- fit_sub
       }
   
 
@@ -341,7 +341,7 @@ nuisance_cf = function(ml, y, x, cf_mat,
     }
     
     if (storeModels == "Memory") {
-      models_output <- fit_sub
+      models <- fit_sub
     }
 
   }
