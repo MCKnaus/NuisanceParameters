@@ -94,7 +94,9 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
   if ("Wz.hat" %in% NuPa) Wz.hat = matrix(NA, nrow(z_mat), ncol(z_mat))
   if ("Z.hat" %in% NuPa) Z.hat = matrix(NA, nrow(z_mat), ncol(z_mat)-1)
   
-  colnames(Yw.hat) = colnames(w_mat); colnames(Yz.hat) = colnames(Wz.hat) = colnames(z_mat)
+  if ("Yw.hat" %in% NuPa) colnames(Yw.hat) = colnames(w_mat)
+  if ("Yz.hat" %in% NuPa) colnames(Yz.hat) = colnames(z_mat)
+  if ("Wz.hat" %in% NuPa) colnames(Wz.hat) = colnames(z_mat)
   
   
   ## Experimental: progress printing
@@ -298,7 +300,7 @@ nuisance_cf = function(ml, y, x, cf_mat,
       nnls_w <- nnls_weights(ens$fit_cv[subset, ], y[subset])
       np <- predict(ens, w = nnls_w)
       
-      fit_sub <- list("fit_cv" = ens$fit_cv, "nnls_w" = nnls_w, "models" = ens$ml)
+      fit_sub <- list("ens_object" = ens, "nnls_w" = nnls_w)
       class(fit_sub) <- "ens.learner"
       
       if (storeModels == "Disk") {
