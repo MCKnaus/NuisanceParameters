@@ -140,6 +140,7 @@ calculate_weights <- function(object, ml, x, y, cv, cf_mat, nnls_w, quiet) {
     }
   }
   return(w)
+  
 }
 
 

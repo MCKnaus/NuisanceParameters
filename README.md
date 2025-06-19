@@ -66,9 +66,11 @@ The package is work in progress. Find here the current state
   - [ ] General tutorial notebook
   - [ ] Explainers for (1) different types of stacking, (2) different
     learners and ML methods and (3) clustering options
-- [ ] Fix already existing and newly created bugs
-  - [ ] Inability of the ensemble mechanism to work with a single `ml`
-    method
+- [ ] Miscellaneous and bugs to fix
+  - [ ] Fix the inability of the ensemble mechanism to work with a
+    single `ml` method
+  - [ ] Name objects consistently throughout the package, in tune with
+    `OutcomeWeights`
 
 ### Envisioned features
 
@@ -127,14 +129,14 @@ ml = list(
  "knn" = create_method("knn", arguments = list("k" = 3))
 )
 
-# Core function of NuisanceParameters
+# Core functionality of NuisanceParameters
 np <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"), 
                           ml = ml, x = X, y = Y, w = W, z = Z,
                           cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
                           cl = NULL, cv = cv, learner = c("t"), 
                           storeModels = "Memory", path = NULL, quiet = FALSE)
 
-# Functionality to be exported to OutcomeWeights
+# Produces smoother matrices for each outcome nuisance parameter
 S <- get_outcome_weights(np_object = np, 
                          ml = ml, 
                          x = X, y = Y, 
