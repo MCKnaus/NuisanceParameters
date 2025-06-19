@@ -4,15 +4,14 @@
 #' Extract smoother weights from short- or standard-stacked ensemble model 
 #' created by \code{\link{ensemble_short}} or \code{\link{ensemble}}.
 #'
-#' @param object Stacked ensemble learner from \code{\link{ensemble_short}} or \code{\link{ensemble}}.
+#' @param NuPa String vector specifying which nuisance parameters to extract smoother matrices for.
+#' @param np_object Stacked ensemble learner from \code{\link{ensemble_short}} or \code{\link{ensemble}}.
 #' @param ml List of ML models by \code{\link{create_method}} that was used as
-#' input for \code{\link{ensemble_short}} or \code{\link{ensemble}}.
+#' iobjectut for \code{\link{ensemble_short}} or \code{\link{ensemble}}.
 #' @param x Covariate matrix of training sample.
 #' @param y Vector of outcomes of training sample.
 #' @param subset Logical vector indicating which observations to use for determining
 #' ensemble weights. If not provided, all observations are used.
-#' @param nnls_w Ensemble weights to aggregate predictions from different learners (optional).
-#' Needs to be a vector of length \code{ncol(object$fit_cv)}.
 #' @param cv Number of cross-validation folds when estimating ensemble model.
 #' @param cf_mat Logical matrix with k columns of indicators representing the different folds
 #' (for example created by \code{\link{prep_cf_mat}}).
@@ -21,53 +20,126 @@
 #' @param ... Ignore unused arguments
 #'
 #' @return Matrix of dimension \code{nrow(x)} x \code{nrow(x)} containing
-#' ensemble smoother weights.
+#' ensemble smoother weights, or list of such matrices if multiple models are requested.
 #'
 #' @export
-get_outcome_weights = function(object,
-                               ml,
-                               x, y,
-                               subset,
-                               nnls_w = NULL,
-                               cv = cv,
-                               cf_mat,
-                               quiet = TRUE,
+get_outcome_weights = function(np_object, 
+                               NuPa, 
+                               ml, 
+                               x, y, 
+                               cv = 1, 
+                               cf_mat, 
+                               quiet = TRUE, 
                                ...) {
   
-  # load fitted ml object
-  if(is.null(object$ml)) {
-    stop("Ensemble models were not saved after training.")
-  } else if (is.character(object$ml) & length(object$ml) == 1) {
-    ml_fit = readRDS(object$ml)
-  } else {
-    ml_fit = object$ml
+  weights_list <- list()
+  
+  # Check for available models
+  model_names <- paste0(NuPa, "_ml")
+  existing_models <- model_names[model_names %in% names(np_object[["models"]])]
+  missing_models <- setdiff(model_names, existing_models)
+  
+  if (length(missing_models) > 0) {
+    message("The following ensemble models were not found: ", paste(missing_models, collapse = ", "))
+    message("Continuing with available models: ", paste(existing_models, collapse = ", "))
   }
   
+  if (length(existing_models) == 0) {stop("No valid (ensemble) models found in np_object[['models']].")}
   
+  
+  # Process each existing model
+  for (model in existing_models) {
+    
+    model_object <- np_object[["models"]][[model]]
+    
+    if ("ens_object" %in% names(model_object)) {
+      # If a single list - process directly
+      if (!is.null(model_object[["ens_object"]])) {
+        object <- model_object[["ens_object"]]
+        nnls_w <- model_object[["nnls_w"]]
+        
+        # Load fitted ml object if needed
+        if (is.null(object$ml)) {
+          stop(paste0("Ensemble models were not saved after training for ", model))
+        } else if (is.character(object$ml) & length(object$ml) == 1) {
+          ml_fit <- readRDS(object$ml)
+        } else {
+          ml_fit <- object$ml
+        }
+        
+        # Calculate weights
+        w <- calculate_weights(object, ml, x, y, cv, cf_mat, nnls_w, quiet)
+        weights_list[[model]] <- w
+      } else {
+        warning(paste0("No ens_object found for ", model))
+        weights_list[[model]] <- NULL
+      }
+    } else {
+      # It's a list of lists - process each element
+      model_weights <- list()
+      
+      for (i in seq_along(model_object)) {
+        if (!is.null(model_object[[i]][["ens_object"]])) {
+          # Get the ensemble object and nnls weights
+          object <- model_object[[i]][["ens_object"]]
+          nnls_w <- model_object[[i]][["nnls_w"]]
+          
+          # Load fitted ml object if needed
+          if (is.null(object$ml)) {
+            stop(paste0("Ensemble models were not saved after training for ", model, "[[", i, "]]"))
+          } else if (is.character(object$ml) & length(object$ml) == 1) {
+            ml_fit <- readRDS(object$ml)
+          } else {
+            ml_fit <- object$ml
+          }
+          
+          # Calculate weights
+          w <- calculate_weights(object, ml, x, y, cv, cf_mat, nnls_w, quiet)
+          model_weights[[i]] <- w
+        } else {
+          warning(paste0("No ens_object found for ", model, "[[", i, "]]"))
+          model_weights[[i]] <- NULL
+        }
+      }
+      
+      # If only one element exists, simplify the output
+      if (length(model_weights) == 1) {
+        weights_list[[model]] <- model_weights[[1]]
+      } else {
+        weights_list[[model]] <- model_weights
+      }
+    }
+  }
+  
+  # If only one model exists, simplify the output
+  if (length(weights_list) == 1) {
+    return(weights_list[[1]])
+  } else {
+    return(weights_list)
+  }
+}
+
+# Helper function to calculate weights 
+calculate_weights <- function(object, ml, x, y, cv, cf_mat, nnls_w, quiet) {
   ### Short-Stacking ###
   if (cv == 1) {
-    w = weights(object, ml = ml, x = x, y = y, subset = subset, nnls_w = nnls_w, cf_mat = cf_mat, quiet = FALSE)
-
+    w <- weights(object, ml = ml, x = x, y = y, subset = NULL, w = nnls_w, cf_mat = cf_mat, quiet = quiet)
     
-  ### Standard-Stacking ###
-    
+    ### Standard-Stacking ###
   } else if (cv > 1) {
-    w = matrix(0, nrow = nrow(x), ncol = nrow(x))
-
-    for (i in 1:ncol(cf_mat)) {
-      fold = cf_mat[, i]
-      x_tr = x[!fold & subset, ]
-      y_tr = y[!fold & subset]
-      x_te = x[fold, ]
-      
-      w_array = weights(object, ml, x = x_tr, y = y_tr, xnew = x_te, quiet = quiet)
-      w[fold, !fold & subset] = apply(w_array, c(1, 2), function(x) sum(x * ens$nnls_weights))
-    }
+    w <- matrix(0, nrow = nrow(x), ncol = nrow(x))
     
+    for (j in 1:ncol(cf_mat)) {
+      fold <- cf_mat[, j]
+      x_tr <- x[!fold, ]
+      y_tr <- y[!fold]
+      x_te <- x[fold, ]
+      
+      w_array <- weights(object, ml, x = x_tr, y = y_tr, xnew = x_te, quiet = quiet)
+      w[fold, !fold] <- apply(w_array, c(1, 2), function(x) sum(x * nnls_w))
+    }
   }
-  
   return(w)
-  
 }
 
 

@@ -6,9 +6,12 @@
 #' Methods can be created by \code{\link{create_method}}.
 #' @param y Numerical vector containing the outcome variable.
 #' @param w Numerical vector containing the treatment variable.
-#' @param z Numerical vector containing the instrument variable.
+#' @param w Numerical vector containing the instrument variable.
+#' @param w_mat Logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.
+#' @param z_mat Logical matrix of instrument indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.
 #' @param x Covariate matrix.
-#' @param cf Number of cross-fitting folds
+#' @param cf_mat Logical matrix with k columns of indicators representing the different folds
+#' (for example created by \code{\link{prep_cf_mat}}).
 #' @param cl Optional vector of cluster variable if cross-fitting should account
 #' for clusters within the data.
 #' @param cv Number of cross-validation folds when estimating ensemble (default 5).
@@ -29,11 +32,8 @@
 #' @export
 nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.hat","Z.hat"),
                                ml,
-                               x,
-                               y=NULL,
-                               w=NULL,
-                               z=NULL,
-                               cf = 5,
+                               x, y, w, z,
+                               w_mat, z_mat, cf_mat,
                                cl = NULL,
                                cv = 5,
                                learner = c("t", "s", "both"),
@@ -61,15 +61,6 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
   
   ## Preps
   n = nrow(x)
-  
-  # One-hot encoding of treatment & instrument vectors
-  if (length(unique(w)) <= 1) stop("Need at least two values in treatment vector")
-  if (length(unique(z)) <= 1) stop("Need at least two values in instrument vector")
-  w_mat = prep_w_mat(w)
-  z_mat = prep_w_mat(z)
-  
-  # Cross-fitting fold indicators
-  cf_mat = prep_cf_mat(n, cf = cf, cl = cl, w_mat = w_mat)
   
   # Define path if not provided
   if (is.null(path)) path = getwd()
@@ -151,7 +142,7 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
       pb_np <- paste0("Yz.hat, z=", i-1)
       
       temp <- nuisance_cf(
-        ml = ml, y = z, x = x, cf_mat = cf_mat, learner = learner, cv = cv,
+        ml = ml, y = y, x = x, cf_mat = cf_mat, learner = learner, cv = cv,
         subset = z_mat[, i], storeModels = storeModels,
         path = path_temp[i], quiet = quiet, pb = pb, pb_np = pb_np)
       

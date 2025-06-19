@@ -8,10 +8,12 @@ nuisance_parameters(
   NuPa = c("Y.hat", "Yw.hat", "Yz.hat", "W.hat", "Wz.hat", "Z.hat"),
   ml,
   x,
-  y = NULL,
-  w = NULL,
-  z = NULL,
-  cf = 5,
+  y,
+  w,
+  z,
+  w_mat,
+  z_mat,
+  cf_mat,
   cl = NULL,
   cv = 5,
   learner = c("t", "s", "both"),
@@ -31,11 +33,14 @@ Methods can be created by \code{\link{create_method}}.}
 
 \item{y}{Numerical vector containing the outcome variable.}
 
-\item{w}{Numerical vector containing the treatment variable.}
+\item{w}{Numerical vector containing the instrument variable.}
 
-\item{z}{Numerical vector containing the instrument variable.}
+\item{w_mat}{Logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.}
 
-\item{cf}{Number of cross-fitting folds}
+\item{z_mat}{Logical matrix of instrument indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.}
+
+\item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
+(for example created by \code{\link{prep_cf_mat}}).}
 
 \item{cl}{Optional vector of cluster variable if cross-fitting should account
 for clusters within the data.}

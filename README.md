@@ -48,9 +48,12 @@ The package is work in progress. Find here the current state
 
 - [ ] Compatibility with
   [`OutcomeWeights`](https://github.com/MCKnaus/OutcomeWeights) package
-  - [ ] Make `OutcomeWeights` able to extract NxN smoother matrices for
-    all outcome regressions produced in `NuisanceParameters`, or raise a
-    flag (e.g., for Lasso)
+  - [x] Create a separate `get_outcome_weights` function that takes the
+    objects produced by `nuisance_parameters` as inputs and provides the
+    user with a list of NxN smoother matrices for all outcome
+    regressions produced in `NuisanceParameters`, or raise a flag (e.g.,
+    for Lasso)
+  - [ ] Integrate it with `OutcomeWeights` package
 - [ ] Storage options
   - [x] Allow the user to choose where to store the models: “No” (just
     the nuisance parameters in the output), “Memory” (keep all trained
@@ -60,9 +63,12 @@ The package is work in progress. Find here the current state
 - [x] Implement a progress bar
   - <img src="assets/progress_bar.gif" width="485" />
 - [ ] Create vignettes
-  - [ ] Explainer for different types of stacking
-  - [ ] Explainer for different learners and ML methods
-  - [ ] Explainer for clustering
+  - [ ] General tutorial notebook
+  - [ ] Explainers for (1) different types of stacking, (2) different
+    learners and ML methods and (3) clustering options
+- [ ] Fix already existing and newly created bugs
+  - [ ] Inability of the ensemble mechanism to work with a single `ml`
+    method
 
 ### Envisioned features
 
@@ -92,10 +98,11 @@ who investigated the effect of participation in the employer-sponsored
 ``` r
 if (!require("NuisanceParameters")) install.packages("NuisanceParameters", dependencies = TRUE)
 library(NuisanceParameters)
-library(hdm, estimatr) # 401(k) dataset, lm_robust
+library(hdm) # 401(k) dataset
+library(estimatr) # lm_robust
 
 set.seed(123)
-idx <- sample(nrow(pension), size = round(1 * nrow(pension)))
+idx <- sample(nrow(pension), size = round(0.1 * nrow(pension)))
 sub <- pension[idx, ]
 
 # subset
@@ -105,10 +112,14 @@ Y <- sub$net_tfa
 X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc + male + marr + pira + twoearn, 
                   data = sub)
 
-# cross-fitting folds
+# Cross-fitting folds and stacking type
 cf = 5 
-# ensemble learning with short stacking
 cv = 1
+
+# Prepare the input
+w_mat = prep_w_mat(W)
+z_mat = prep_w_mat(Z)
+cf_mat = prep_cf_mat(n=nrow(X), cf = cf, w_mat = w_mat)
 
 ml = list(
  "ols" = create_method("ols"),
@@ -116,11 +127,26 @@ ml = list(
  "knn" = create_method("knn", arguments = list("k" = 3))
 )
 
-np <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat", "W.hat", "Wz.hat", "Z.hat"), 
-                          ml = ml, x = X, y = Y, w = W, z = Z, cf = cf, cl = NULL, cv = cv,
-                          learner = c("t"), storeModels = "Memory", 
-                          path = NULL, quiet = FALSE
-)
+# Core function of NuisanceParameters
+np <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"), 
+                          ml = ml, x = X, y = Y, w = W, z = Z,
+                          cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
+                          cl = NULL, cv = cv, learner = c("t"), 
+                          storeModels = "Memory", path = NULL, quiet = FALSE)
+
+# Functionality to be exported to OutcomeWeights
+S <- get_outcome_weights(np_object = np, 
+                         ml = ml, 
+                         x = X, y = Y, 
+                         cv = cv, cf_mat = cf_mat,
+                         NuPa = c("Y.hat","Yw.hat","Yz.hat"))
+                         
+# Check if weights are correct
+all.equal(all.equal(as.numeric(S$Y.hat_ml%*%Y), np$nuisance_parameters$Y.hat), 
+          all.equal(as.numeric(S$Yw.hat_ml[[1]]%*%Y), np$nuisance_parameters$Yw.hat[,1]), 
+          all.equal(as.numeric(S$Yw.hat_ml[[2]]%*%Y), np$nuisance_parameters$Yw.hat[,2]), 
+          all.equal(as.numeric(S$Yz.hat_ml[[1]]%*%Y), np$nuisance_parameters$Yz.hat[,1]), 
+          all.equal(as.numeric(S$Yz.hat_ml[[2]]%*%Y), np$nuisance_parameters$Yz.hat[,2]))
 
 # Hand-coded Double ML for partially linear model
 res_y = Y-np$nuisance_parameters$Y.hat
