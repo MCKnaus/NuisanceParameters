@@ -23,7 +23,7 @@ if (!require("dplyr")) install.packages("dplyr", dependencies = TRUE); library(d
 if (!require("purrr")) install.packages("purrr", dependencies = TRUE); library(purrr)
 if (!require("ggplot2")) install.packages("ggplot2", dependencies = TRUE); library(ggplot2)
 
-#devtools::document()
+# devtools::document()
 library(NuisanceParameters)
 
 set.seed(1234)
@@ -72,7 +72,7 @@ head(z_mat)
 
 We prepare these because `w_mat` can be passed to `prep_cf_mat`, which is used in both nuisance parameter estimation and smoother matrix recovery—two separate steps—so it needs to be saved outside `nuisance_parameters`.
 
-That said, it could also be done internally: you just pass `W`, `Z`, and `cf`, and `nuisance_parameters` handles the rest, returning `cf_mat`.
+That said, I can do it internally instead—when you just pass `W`, `Z`, and `cf`, and `nuisance_parameters` handles the rest, returning `cf_mat`. This would simplify the input.
 
 Here, we do it manually:
 
@@ -108,7 +108,7 @@ np_short <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.
                           ml = ml, x = X, y = Y, w = W, z = Z,
                           cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
                           cv = cv, learner = c("t"), 
-                          storeModels = "Disk", path = "/Users/romanrakov/Desktop/save", quiet = TRUE)
+                          storeModels = "Memory", path = NULL, quiet = TRUE)
 ```
 
 To make sure the result makes sense, let's manually estimate some target parameters and compare the result to `dml_with_smoother` of `OutcomeWeights`:
@@ -155,7 +155,7 @@ DML_inference = function(psi_a,psi_b) {
 }
 ```
 
-Short stacking 2-learner estimation:
+We work with only a fraction of `401k`, so the estimates are noisy:
 
 ```{r}
 results = matrix(NA,4,4)
@@ -176,7 +176,7 @@ data.frame(
   geom_point(size = 2.5) + geom_errorbar(width = 0.15) + geom_hline(yintercept = 0)
 ```
 
-And compare it to:
+Observe that the results are very close to those from the 5-fold `dml_with_smoother` routine
 
 ```{r}
 dml_5f = dml_with_smoother(Y,W,X,Z, n_cf_folds = 5)
@@ -184,7 +184,7 @@ results_dml_5f = summary(dml_5f)
 plot(dml_5f)
 ```
 
-We can also study the ensemble weights:
+We can also check the ensemble weights:
 
 ```{r}
 ens_weights(np_short$models, names(ml))
@@ -210,17 +210,13 @@ all.equal(all.equal(as.numeric(S$Y.hat_ml%*%Y), np_short$nuisance_parameters$Y.h
           all.equal(as.numeric(S$Yz.hat_ml[[2]]%*%Y), np_short$nuisance_parameters$Yz.hat[,2]))
 ```
 
-At this point, this function is a bit of a misnomer, providing smoother matrices instead of outcome weights. In the future, it will also take in the target parameters estimated in MLeffects or somewhere else - and provide a vector of outcome weights.
+At this point, this function is a bit of a misnomer: it gives smoother matrices instead of outcome weights. In the future, it will also take in the target parameters estimated in `MLeffects` or elsewhere—and provide a vector of outcome weights.
 
-Stripping the weight functionality (which was creating smoother matrices) away from the nuisance_parameters routine made the code much less elegant.
+Stripping the "weight" functionality (which was creating smoother matrices) away from the `nuisance_parameters` routine made the code much less elegant.
 
-To double check: do we expect smoother extraction within nuisance_parameters and within get_outcome_weights?
+-   To double-check: do we expect smoother extraction within `nuisance_parameters` or within `get_outcome_weights`?
 
-Now, let's repeat for standard stacking and print the progress.
-
-The progress bar looks amazing in the concole, but something breaks when knitting a notebook. I will replace it with something better looking, because I don't seem to find a way to get rid of these extra "G3" symbols.
-
-I like it because it provides more information on what exactly is being done: adapt from work done in each cross-validation fold (`cv=1,2..`) `cv = fs` run all methods on the full sample (fs) and and `cv = op` is out of sample prediction (also on full sample?)
+Now, let's repeat for standard stacking and print the progress. Here, we first save it to disk and then load it back in to check that everything works:
 
 ```{r}
 # Standard stacking 
@@ -228,26 +224,37 @@ cv = 2
 
 # nuisance parameter estimation
 np_stand <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
-                          ml = ml, x = X, y = Y, w = W, z = Z,
-                          cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
-                          cv = cv, learner = c("t"), 
-                          storeModels = "Memory", path = NULL, quiet = FALSE)
+                      ml = ml, x = X, y = Y, w = W, z = Z,
+                      cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
+                      cv = cv, learner = c("t"), 
+                      storeModels = "Disk", path = "/Users/romanrakov/Desktop", quiet = FALSE)
 ```
 
-And extract the smoother matrices for every outcome model:
+The progress bar looks amazing in the console, but something breaks when knitting a notebook. I will replace it with something better looking, because I don't seem to find a way to get rid of these extra "G3" symbols.
+
+It is useful for giving more information on what exactly is being done:
+
+-   `cv = 1, 2, ...`: Each candidate learner *j* is trained on the data excluding the current cross-validation hold-out fold, i.e., $T_k \setminus T_{k,v}$ in the notation of Ahrens et al. (2024)
+
+-   `cv = fs`: After cross-validating the individual learners within each cross-fitting fold, we re-fit our learners on the full training portion of the cross-fitting fold (full sample, fs)
+
+-   `cv = op`: We use the learners fitted in `cv = fs` and make predictions on the held-out part of the cross-fitting fold using ensemble weights obtained from `cv = 1, 2, ...`. (out-of-sample prediction, op)
 
 ```{r}
-S2 <- NuisanceParameters::get_outcome_weights(np_object = np_stand,
+S2 <- NuisanceParameters::get_outcome_weights(
+                         np_object = "/Users/romanrakov/Desktop/nuisance_models.rds",
                          ml = ml, 
                          x = X, y = Y, w_mat=w_mat, z_mat=z_mat,
                          cv = cv, cf_mat = cf_mat,
                          NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
                          quiet=TRUE)
 
-# Check if they are all correct
+# Check if SY = Y_hat
 all.equal(all.equal(as.numeric(S2$Y.hat_ml%*%Y), np_stand$nuisance_parameters$Y.hat), 
         all.equal(as.numeric(S2$Yw.hat_ml[[1]]%*%Y), np_stand$nuisance_parameters$Yw.hat[,1]), 
         all.equal(as.numeric(S2$Yw.hat_ml[[2]]%*%Y), np_stand$nuisance_parameters$Yw.hat[,2]), 
         all.equal(as.numeric(S2$Yz.hat_ml[[1]]%*%Y), np_stand$nuisance_parameters$Yz.hat[,1]), 
         all.equal(as.numeric(S2$Yz.hat_ml[[2]]%*%Y), np_stand$nuisance_parameters$Yz.hat[,2]))
 ```
+
+This is it. This notebook will become a vignette when it’s ready.

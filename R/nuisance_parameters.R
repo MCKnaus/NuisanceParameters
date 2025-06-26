@@ -46,6 +46,9 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
   learner = match.arg(learner)
   storeModels = match.arg(storeModels)
   
+  # Define path if not provided
+  if (is.null(path)) path = getwd()
+  
   supported_NuPas = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.hat","Z.hat")
   not_supported = NuPa[!NuPa %in% supported_NuPas]
   if (length(not_supported) > 0) {
@@ -61,10 +64,6 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
   
   ## Preps
   n = nrow(x)
-  
-  # Define path if not provided
-  if (is.null(path)) path = getwd()
-  path_temp = paste0(path, "/Ensemble_Y", 1:ncol(w_mat))
   
   if((learner %in% c("s", "both")) & (ncol(w_mat) > 2)) stop("S-Learner cannot be combined with more than two treatments.")
   
@@ -127,8 +126,8 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
       
       temp <- nuisance_cf(
         ml = ml, y = y, x = x, cf_mat = cf_mat, learner = learner, cv = cv,
-        subset = w_mat[, i], storeModels = storeModels,
-        path = path_temp[i], quiet = quiet, pb = pb, pb_np = pb_np)
+        subset = w_mat[, i], storeModels = "Memory",
+        path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
       
       Yw.hat[, i] <- temp$np
       Yw.hat_ml[[i]] <- temp$models
@@ -142,8 +141,8 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
       
       temp <- nuisance_cf(
         ml = ml, y = y, x = x, cf_mat = cf_mat, learner = learner, cv = cv,
-        subset = z_mat[, i], storeModels = storeModels,
-        path = path_temp[i], quiet = quiet, pb = pb, pb_np = pb_np)
+        subset = z_mat[, i], storeModels = "Memory",
+        path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
       
       Yz.hat[, i] <- temp$np
       Yz.hat_ml[[i]] <- temp$models
@@ -155,8 +154,8 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
     
     temp <- nuisance_cf(
       ml = ml, y = y, x = x, cf_mat = cf_mat, learner = learner, cv = cv,
-      subset = NULL, storeModels = storeModels,
-      path = path_temp[1], quiet = quiet, pb = pb, pb_np = pb_np)
+      subset = NULL, storeModels = "Memory",
+      path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
     
     Y.hat <- temp$np
     Y.hat_ml <- temp$models
@@ -209,10 +208,21 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
                  "W.hat"=W.hat,"Wz.hat"=Wz.hat,"Z.hat"=Z.hat)
   models_list = list("Y.hat_ml"=Y.hat_ml,"Yw.hat_ml"=Yw.hat_ml,"Yz.hat_ml"=Yz.hat_ml)
   
-  list("nuisance_parameters"=np_list, "models"=models_list)
+  if (storeModels == "Disk") {
+    models_path = file.path(path, "nuisance_models.rds")
+    saveRDS(models_list, file = models_path)
+    
+    if (!quiet) message("Models saved to: ", models_path)
+    return(list("nuisance_parameters" = np_list, "models" = NULL))
+    
+  } else if (storeModels == "No") {
+    return(list("nuisance_parameters" = np_list, "models" = NULL))
+    
+  } else {
+    return(list("nuisance_parameters" = np_list, "models" = models_list))
+  }
   
 }
-
 
 
 #' Cross-fitting of nuisance parameters

@@ -31,6 +31,10 @@ iobjectut for \code{\link{ensemble_short}} or \code{\link{ensemble}}.}
 
 \item{y}{Vector of outcomes of training sample.}
 
+\item{w_mat}{Logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.}
+
+\item{z_mat}{Logical matrix of instrument indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.}
+
 \item{cv}{Number of cross-validation folds when estimating ensemble model.}
 
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds

@@ -38,6 +38,17 @@ get_outcome_weights = function(np_object,
   
   results <- list()
   
+  if (is.null(np_object)) {
+    stop("Ensemble models were not saved after training.")
+    
+  } else if (is.character(np_object) && length(np_object) == 1) {
+    loaded_object <- readRDS(np_object)
+    np_object <- list(models = loaded_object)
+    
+  } else if (!is.list(np_object)) {
+    stop("np_object must be either a list or a valid path to an RDS file.")
+  }
+  
   # Check for available models
   model_names <- paste0(NuPa, "_ml")
   existing_models <- model_names[model_names %in% names(np_object[["models"]])]

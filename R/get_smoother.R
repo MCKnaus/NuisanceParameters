@@ -34,15 +34,7 @@ get_smoother = function(object,
                                quiet = TRUE,
                                ...) {
   
-  # load fitted ml object
-  if(is.null(object)) {
-    stop("Ensemble models were not saved after training.")
-  } else if (is.character(object) & length(object) == 1) {
-    ml_fit = readRDS(object)
-  } else {
-    ml_fit = object
-  }
-  
+  if (is.null(object)) stop("Ensemble models were not saved after training.")
   if (is.null(subset)) subset = rep(TRUE, length(y))
   
   
