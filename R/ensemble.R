@@ -153,12 +153,12 @@ weights.ensemble = function(object,
                             quiet = TRUE,
                             ...) {
 
-  if (length(object$ml) > 1) {
+  if (length(object$ml_fit) > 1) {
 
     w_array = weights.ensemble_core(object = object$ml_fit, ml = ml, x_tr = x, y_tr = y, x_te = xnew, quiet)
     smoother_weights = agg_array(w_array, object$nnls_weights)
 
-  } else if (length(object$ml) == 1) {
+  } else if (length(object$ml_fit) == 1) {
 
     w_array = weights.ensemble_core(object = object$ml_fit, ml = ml, x_tr = x, y_tr = y, x_te = xnew, quiet)
     smoother_weights = array(w_array[, , 1], dim = dim(w_array)[-3])

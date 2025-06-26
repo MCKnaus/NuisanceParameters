@@ -6,7 +6,7 @@
 #' Methods can be created by \code{\link{create_method}}.
 #' @param y Numerical vector containing the outcome variable.
 #' @param w Numerical vector containing the treatment variable.
-#' @param w Numerical vector containing the instrument variable.
+#' @param z Numerical vector containing the instrument variable.
 #' @param w_mat Logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.
 #' @param z_mat Logical matrix of instrument indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.
 #' @param x Covariate matrix.
@@ -103,20 +103,19 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
     if ("Z.hat" %in% NuPa) total_ticks <- total_ticks + 1
     
     # Multiply by folds and models (fitting + prediction)
-    total_ticks <- total_ticks * cf_folds * length(models) * 2 * if (cv_folds > 1) (cv_folds+1) else 1
+    total_ticks <- total_ticks * cf_folds * length(models) * 2 * if (cv_folds > 1 && length(models) > 1) (cv_folds+1) else 1
     
     pb <- progress::progress_bar$new(
       format = "[:bar] :percent | :current/:total | :nuisance | cf =:pb_cf, cv =:pb_cv | :task :model",
       total = total_ticks,
-      clear = FALSE,
-      width = 80
-    )
+      clear = TRUE, width = 80, force = TRUE
+      )
     
     return(pb)
   }
   
-  # Initialize progress bar
-  if (isFALSE(quiet)) {pb <- setup_progress_bar(NuPa, ncol(w_mat), ncol(z_mat), cf, cv, ml)}
+  # Initialize progress bar (only if quiet = FALSE)
+  pb <- if (isFALSE(quiet)) {setup_progress_bar(NuPa, ncol(w_mat), ncol(z_mat), ncol(cf_mat), cv, ml)} else {NULL}
   
   
   ######
@@ -323,7 +322,7 @@ nuisance_cf = function(ml, y, x, cf_mat,
       ens_pred = predict(ens, ml, x = x_tr, y = y_tr, xnew = x_te, quiet = quiet, pb = pb, pb_np = pb_np, pb_cf = i)
       np[fold] = ens_pred$np
 
-      fit_sub[[i]] = list("fit_cv" = ens_pred$fit_cv, "nnls_w" = ens$nnls_weights, "models" = ens$ml)
+      fit_sub[[i]] = list("fit_cv" = ens_pred$fit_cv, "nnls_w" = ens$nnls_weights, "ens_object" = ens)
 
     }
 

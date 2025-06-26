@@ -71,6 +71,8 @@ The package is work in progress. Find here the current state
     single `ml` method
   - [ ] Name objects consistently throughout the package, in tune with
     `OutcomeWeights`
+  - [ ] Decide on whether `cf_mat` should be created internally or
+    externally of `nuisance_parameters`
 
 ### Envisioned features
 

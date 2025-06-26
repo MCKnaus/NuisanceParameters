@@ -377,11 +377,19 @@ plot.ens.learner = function(x,
 update_progress <- function(pb, pb_np, pb_cf, pb_cv, task, method) {
   if (is.null(pb)) return(invisible(NULL))
   
-  # Center-align formatter with padding
+  # Simplified center-align without ANSI interference
   format_center <- function(x, width) {
+    if (getOption("knitr.in.progress", FALSE)) {
+      return(x)  # Skip fancy formatting in notebooks
+    }
     x <- substr(as.character(x), 1, width)
     pad <- width - nchar(x)
     paste0(strrep(" ", ceiling(pad / 2)), x, strrep(" ", floor(pad / 2)))
+  }
+  
+  # Force plain text in notebooks
+  if (getOption("knitr.in.progress", FALSE)) {
+    pb$format <- gsub("\\033\\[[0-9;]*[mGKH]", "", pb$format)
   }
   
   pb$tick(tokens = list(

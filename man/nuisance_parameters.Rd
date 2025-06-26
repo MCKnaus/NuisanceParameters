@@ -33,7 +33,9 @@ Methods can be created by \code{\link{create_method}}.}
 
 \item{y}{Numerical vector containing the outcome variable.}
 
-\item{w}{Numerical vector containing the instrument variable.}
+\item{w}{Numerical vector containing the treatment variable.}
+
+\item{z}{Numerical vector containing the instrument variable.}
 
 \item{w_mat}{Logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.}
 
