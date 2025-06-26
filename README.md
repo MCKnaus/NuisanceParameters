@@ -132,31 +132,26 @@ ml = list(
 )
 
 # Core functionality of NuisanceParameters
-np <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"), 
+np_short <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
                           ml = ml, x = X, y = Y, w = W, z = Z,
                           cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
-                          cl = NULL, cv = cv, learner = c("t"), 
-                          storeModels = "Memory", path = NULL, quiet = FALSE)
+                          cv = cv, learner = c("t"), 
+                          storeModels = "Memory", path = NULL, quiet = TRUE)
 
 # Produces smoother matrices for each outcome nuisance parameter
-S <- get_outcome_weights(np_object = np, 
+S <- NuisanceParameters::get_outcome_weights(np_object = np_short, 
                          ml = ml, 
-                         x = X, y = Y, 
+                         x = X, y = Y, w_mat=w_mat, z_mat=z_mat,
                          cv = cv, cf_mat = cf_mat,
-                         NuPa = c("Y.hat","Yw.hat","Yz.hat"))
-                         
-# Check if weights are correct
-all.equal(all.equal(as.numeric(S$Y.hat_ml%*%Y), np$nuisance_parameters$Y.hat), 
-          all.equal(as.numeric(S$Yw.hat_ml[[1]]%*%Y), np$nuisance_parameters$Yw.hat[,1]), 
-          all.equal(as.numeric(S$Yw.hat_ml[[2]]%*%Y), np$nuisance_parameters$Yw.hat[,2]), 
-          all.equal(as.numeric(S$Yz.hat_ml[[1]]%*%Y), np$nuisance_parameters$Yz.hat[,1]), 
-          all.equal(as.numeric(S$Yz.hat_ml[[2]]%*%Y), np$nuisance_parameters$Yz.hat[,2]))
+                         NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
+                         quiet=TRUE)
 
-# Hand-coded Double ML for partially linear model
-res_y = Y-np$nuisance_parameters$Y.hat
-res_w = W-np$nuisance_parameters$W.hat
-plr = lm_robust(res_y ~ 0+res_w)
-summary(plr)
+# Check if SY = Y_hat
+all.equal(all.equal(as.numeric(S$Y.hat_ml%*%Y), np_short$nuisance_parameters$Y.hat), 
+          all.equal(as.numeric(S$Yw.hat_ml[[1]]%*%Y), np_short$nuisance_parameters$Yw.hat[,1]),
+          all.equal(as.numeric(S$Yw.hat_ml[[2]]%*%Y), np_short$nuisance_parameters$Yw.hat[,2]),
+          all.equal(as.numeric(S$Yz.hat_ml[[1]]%*%Y), np_short$nuisance_parameters$Yz.hat[,1]),
+          all.equal(as.numeric(S$Yz.hat_ml[[2]]%*%Y), np_short$nuisance_parameters$Yz.hat[,2]))
 ```
 
 The development version will be soon available using the `devtools`
