@@ -56,7 +56,7 @@ or a combination of the two.}
 models for future processing (default "No").}
 
 \item{path}{Optional path to save the \code{\link{ensemble}} objects for later processing.
-Saved as Ensemble_Yi where i is the number of the treatment in multiple treatment settings.}
+Saved as a list of models.}
 
 \item{quiet}{If FALSE, progress output is printed into console.}
 }

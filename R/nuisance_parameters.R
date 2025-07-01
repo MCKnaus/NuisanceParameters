@@ -20,7 +20,7 @@
 #' @param storeModels Vector of characters indicating where to save individual 
 #' models for future processing (default "No").
 #' @param path Optional path to save the \code{\link{ensemble}} objects for later processing.
-#' Saved as Ensemble_Yi where i is the number of the treatment in multiple treatment settings.
+#' Saved as a list of models.
 #' @param quiet If FALSE, progress output is printed into console.
 #'
 #' @return A list containing:
@@ -45,7 +45,7 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
   ## Sanity checks
   learner = match.arg(learner)
   storeModels = match.arg(storeModels)
-  
+
   # Define path if not provided
   if (is.null(path)) path = getwd()
   
@@ -106,14 +106,11 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
     
     pb <- progress::progress_bar$new(
       format = "[:bar] :percent | :current/:total | :nuisance | cf =:pb_cf, cv =:pb_cv | :task :model",
-      total = total_ticks,
-      clear = TRUE, width = 80, force = TRUE
-      )
-    
+      total = total_ticks, clear = TRUE, width = 80, force = TRUE)
     return(pb)
   }
   
-  # Initialize progress bar (only if quiet = FALSE)
+  # Initialize progress bar
   pb <- if (isFALSE(quiet)) {setup_progress_bar(NuPa, ncol(w_mat), ncol(z_mat), ncol(cf_mat), cv, ml)} else {NULL}
   
   
@@ -264,13 +261,9 @@ nuisance_cf = function(ml, y, x, cf_mat,
 
 
   ### Parameter Configuration ###
-
   learner = match.arg(learner)
 
-
-
   ### Checks ###
-
   if (is.numeric(cf_mat)) {
     if (!all(cf_mat %in% 0:1) | !is.matrix(cf_mat)) stop("Please provide cf_mat as binary indicator matrix. E.g. use function prep_cf_mat")
     if (nrow(cf_mat) != length(y)) stop("cf_mat indicator matrix nrows different from # of obs.")
@@ -285,6 +278,12 @@ nuisance_cf = function(ml, y, x, cf_mat,
 
   np = rep(NA, length(y))
   models <- NULL
+  
+  ### Hyperparameter tuning
+  if (!is.null(ml$forest_grf) && identical(ml$forest_grf$arguments, list("tune_full"))) {
+    tuning <- grf::regression_forest(X = x, Y = y, tune.parameters = "all")
+    ml$forest_grf$arguments <- as.list(tuning$tuning.output$params)
+  }
   
 
   ### Short-Stacking ###
