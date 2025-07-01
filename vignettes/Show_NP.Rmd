@@ -263,7 +263,9 @@ all.equal(all.equal(as.numeric(S2$Y.hat_ml%*%Y), np_stand$nuisance_parameters$Y.
 
 ## Hyperparameter tuning
 
-As of now, only `grf`'s regression forest can be tuned on full sample by specifying `arguments = list("tune_full")`:
+As of now, only `grf`'s regression forest can be tuned.
+
+On full sample by specifying `arguments = list("tune_full")`..
 
 ```{r}
 ml = list(
@@ -272,7 +274,7 @@ ml = list(
 )
 
 # Measure execution time
-time_short_tune <- system.time({
+time_short_tune_full <- system.time({
 np_short <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
                                 ml = ml, x = X, y = Y, w = W, z = Z,
                                 cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
@@ -280,23 +282,53 @@ np_short <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.
                                 storeModels = "Memory", path = NULL, quiet = TRUE)
 })
 
-time_stand_tune <- system.time({
+time_stand_tune_full <- system.time({
 np_stand <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
                       ml = ml, x = X, y = Y, w = W, z = Z,
                       cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
-                      cv = cv, learner = c("t"), 
+                      cv = 2, learner = c("t"), 
                       storeModels = "Disk", path = "/Users/romanrakov/Desktop", quiet = TRUE)
 })
 ```
+
+Or on the fold by specifying `arguments = list("tune_fold")`..
+
+```{r}
+ml = list(
+ "ols" = create_method("ols"),
+ "forest_grf" = create_method("forest_grf", arguments = list("tune_fold"))
+)
+
+# Measure execution time
+time_short_tune_fold <- system.time({
+np_short <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
+                                ml = ml, x = X, y = Y, w = W, z = Z,
+                                cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
+                                cl = NULL, cv = 1, learner = c("t"), 
+                                storeModels = "Memory", path = NULL, quiet = TRUE)
+})
+
+time_stand_tune_fold <- system.time({
+np_stand <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
+                      ml = ml, x = X, y = Y, w = W, z = Z,
+                      cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
+                      cv = 2, learner = c("t"), 
+                      storeModels = "Memory", path = NULL, quiet = TRUE)
+})
+```
+
+The warnings appear because there is very little variation in $W$ when $Z = 0$.
 
 And print the training time:
 
 ```{r}
 cat("
-Short stacking not tuned:   ", time_short_notune[3], "s
-Short stacking tuned:       ", time_short_tune[3], "s  
-Standard stacking not tuned:", time_stand_notune[3], "s
-Standard stacking tuned:    ", time_stand_tune[3], "s"
+Short stacking not tuned:    ", time_short_notune[3], "s
+Standard stacking not tuned: ", time_stand_notune[3], "s
+\nShort stacking full-tuned:   ", time_short_tune_full[3], "s  
+Standard stacking full-tuned:", time_stand_tune_full[3], "s
+\nShort stacking fold-tuned:   ", time_short_tune_fold[3], "s  
+Standard stacking fold-tuned:", time_stand_tune_fold[3], "s"
     )
 ```
 

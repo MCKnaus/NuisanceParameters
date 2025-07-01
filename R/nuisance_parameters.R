@@ -76,6 +76,9 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
   Y.hat = Yw.hat = Yz.hat = W.hat = Wz.hat = Z.hat = 
     "This nuisance parameter was not specified and is therefore empty."
   
+  Y.hat_ml = Yw.hat_ml = Yz.hat_ml = 
+    "This model was not specified and is therefore empty."
+  
   # Initialize nuisance parameters and estimated model lists to be filled
   if ("Y.hat" %in% NuPa) {Y.hat = matrix(NA, nrow(w_mat), ncol(w_mat)-1); Y.hat_ml <- vector("list", ncol(w_mat)-1)}
   if ("Yw.hat" %in% NuPa) {Yw.hat = matrix(NA, nrow(w_mat), ncol(w_mat)); Yw.hat_ml <- vector("list", ncol(w_mat))}
@@ -167,9 +170,9 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
       pb_np <- paste0("Wz.hat, z=", i-1)
       
       temp <- nuisance_cf(
-        ml = ml, y = w_mat[, i], x = x, cf_mat = cf_mat, learner = "t", cv = cv,
+        ml = ml, y = w, x = x, cf_mat = cf_mat, learner = learner, cv = cv,
         subset = z_mat[, i], storeModels = "No",
-        path = path_temp, quiet = quiet, pb = pb, pb_np = pb_np)
+        path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
       
       Wz.hat[, i] <- temp$np
     }
@@ -179,9 +182,9 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
     pb_np <- "W.hat"
     
     temp <- nuisance_cf(
-      ml = ml, y = W, x = x, cf_mat = cf_mat, learner = "t", cv = cv,
+      ml = ml, y = w, x = x, cf_mat = cf_mat, learner = learner, cv = cv,
       subset = NULL, storeModels = "No", 
-      path = path_temp, quiet = quiet, pb = pb, pb_np = pb_np)
+      path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
     
     W.hat <- temp$np
   }
@@ -193,9 +196,9 @@ nuisance_parameters = function(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.ha
     pb_np <- "Z.hat"
     
     temp <- nuisance_cf(
-      ml = ml, y = Z, x = x, cf_mat = cf_mat, learner = "t", cv = cv,
+      ml = ml, y = z, x = x, cf_mat = cf_mat, learner = learner, cv = cv,
       subset = NULL, storeModels = "No", 
-      path = path_temp, quiet = quiet, pb = pb, pb_np = pb_np)
+      path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
     
     Z.hat <- temp$np
   }
@@ -323,12 +326,19 @@ nuisance_cf = function(ml, y, x, cf_mat,
       x_tr = x[!fold & subset, ]
       y_tr = y[!fold & subset]
       x_te = x[fold, ]
+      ml_fold = ml
+      
+      ### Hyperparameter tuning
+      if (!is.null(ml_fold$forest_grf) && identical(ml_fold$forest_grf$arguments, list("tune_fold"))) {
+        tuning <- grf::regression_forest(X = x_tr, Y = y_tr, tune.parameters = "all")
+        ml_fold$forest_grf$arguments <- as.list(tuning$tuning.output$params)
+      }
 
-      ens = ensemble(ml = ml, x = x_tr, y = y_tr, nfolds = cv, 
+      ens = ensemble(ml = ml_fold, x = x_tr, y = y_tr, nfolds = cv, 
                      quiet = quiet, pb = pb, pb_np = pb_np, pb_cf = i
                      )
       
-      ens_pred = predict(ens, ml, x = x_tr, y = y_tr, xnew = x_te, quiet = quiet, pb = pb, pb_np = pb_np, pb_cf = i)
+      ens_pred = predict(ens, ml_fold, x = x_tr, y = y_tr, xnew = x_te, quiet = quiet, pb = pb, pb_np = pb_np, pb_cf = i)
       np[fold] = ens_pred$np
 
       fit_sub[[i]] = list("fit_cv" = ens_pred$fit_cv, "nnls_w" = ens$nnls_weights, "ens_object" = ens)

@@ -77,6 +77,8 @@ The package is work in progress. Find here the current state
 ### Envisioned features
 
 - [ ] Hyperparameter tuning: both on the fold and in full sample
+  - [x] For `grf`’s random forest
+  - [ ] For other learners
 - [ ] Add support for more smoothers (e.g., XGBoost)
 - [ ] Add more Double ML estimators (DiD is a first priority)
 - [ ] Allow for more general treatment types

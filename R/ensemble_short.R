@@ -60,19 +60,23 @@ ensemble_short = function(ml,
 
   for (i in 1:ncol(cf_mat)) {
 
-    #if (isFALSE(quiet)) print(paste("Cross-fitting fold: ", toString(i)))
-
     fold = cf_mat[, i]
     x_tr = x[!fold, ]
     y_tr = y[!fold]
     x_te = x[fold, ]
     subset_tr = subset[!fold]
-
+    ml_fold = ml
+    
+    ### Hyperparameter tuning
+    if (!is.null(ml_fold$forest_grf) && identical(ml_fold$forest_grf$arguments, list("tune_fold"))) {
+      tuning <- grf::regression_forest(X = x_tr, Y = y_tr, tune.parameters = "all")
+      ml_fold$forest_grf$arguments <- as.list(tuning$tuning.output$params)
+    }
 
     if (learner %in% c("t", "both")) {
 
-      ml_fit = ensemble_core(ml, x_tr, y_tr, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
-      fit_cv[fold, grepl("^t", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml, x_tr, y_tr, x_te, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+      ml_fit = ensemble_core(ml_fold, x_tr, y_tr, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+      fit_cv[fold, grepl("^t", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml_fold, x_tr, y_tr, x_te, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
 
       if(saveModels) s[[i]] = ml_fit
 
@@ -83,8 +87,8 @@ ensemble_short = function(ml,
       x_tr_s = cbind(x_tr, subset_tr*1)
       x_te_s = cbind(x_te, rep(1, nrow(x_te)))
 
-      ml_fit = ensemble_core(ml, x_tr_s, y_tr, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
-      fit_cv[fold, grepl("^s", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml, x_tr_s, y_tr, x_te_s, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+      ml_fit = ensemble_core(ml_fold, x_tr_s, y_tr, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+      fit_cv[fold, grepl("^s", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml_fold, x_tr_s, y_tr, x_te_s, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
 
       if(saveModels) s[[ncol(cf_mat) + i]] = ml_fit
 
