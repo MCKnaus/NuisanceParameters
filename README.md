@@ -64,7 +64,6 @@ The package is work in progress. Find here the current state
   - <img src="assets/progress_bar.gif" width="500" />
 - [x] Nicely display ensemble weights
   - <img src="assets/short_plot.png" width="250" />
-    <img src="assets/stand_plot.png" width="250" />
 - [ ] Create vignettes
   - [ ] General tutorial notebook
   - [ ] Explainers for (1) different types of stacking, (2) different

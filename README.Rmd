@@ -38,7 +38,7 @@ The package is work in progress. Find here the current state (suggestions welcom
 -   [x] Implement a progress bar
     -   ![](assets/progress_bar.gif){width="500"}
 -   [x] Nicely display ensemble weights
-    -   ![](assets/short_plot.png){width="250"} ![](assets/stand_plot.png){width="250"}
+    -   ![](assets/short_plot.png){width="250"}
 -   [ ] Create vignettes
     -   [ ] General tutorial notebook
     -   [ ] Explainers for (1) different types of stacking, (2) different learners and ML methods and (3) clustering options
