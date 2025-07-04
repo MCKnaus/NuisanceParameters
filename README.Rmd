@@ -35,6 +35,10 @@ The package is work in progress. Find here the current state (suggestions welcom
 -   [ ] Storage options
     -   [x] Allow the user to choose where to store the models: "No" (just the nuisance parameters in the output), "Memory" (keep all trained models in the object), or "Disk" (write them to disk).
     -   [ ] Store more efficiently: use sparse matrices or save only what's needed for `get_outcome_weights`
+-   [x] Implement a progress bar
+    -   ![](assets/progress_bar.gif){width="500"}
+-   [x] Nicely display ensemble weights
+    -   ![](assets/short_plot.png){width="250"} ![](assets/stand_plot.png){width="250"}
 -   [ ] Create vignettes
     -   [ ] General tutorial notebook
     -   [ ] Explainers for (1) different types of stacking, (2) different learners and ML methods and (3) clustering options
