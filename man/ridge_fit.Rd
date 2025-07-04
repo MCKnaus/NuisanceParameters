@@ -4,12 +4,12 @@
 \alias{ridge_fit}
 \title{Fits Ridge regression}
 \usage{
-ridge_fit(x, y, arguments = list())
+ridge_fit(X, Y, arguments = list())
 }
 \arguments{
-\item{x}{Matrix of covariates}
+\item{X}{Matrix of covariates}
 
-\item{y}{Vector of outcomes}
+\item{Y}{Vector of outcomes}
 
 \item{arguments}{List of arguments passed to \code{\link[glmnet]{glmnet}}}
 }

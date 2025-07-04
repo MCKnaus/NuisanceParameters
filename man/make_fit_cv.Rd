@@ -4,19 +4,19 @@
 \alias{make_fit_cv}
 \title{Prepare fit_cv matrix}
 \usage{
-make_fit_cv(ml, n, learner = c("t", "s", "both"))
+make_fit_cv(ml, N, learner = c("t", "s", "both"))
 }
 \arguments{
 \item{ml}{List of methods built via \code{\link{create_method}} to be used in
 ensemble model}
 
-\item{n}{Number of observations.}
+\item{N}{Number of observations.}
 
 \item{learner}{Vector of characters indicating whether to use S or T learner
 or both.}
 }
 \value{
-A matrix of NAs with dimensions \code{n} x \code{length(ml)}
+A matrix of NAs with dimensions \code{N} x \code{length(ml)}
 }
 \description{
 This function creates a matrix to store cross-fitted ensemble predictions.

@@ -6,8 +6,8 @@
 \usage{
 ensemble_short(
   ml,
-  x,
-  y,
+  X,
+  Y,
   cf_mat,
   subset = NULL,
   learner = c("t", "s", "both"),
@@ -22,9 +22,9 @@ ensemble_short(
 \item{ml}{List of methods built via \code{\link{create_method}} to be used in
 ensemble model.}
 
-\item{x}{Covariate matrix of training sample.}
+\item{X}{Covariate matrix of training sample.}
 
-\item{y}{Vector of outcomes of training sample.}
+\item{Y}{Vector of outcomes of training sample.}
 
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
 (for example created by \code{\link{prep_cf_mat}}).}
@@ -49,7 +49,7 @@ console.}
 }
 \value{
 List object containing:
-\item{fit_cv}{matrix of dimension \code{nrow(x)} x \code{length(ml)} containing
+\item{fit_cv}{matrix of dimension \code{nrow(X)} X \code{length(ml)} containing
 the cross-fitted predictions of the machine learning methods from the ensemble}
 \item{ml}{list of fitted machine learning models from all cross-fitting folds
 (if storeModels is not set to "No")}

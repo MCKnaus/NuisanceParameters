@@ -4,16 +4,16 @@
 \alias{weights.ols_fit}
 \title{Smoother weights from OLS prediction}
 \usage{
-\method{weights}{ols_fit}(ols_fit, x, xnew, ...)
+\method{weights}{ols_fit}(ols_fit, X, Xnew, ...)
 
-\method{weights}{ols_fit}(ols_fit, x, xnew, ...)
+\method{weights}{ols_fit}(ols_fit, X, Xnew, ...)
 }
 \arguments{
 \item{ols_fit}{Output of \code{\link{ols_fit}}}
 
-\item{x}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of training sample}
 
-\item{xnew}{Covariate matrix of test sample}
+\item{Xnew}{Covariate matrix of test sample}
 
 \item{...}{Ignore unused arguments}
 }

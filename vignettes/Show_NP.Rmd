@@ -23,24 +23,10 @@ if (!require("dplyr")) install.packages("dplyr", dependencies = TRUE); library(d
 if (!require("purrr")) install.packages("purrr", dependencies = TRUE); library(purrr)
 if (!require("ggplot2")) install.packages("ggplot2", dependencies = TRUE); library(ggplot2)
 
-# devtools::document()
+devtools::document()
 library(NuisanceParameters)
 
 set.seed(1234)
-```
-
-Define some useful functions:
-
-```{r}
-ens_weights <- function(models_data, learner_names) {
-  v1 <- compact(map_depth(models_data, 1, "nnls_w", .ragged = TRUE))
-  v2 <- compact(map_depth(models_data, 2, "nnls_w", .ragged = TRUE))
-  v2$Y.hat_ml <- v1$Y.hat_ml
-  
-  v2 %>% imap(~ if(is.list(.x) && !is.null(names(.x[[1]]))) {
-    setNames(.x, paste0(.y, "[[", seq_along(.x), "]]"))
-    } else setNames(list(.x), .y)) %>% flatten() %>% map(~ setNames(.x, learner_names))
-}
 ```
 
 Next, load the data. Here we use a sample from the 401(k) data of the `hdm` package.
@@ -51,36 +37,14 @@ idx <- sample(nrow(pension), size = round(0.1 * nrow(pension)))
 sub <- pension[idx, ]
 
 # subset
-W <- sub$p401
+D <- sub$p401
 Z <- sub$e401
 Y <- sub$net_tfa
 X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc + male + marr + pira + twoearn,
                   data = sub)
 ```
 
-Now we structure the inputs.
-
-Starting with the instrument and treatment indicator matrices:
-
-```{r}
-w_mat = prep_w_mat(W)
-z_mat = prep_w_mat(Z)
-
-head(w_mat)
-head(z_mat)
-```
-
-We prepare these because `w_mat` can be passed to `prep_cf_mat`, which is used in both nuisance parameter estimation and smoother matrix recovery—two separate steps—so it needs to be saved outside `nuisance_parameters`.
-
-That said, I can do it internally instead—when you just pass `W`, `Z`, and `cf`, and `nuisance_parameters` handles the rest, returning `cf_mat`. This would simplify the input.
-
-Here, we do it manually:
-
-```{r}
-# Cross-fitting fold indicators
-cf_mat = prep_cf_mat(n=length(Y), cf = 5, w_mat = w_mat, cl = NULL)
-head(cf_mat)
-```
+We just pass `W`, `Z`, and `cf`, and `nuisance_parameters` handles the rest, returning `cf_mat`.
 
 **Reminder**: `cf_mat` creates a matrix of binary cross-fitting fold indicators (n x cross-folds). It can account for clusters within the data (specify `cl`) and preserve the treatment ratios from full sample (specify `w_mat`). If both are provided, `w_mat` is ignored due to computational constraints and feasibility issues.
 
@@ -91,7 +55,10 @@ Lastly, we specify the methods used in the ensemble with `create_method`:
 ```{r}
 ml = list(
  "ols" = create_method("ols"),
- "forest_grf" = create_method("forest_grf")
+ "forest_grf" = create_method("forest_grf"),
+ # "lasso" = create_method("lasso"),
+ # "ridge" = create_method("ridge"),
+ "knn" = create_method("knn", arguments = list("k" = 3))
 )
 ```
 
@@ -101,16 +68,15 @@ Now, we are ready to run the main function:
 
 ```{r}
 # Short stacking 
-cv = 1 
-
-# nuisance parameter estimation
 time_short_notune <- system.time({
-np_short <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
-                                ml = ml, x = X, y = Y, w = W, z = Z,
-                                cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
-                                cl = NULL, cv = cv, learner = c("t"), 
-                                storeModels = "Memory", path = NULL, quiet = TRUE)
+np_short <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
+                                X, Y, D, Z,
+                                ml = ml, cf = 5, stacking = "short",
+                                cluster = NULL, stratify = FALSE, learner = c("t"), 
+                                storeModels = "Memory", path = NULL, quiet = FALSE)
 })
+
+plot(np_short$numbers$ens_weights)
 ```
 
 To make sure the result makes sense, let's manually estimate some target parameters and compare the result to `dml_with_smoother` of `OutcomeWeights`:
@@ -190,6 +156,23 @@ We can also check the ensemble weights:
 
 ```{r}
 ens_weights(np_short$models, names(ml))
+
+debug(plot.ens.learner)
+plot.ens.learner(np_short$models$Y.hat.d_ml)
+
+plot(np_short$models$Y.hat.d_ml[[1]])
+
+for_plot <- readRDS("/Users/romanrakov/Desktop/nuisance_models.rds")
+plot(for_plot$models$Y.hat.d_ml[[1]])
+
+
+undebug(plot)
+x=np_short$models$Y.hat.d_ml
+(is.null(names(x[[1]])))
+
+fit_cv = make_fit_cv(ml = ml, N = nrow(X), learner = "t")
+
+names(ml)[1]
 ```
 
 ## Extract smoother matrices S
@@ -197,19 +180,20 @@ ens_weights(np_short$models, names(ml))
 Here comes the second function, which will later move to the `OutcomeWeights` package:
 
 ```{r}
-S <- NuisanceParameters::get_outcome_weights(np_object = np_short, 
-                         ml = ml, 
-                         x = X, y = Y, w_mat=w_mat, z_mat=z_mat,
-                         cv = cv, cf_mat = cf_mat,
-                         NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
-                         quiet=TRUE)
+S <- NuisanceParameters::get_outcome_weights(
+  np_object = np_short, 
+  NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat")
+  )
 
 # Check if SY = Y_hat
-all.equal(all.equal(as.numeric(S$Y.hat_ml%*%Y), np_short$nuisance_parameters$Y.hat), 
-          all.equal(as.numeric(S$Yw.hat_ml[[1]]%*%Y), np_short$nuisance_parameters$Yw.hat[,1]),
-          all.equal(as.numeric(S$Yw.hat_ml[[2]]%*%Y), np_short$nuisance_parameters$Yw.hat[,2]),
-          all.equal(as.numeric(S$Yz.hat_ml[[1]]%*%Y), np_short$nuisance_parameters$Yz.hat[,1]),
-          all.equal(as.numeric(S$Yz.hat_ml[[2]]%*%Y), np_short$nuisance_parameters$Yz.hat[,2]))
+checks <- c(
+  all.equal(as.numeric(S$Y.hat_ml %*% Y), np_short$nuisance_parameters$Y.hat),
+  all.equal(as.numeric(S$Y.hat.d_ml[[1]] %*% Y), np_short$nuisance_parameters$Y.hat.d[, 1]),
+  all.equal(as.numeric(S$Y.hat.d_ml[[2]] %*% Y), np_short$nuisance_parameters$Y.hat.d[, 2]),
+  all.equal(as.numeric(S$Y.hat.z_ml[[1]] %*% Y), np_short$nuisance_parameters$Y.hat.z[, 1]),
+  all.equal(as.numeric(S$Y.hat.z_ml[[2]] %*% Y), np_short$nuisance_parameters$Y.hat.z[, 2]))
+
+all(sapply(checks, isTRUE))
 ```
 
 At this point, this function is a bit of a misnomer: it gives smoother matrices instead of outcome weights. In the future, it will also take in the target parameters estimated in `MLeffects` or elsewhere—and provide a vector of outcome weights.
@@ -218,20 +202,22 @@ Stripping the "weight" functionality (which was creating smoother matrices) away
 
 -   To double-check: do we expect smoother extraction within `nuisance_parameters` or within `get_outcome_weights`?
 
+### Standard stacking
+
 Now, let's repeat for standard stacking and print the progress. Here, we first save it to disk and then load it back in to check that everything works:
 
 ```{r}
 # Standard stacking 
-cv = 2
-
-# nuisance parameter estimation
 time_stand_notune <- system.time({
-np_stand <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
-                      ml = ml, x = X, y = Y, w = W, z = Z,
-                      cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
-                      cv = cv, learner = c("t"), 
-                      storeModels = "Disk", path = "/Users/romanrakov/Desktop", quiet = FALSE)
+np_stand <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat.z","D.hat","Z.hat"),
+                                X, Y, D, Z,
+                                ml = ml, cf = 5, stacking = 2,
+                                cluster = NULL, stratify = FALSE, learner = c("t"), 
+                                storeModels = "Memory", quiet = FALSE, 
+                                path = NULL)
 })
+
+plot(np_stand$numbers$ens_weights)
 ```
 
 The progress bar looks amazing in the console, but something breaks when knitting a notebook. I will replace it with something better looking, because I don't seem to find a way to get rid of these extra "G3" symbols.
@@ -246,19 +232,20 @@ It is useful for giving more information on what exactly is being done:
 
 ```{r}
 S2 <- NuisanceParameters::get_outcome_weights(
-                         np_object = "/Users/romanrakov/Desktop/nuisance_models.rds",
-                         ml = ml, 
-                         x = X, y = Y, w_mat=w_mat, z_mat=z_mat,
-                         cv = cv, cf_mat = cf_mat,
-                         NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
-                         quiet=TRUE)
+  np_object = "/Users/romanrakov/Desktop/nuisance_models.rds", 
+  NuPa = c("Y.hat","Y.hat.d","Y.hat.z")
+  )
+
 
 # Check if SY = Y_hat
-all.equal(all.equal(as.numeric(S2$Y.hat_ml%*%Y), np_stand$nuisance_parameters$Y.hat), 
-        all.equal(as.numeric(S2$Yw.hat_ml[[1]]%*%Y), np_stand$nuisance_parameters$Yw.hat[,1]), 
-        all.equal(as.numeric(S2$Yw.hat_ml[[2]]%*%Y), np_stand$nuisance_parameters$Yw.hat[,2]), 
-        all.equal(as.numeric(S2$Yz.hat_ml[[1]]%*%Y), np_stand$nuisance_parameters$Yz.hat[,1]), 
-        all.equal(as.numeric(S2$Yz.hat_ml[[2]]%*%Y), np_stand$nuisance_parameters$Yz.hat[,2]))
+checks <- c(
+  all.equal(as.numeric(S2$Y.hat_ml %*% Y), np_stand$nuisance_parameters$Y.hat),
+  all.equal(as.numeric(S2$Y.hat.d_ml[[1]] %*% Y), np_stand$nuisance_parameters$Y.hat.d[, 1]),
+  all.equal(as.numeric(S2$Y.hat.d_ml[[2]] %*% Y), np_stand$nuisance_parameters$Y.hat.d[, 2]),
+  all.equal(as.numeric(S2$Y.hat.z_ml[[1]] %*% Y), np_stand$nuisance_parameters$Y.hat.z[, 1]),
+  all.equal(as.numeric(S2$Y.hat.z_ml[[2]] %*% Y), np_stand$nuisance_parameters$Y.hat.z[, 2]))
+
+all(sapply(checks, isTRUE))
 ```
 
 ## Hyperparameter tuning

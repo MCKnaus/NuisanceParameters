@@ -4,41 +4,12 @@
 \alias{get_outcome_weights}
 \title{Extraction of smoother weights for ensemble learner}
 \usage{
-get_outcome_weights(
-  np_object,
-  NuPa,
-  ml,
-  x,
-  y,
-  w_mat,
-  z_mat,
-  cv = 1,
-  cf_mat,
-  quiet = TRUE,
-  subset = NULL,
-  ...
-)
+get_outcome_weights(np_object, NuPa, quiet = TRUE, subset = NULL, ...)
 }
 \arguments{
 \item{np_object}{Stacked ensemble learner from \code{\link{ensemble_short}} or \code{\link{ensemble}}.}
 
 \item{NuPa}{String vector specifying which nuisance parameters to extract smoother matrices for.}
-
-\item{ml}{List of ML models by \code{\link{create_method}} that was used as
-iobjectut for \code{\link{ensemble_short}} or \code{\link{ensemble}}.}
-
-\item{x}{Covariate matrix of training sample.}
-
-\item{y}{Vector of outcomes of training sample.}
-
-\item{w_mat}{Logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.}
-
-\item{z_mat}{Logical matrix of instrument indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.}
-
-\item{cv}{Number of cross-validation folds when estimating ensemble model.}
-
-\item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
-(for example created by \code{\link{prep_cf_mat}}).}
 
 \item{quiet}{If FALSE, method that is currently computed is printed into the
 console.}
@@ -47,9 +18,25 @@ console.}
 ensemble weights. If not provided, all observations are used.}
 
 \item{...}{Ignore unused arguments}
+
+\item{ml}{List of ML models by \code{\link{create_method}} that was used as
+iobjectut for \code{\link{ensemble_short}} or \code{\link{ensemble}}.}
+
+\item{X}{Covariate matrix of training sample.}
+
+\item{Y}{Vector of outcomes of training sample.}
+
+\item{d_mat}{Logical matrix of treatment indicators (N X T+1). For example created by \code{\link{prep_w_mat}}.}
+
+\item{z_mat}{Logical matrix of instrument indicators (N X T+1). For example created by \code{\link{prep_w_mat}}.}
+
+\item{cv}{Number of cross-validation folds when estimating ensemble model.}
+
+\item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
+(for example created by \code{\link{prep_cf_mat}}).}
 }
 \value{
-Matrix of dimension \code{nrow(x)} x \code{nrow(x)} containing
+Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing
 ensemble smoother weights, or list of such matrices if multiple models are requested.
 }
 \description{

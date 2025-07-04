@@ -4,13 +4,13 @@
 \alias{nnls_weights}
 \title{Non-negative least squares function for estimation of ensemble weights}
 \usage{
-nnls_weights(X, y)
+nnls_weights(X, Y)
 }
 \arguments{
 \item{X}{A matrix where each column represents a different predictor variable
 and each row represents an observation}
 
-\item{y}{A numeric vector of actual target values}
+\item{Y}{A numeric vector of actual target values}
 }
 \value{
 A numeric vector of the non-negative least weights.
@@ -22,7 +22,7 @@ constraint on the regression coefficients.
 }
 \examples{
 X = matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2)
-y = c(0.25, 0.45, 0.65)
-\donttest{nnls_w = nnls_weights(X, y)}
+Y = c(0.25, 0.45, 0.65)
+\donttest{nnls_w = nnls_weights(X, Y)}
 
 }

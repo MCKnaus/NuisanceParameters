@@ -4,12 +4,12 @@
 \alias{predict.plasso_fit}
 \title{Predictions based on Post-Lasso regression}
 \usage{
-\method{predict}{plasso_fit}(plasso_fit, xnew = NULL, ...)
+\method{predict}{plasso_fit}(plasso_fit, Xnew = NULL, ...)
 }
 \arguments{
 \item{plasso_fit}{Output of \code{\link{plasso_fit}}}
 
-\item{xnew}{Covariate matrix of test sample.
+\item{Xnew}{Covariate matrix of test sample.
 If not provided, prediction is done for the training sample.}
 
 \item{...}{Ignore unused arguments}
@@ -18,7 +18,7 @@ If not provided, prediction is done for the training sample.}
 Vector of fitted values.
 }
 \description{
-Prediction of fitted values (for a potentially new set of covaraites xnew)
+Prediction of fitted values (for a potentially new set of covaraites Xnew)
 based on a trained Post-Lasso model.
 }
 \keyword{internal}

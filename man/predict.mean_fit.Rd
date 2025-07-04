@@ -4,12 +4,12 @@
 \alias{predict.mean_fit}
 \title{Predict after arithmetic mean fitting}
 \usage{
-\method{predict}{mean_fit}(mean_fit, xnew = NULL, ...)
+\method{predict}{mean_fit}(mean_fit, Xnew = NULL, ...)
 }
 \arguments{
 \item{mean_fit}{Output of \code{\link{mean_fit}}}
 
-\item{xnew}{Covariate matrix of test sample. If no test sample provided,
+\item{Xnew}{Covariate matrix of test sample. If no test sample provided,
 prediction is done for training sample.}
 
 \item{...}{Ignore unused arguments}

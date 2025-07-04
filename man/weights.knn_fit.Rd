@@ -4,16 +4,16 @@
 \alias{weights.knn_fit}
 \title{Smoother weights from k-Nearest-Neighbor algorithm}
 \usage{
-\method{weights}{knn_fit}(arguments, x, xnew = NULL, ...)
+\method{weights}{knn_fit}(arguments, X, Xnew = NULL, ...)
 
-\method{weights}{knn_fit}(arguments, x, xnew = NULL, ...)
+\method{weights}{knn_fit}(arguments, X, Xnew = NULL, ...)
 }
 \arguments{
 \item{arguments}{Output of \code{\link{knn_fit}}}
 
-\item{x}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of training sample}
 
-\item{xnew}{Covariate matrix of test sample}
+\item{Xnew}{Covariate matrix of test sample}
 
 \item{...}{Ignore unused arguments}
 }

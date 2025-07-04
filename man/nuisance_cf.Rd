@@ -6,8 +6,8 @@
 \usage{
 nuisance_cf(
   ml,
-  y,
-  x,
+  Y,
+  X,
   cf_mat,
   learner = c("t", "s", "both"),
   cv = 5,
@@ -23,9 +23,9 @@ nuisance_cf(
 \item{ml}{List of methods to be used in \code{\link{ensemble}} estimation.
 Methods can be created by \code{\link{create_method}}.}
 
-\item{y}{Vector of variable to be predicted.}
+\item{Y}{Vector of variable to be predicted.}
 
-\item{x}{Matrix of covariates.}
+\item{X}{Matrix of covariates.}
 
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
 (for example created by \code{\link{prep_cf_mat}}).}
@@ -48,7 +48,7 @@ Optionally, weights as well.}
 \item{quiet}{If FALSE, progress output is printed into console.}
 }
 \value{
-Returns a vector of length n containing nuisance parameters.
+Returns a vector of length N containing nuisance parameters.
 }
 \description{
 \code{\link{nuisance_cf}} makes a cross-fitted ensemble prediction using

@@ -4,12 +4,12 @@
 \alias{predict.forest_drf_fit}
 \title{Predictions based on Distributional Random Forest}
 \usage{
-\method{predict}{forest_drf_fit}(forest_drf_fit, xnew = NULL, functional = "mean", ...)
+\method{predict}{forest_drf_fit}(forest_drf_fit, Xnew = NULL, functional = "mean", ...)
 }
 \arguments{
 \item{forest_drf_fit}{Output of \code{\link{forest_drf_fit}}}
 
-\item{xnew}{Covariate matrix of test sample.
+\item{Xnew}{Covariate matrix of test sample.
 If not provided, prediction is done for the training sample.}
 
 \item{...}{Ignore unused arguments}

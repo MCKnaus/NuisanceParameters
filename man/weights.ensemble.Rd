@@ -4,18 +4,18 @@
 \alias{weights.ensemble}
 \title{Smoother weights from cross-validated ensemble learner}
 \usage{
-\method{weights}{ensemble}(object, ml, x, y, xnew, quiet = TRUE, ...)
+\method{weights}{ensemble}(object, ml, X, Y, Xnew, quiet = TRUE, ...)
 }
 \arguments{
 \item{object}{Trained ensemble object from \code{\link{ensemble}}}
 
 \item{ml}{List of raw methods built via \code{\link{create_method}}}
 
-\item{x}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of training sample}
 
-\item{y}{Vector of outcomes of training sample}
+\item{Y}{Vector of outcomes of training sample}
 
-\item{xnew}{Covariate matrix of test sample}
+\item{Xnew}{Covariate matrix of test sample}
 
 \item{quiet}{If FALSE, method that is currently computed is printed into the
 console}
@@ -23,7 +23,7 @@ console}
 \item{...}{Ignore unused arguments}
 }
 \value{
-Matrix of dimension \code{nrow(xnew)} x \code{nrow(x)} containing
+Matrix of dimension \code{nrow(Xnew)} X \code{nrow(X)} containing
 ensemble smoother weights.
 }
 \description{

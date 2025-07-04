@@ -4,14 +4,14 @@
 \alias{weights.plasso_fit}
 \title{Smoother weights from Post-Lasso prediction}
 \usage{
-\method{weights}{plasso_fit}(plasso_fit, xnew = NULL, ...)
+\method{weights}{plasso_fit}(plasso_fit, Xnew = NULL, ...)
 
-\method{weights}{plasso_fit}(plasso_fit, xnew = NULL, ...)
+\method{weights}{plasso_fit}(plasso_fit, Xnew = NULL, ...)
 }
 \arguments{
 \item{plasso_fit}{Output of \code{\link{plasso_fit}}}
 
-\item{xnew}{Covariate matrix of test sample.
+\item{Xnew}{Covariate matrix of test sample.
 If not provided, prediction is done for the training sample.}
 
 \item{...}{Ignore unused arguments}

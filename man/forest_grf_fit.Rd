@@ -4,12 +4,12 @@
 \alias{forest_grf_fit}
 \title{Fits Random Forest}
 \usage{
-forest_grf_fit(x, y, arguments = list())
+forest_grf_fit(X, Y, arguments = list())
 }
 \arguments{
-\item{x}{Matrix of covariates}
+\item{X}{Matrix of covariates}
 
-\item{y}{vector of outcomes}
+\item{Y}{vector of outcomes}
 
 \item{arguments}{List of arguments passed to \code{\link[grf]{regression_forest}}}
 }

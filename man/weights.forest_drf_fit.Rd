@@ -4,12 +4,12 @@
 \alias{weights.forest_drf_fit}
 \title{Smoother weights from Distributional Random Forest model}
 \usage{
-\method{weights}{forest_drf_fit}(forest_drf_fit, xnew = NULL, ...)
+\method{weights}{forest_drf_fit}(forest_drf_fit, Xnew = NULL, ...)
 
-\method{weights}{forest_drf_fit}(forest_drf_fit, xnew = NULL, ...)
+\method{weights}{forest_drf_fit}(forest_drf_fit, Xnew = NULL, ...)
 }
 \arguments{
-\item{xnew}{Covariate matrix of test sample.
+\item{Xnew}{Covariate matrix of test sample.
 If not provided, prediction is done for the training sample.}
 
 \item{...}{Ignore unused arguments}

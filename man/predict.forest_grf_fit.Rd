@@ -4,12 +4,12 @@
 \alias{predict.forest_grf_fit}
 \title{Predictions based on Random Forest}
 \usage{
-\method{predict}{forest_grf_fit}(forest_grf_fit, xnew = NULL, ...)
+\method{predict}{forest_grf_fit}(forest_grf_fit, Xnew = NULL, ...)
 }
 \arguments{
 \item{forest_grf_fit}{Output of \code{\link{forest_grf_fit}}}
 
-\item{xnew}{Covariate matrix of test sample.
+\item{Xnew}{Covariate matrix of test sample.
 If not provided, prediction is done for the training sample.}
 
 \item{...}{Ignore unused arguments}
@@ -18,7 +18,7 @@ If not provided, prediction is done for the training sample.}
 Vector of fitted values.
 }
 \description{
-Prediction of fitted values (for a potentially new set of covariates xnew)
+Prediction of fitted values (for a potentially new set of covariates Xnew)
 from a Random Forest.
 }
 \keyword{internal}

@@ -4,17 +4,17 @@
 \alias{predict.ridge_fit}
 \title{Predictions based on Ridge regression}
 \usage{
-\method{predict}{ridge_fit}(ridge_fit, xnew, ...)
+\method{predict}{ridge_fit}(ridge_fit, Xnew, ...)
 }
 \arguments{
 \item{ridge_fit}{Output of \code{\link{ridge_fit}}}
 
-\item{xnew}{Covariate matrix of test sample.}
+\item{Xnew}{Covariate matrix of test sample.}
 
 \item{...}{Ignore unused arguments}
 }
 \value{
-Vector of predictions for xnew.
+Vector of predictions for Xnew.
 }
 \description{
 Prediction based on fitted Ridge regression model.

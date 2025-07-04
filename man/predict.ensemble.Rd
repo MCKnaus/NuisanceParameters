@@ -7,9 +7,9 @@
 \method{predict}{ensemble}(
   object,
   ml,
-  x,
-  y,
-  xnew,
+  X,
+  Y,
+  Xnew,
   quiet = TRUE,
   pb = NULL,
   pb_cf = NULL,
@@ -22,11 +22,11 @@
 
 \item{ml}{List of raw methods built via \code{\link{create_method}}}
 
-\item{x}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of training sample}
 
-\item{y}{Vector of outcomes of training sample}
+\item{Y}{Vector of outcomes of training sample}
 
-\item{xnew}{Covariate matrix of test sample}
+\item{Xnew}{Covariate matrix of test sample}
 
 \item{quiet}{If FALSE, method that is currently computed is printed into the
 console.}

@@ -4,12 +4,12 @@
 \alias{predict.lasso_fit}
 \title{Lasso prediction}
 \usage{
-\method{predict}{lasso_fit}(lasso_fit, xnew = NULL, ...)
+\method{predict}{lasso_fit}(lasso_fit, Xnew = NULL, ...)
 }
 \arguments{
 \item{lasso_fit}{Output of \code{\link{lasso_fit}}}
 
-\item{xnew}{Covariate matrix of test sample.
+\item{Xnew}{Covariate matrix of test sample.
 If not provided, prediction is done for the training sample.}
 
 \item{...}{Ignore unused arguments}

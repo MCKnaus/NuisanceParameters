@@ -26,7 +26,11 @@ Imports:
     plasso,
     FastKNN,
     drf,
-    progress
+    progress,
+    ggplot2,
+    gridExtra,
+    reshape2,
+    gtable
 Config/testthat/edition: 3
 Depends: 
     R (>= 2.10)

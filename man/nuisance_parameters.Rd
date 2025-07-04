@@ -5,17 +5,16 @@
 \title{Nuisance parameter estimation}
 \usage{
 nuisance_parameters(
-  NuPa = c("Y.hat", "Yw.hat", "Yz.hat", "W.hat", "Wz.hat", "Z.hat"),
+  NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat"),
+  X,
+  Y,
+  D,
+  Z,
   ml,
-  x,
-  y,
-  w,
-  z,
-  w_mat,
-  z_mat,
-  cf_mat,
-  cl = NULL,
-  cv = 5,
+  cluster = NULL,
+  stratify = FALSE,
+  cf,
+  stacking,
   learner = c("t", "s", "both"),
   storeModels = c("No", "Memory", "Disk"),
   path = NULL,
@@ -24,30 +23,18 @@ nuisance_parameters(
 }
 \arguments{
 \item{NuPa}{String vector specifying the nuisance parameters to be estimated.
-Currently supported: \code{c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.hat","Z.hat")}}
+Currently supported: \code{c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat")}}
+
+\item{X}{Covariate matrix.}
+
+\item{Y}{Numerical vector containing the outcome variable.}
+
+\item{D}{Numerical vector containing the treatment variable.}
+
+\item{Z}{Numerical vector containing the instrument variable.}
 
 \item{ml}{List of methods to be used in \code{\link{ensemble}} estimation.
 Methods can be created by \code{\link{create_method}}.}
-
-\item{x}{Covariate matrix.}
-
-\item{y}{Numerical vector containing the outcome variable.}
-
-\item{w}{Numerical vector containing the treatment variable.}
-
-\item{z}{Numerical vector containing the instrument variable.}
-
-\item{w_mat}{Logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.}
-
-\item{z_mat}{Logical matrix of instrument indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.}
-
-\item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
-(for example created by \code{\link{prep_cf_mat}}).}
-
-\item{cl}{Optional vector of cluster variable if cross-fitting should account
-for clusters within the data.}
-
-\item{cv}{Number of cross-validation folds when estimating ensemble (default 5).}
 
 \item{learner}{Vector of characters indicating whether to use S or T learner
 or a combination of the two.}
@@ -59,6 +46,18 @@ models for future processing (default "No").}
 Saved as a list of models.}
 
 \item{quiet}{If FALSE, progress output is printed into console.}
+
+\item{d_mat}{Logical matrix of treatment indicators (N x T+1). For example created by \code{\link{prep_w_mat}}.}
+
+\item{z_mat}{Logical matrix of instrument indicators (N x T+1). For example created by \code{\link{prep_w_mat}}.}
+
+\item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
+(for example created by \code{\link{prep_cf_mat}}).}
+
+\item{cl}{Optional vector of cluster variable if cross-fitting should account
+for clusters within the data.}
+
+\item{cv}{Number of cross-validation folds when estimating ensemble (default 5).}
 }
 \value{
 A list containing:

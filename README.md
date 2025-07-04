@@ -61,7 +61,10 @@ The package is work in progress. Find here the current state
   - [ ] Store more efficiently: use sparse matrices or save only what’s
     needed for `get_outcome_weights`
 - [x] Implement a progress bar
-  - <img src="assets/progress_bar.gif" width="485" />
+  - <img src="assets/progress_bar.gif" width="500" />
+- [x] Nicely display ensemble weights
+  - <img src="assets/short_plot.png" width="250" />
+    <img src="assets/stand_plot.png" width="250" />
 - [ ] Create vignettes
   - [ ] General tutorial notebook
   - [ ] Explainers for (1) different types of stacking, (2) different

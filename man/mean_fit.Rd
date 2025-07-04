@@ -4,12 +4,12 @@
 \alias{mean_fit}
 \title{Arithmetic mean}
 \usage{
-mean_fit(x, y, ...)
+mean_fit(X, Y, ...)
 }
 \arguments{
-\item{x}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of training sample}
 
-\item{y}{Vector of outcomes of training sample}
+\item{Y}{Vector of outcomes of training sample}
 
 \item{...}{Ignore unused arguments}
 }

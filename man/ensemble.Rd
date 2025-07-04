@@ -6,8 +6,8 @@
 \usage{
 ensemble(
   ml,
-  x,
-  y,
+  X,
+  Y,
   nfolds = 5,
   quiet = TRUE,
   pb = NULL,
@@ -20,9 +20,9 @@ ensemble(
 \item{ml}{List of methods built via \code{\link{create_method}} to be used in
 ensemble model}
 
-\item{x}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of training sample}
 
-\item{y}{Vector of outcomes of training sample}
+\item{Y}{Vector of outcomes of training sample}
 
 \item{nfolds}{Number of folds used in cross-validation of ensemble weights
 (default \code{nfolds = 5})}
@@ -32,7 +32,7 @@ console}
 }
 \value{
 List object containing:
-\item{fit_cv}{matrix of dimension \code{nrow(x)} x \code{length(ml)} containing
+\item{fit_cv}{matrix of dimension \code{nrow(X)} X \code{length(ml)} containing
 the cross-fitted predictions of the machine learning methods from the ensemble}
 \item{nnls_weights}{the weights that each machine learning method receives in
 the ensemble}

@@ -4,18 +4,18 @@
 \alias{weights.ridge_fit}
 \title{Smoother weights from Ridge regression prediction}
 \usage{
-\method{weights}{ridge_fit}(ridge_fit, x, y, xnew = NULL, ...)
+\method{weights}{ridge_fit}(ridge_fit, X, Y, Xnew = NULL, ...)
 
-\method{weights}{ridge_fit}(ridge_fit, x, y, xnew = NULL, ...)
+\method{weights}{ridge_fit}(ridge_fit, X, Y, Xnew = NULL, ...)
 }
 \arguments{
 \item{ridge_fit}{Output of \code{\link{ridge_fit}}}
 
-\item{x}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of training sample}
 
-\item{y}{Vector of outcomes of training sample}
+\item{Y}{Vector of outcomes of training sample}
 
-\item{xnew}{Covariate matrix of test sample.
+\item{Xnew}{Covariate matrix of test sample.
 If not provided, prediction is done for the training sample.}
 
 \item{...}{Ignore unused arguments}

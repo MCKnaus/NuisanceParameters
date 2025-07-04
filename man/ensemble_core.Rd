@@ -6,8 +6,8 @@
 \usage{
 ensemble_core(
   ml,
-  x_tr,
-  y_tr,
+  X_tr,
+  Y_tr,
   quiet = TRUE,
   pb = NULL,
   pb_cf = NULL,
@@ -19,9 +19,9 @@ ensemble_core(
 \item{ml}{List of methods built via \code{\link{create_method}} to be used in
 ensemble model}
 
-\item{x_tr}{Covariate matrix of training sample}
+\item{X_tr}{Covariate matrix of training sample}
 
-\item{y_tr}{Vector of outcomes of training sample}
+\item{Y_tr}{Vector of outcomes of training sample}
 
 \item{quiet}{If FALSE, method that is currently computed is printed into the
 console}

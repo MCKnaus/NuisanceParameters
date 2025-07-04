@@ -4,12 +4,12 @@
 \alias{predict.ols_fit}
 \title{Predictions based on OLS}
 \usage{
-\method{predict}{ols_fit}(ols_fit, xnew = NULL, ...)
+\method{predict}{ols_fit}(ols_fit, Xnew = NULL, ...)
 }
 \arguments{
 \item{ols_fit}{Output of \code{\link{ols_fit}}}
 
-\item{xnew}{Covariate matrix of test sample.}
+\item{Xnew}{Covariate matrix of test sample.}
 
 \item{...}{Ignore unused arguments}
 }

@@ -4,12 +4,12 @@
 \alias{ols_fit}
 \title{Fits OLS}
 \usage{
-ols_fit(x, y, ...)
+ols_fit(X, Y, ...)
 }
 \arguments{
-\item{x}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of training sample}
 
-\item{y}{Vector of outcomes of training sample}
+\item{Y}{Vector of outcomes of training sample}
 
 \item{...}{Ignore unused arguments}
 }

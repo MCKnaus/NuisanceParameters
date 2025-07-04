@@ -4,12 +4,12 @@
 \alias{forest_drf_fit}
 \title{Fits Distributional Random Forest}
 \usage{
-forest_drf_fit(x, y, arguments = list())
+forest_drf_fit(X, Y, arguments = list())
 }
 \arguments{
-\item{x}{Matrix of covariates}
+\item{X}{Matrix of covariates}
 
-\item{y}{vector of outcomes}
+\item{Y}{vector of outcomes}
 
 \item{arguments}{List of arguments passed to \code{\link[drf]{drf}}}
 }

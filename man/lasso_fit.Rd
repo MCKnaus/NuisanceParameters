@@ -4,12 +4,12 @@
 \alias{lasso_fit}
 \title{Fits Lasso regression}
 \usage{
-lasso_fit(x, y, arguments = list())
+lasso_fit(X, Y, arguments = list())
 }
 \arguments{
-\item{x}{Matrix of covariates (number of observations times number of covariates matrix)}
+\item{X}{Matrix of covariates (number of observations times number of covariates matrix)}
 
-\item{y}{vector of outcomes}
+\item{Y}{vector of outcomes}
 
 \item{arguments}{List of arguments passed to \code{\link[glmnet]{cv.glmnet}}}
 }

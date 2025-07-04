@@ -4,34 +4,34 @@
 \alias{prep_cf_mat}
 \title{Cross-fitting fold indicators}
 \usage{
-prep_cf_mat(n, cf, cl = NULL, w_mat = NULL)
+prep_cf_mat(N, cf, cluster = NULL, d_mat = NULL)
 }
 \arguments{
-\item{n}{Number of observations}
+\item{N}{Number of observations}
 
 \item{cf}{Number of cross-fitting folds}
 
-\item{cl}{Optional vector of cluster variable if cross-fitting should account
+\item{cluster}{Optional vector of cluster variable if cross-fitting should account
 for clusters within the data.}
 
-\item{w_mat}{Optional logical matrix of treatment indicators (n x T+1 with T
+\item{d_mat}{Optional logical matrix of treatment indicators (N x T+1 with T
 being the number of treatments).
 For example created by \code{\link{prep_w_mat}}.
 If specified, cross-fitting folds will preserve the treatment ratios from full sample.
-However, if cluster vector is provided, w_mat is ignored due to computational
+However, if cluster vector is provided, d_mat is ignored due to computational
 constraints and randomization as well as feasibility issues.}
 }
 \value{
-Logical matrix of cross-fitting folds (n x # folds).
+Logical matrix of cross-fitting folds (N x # folds).
 }
 \description{
 \code{\link{prep_cf_mat}} creates a matrix of binary cross-fitting fold
-indicators (n x # cross-folds)
+indicators (N x # cross-folds)
 }
 \examples{
-n = 1000
-w_mat = prep_w_mat(sample(3, n, replace = TRUE))
-cf_mat = prep_cf_mat(n, cf = 5, w_mat = w_mat)
+N = 1000
+d_mat = prep_w_mat(sample(3, N, replace = TRUE))
+cf_mat = prep_cf_mat(N, cf = 5, d_mat = d_mat)
 head(cf_mat)
 
 }

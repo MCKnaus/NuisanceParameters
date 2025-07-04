@@ -4,14 +4,14 @@
 \alias{weights.mean_fit}
 \title{Arithmetic mean smoother weights}
 \usage{
-\method{weights}{mean_fit}(mean_fit, xnew, ...)
+\method{weights}{mean_fit}(mean_fit, Xnew, ...)
 
-\method{weights}{mean_fit}(mean_fit, xnew, ...)
+\method{weights}{mean_fit}(mean_fit, Xnew, ...)
 }
 \arguments{
 \item{mean_fit}{Output of \code{\link{mean_fit}}}
 
-\item{xnew}{Covariate matrix of test sample}
+\item{Xnew}{Covariate matrix of test sample}
 
 \item{...}{Ignore unused arguments}
 }

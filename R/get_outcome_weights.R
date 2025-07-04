@@ -8,10 +8,10 @@
 #' @param np_object Stacked ensemble learner from \code{\link{ensemble_short}} or \code{\link{ensemble}}.
 #' @param ml List of ML models by \code{\link{create_method}} that was used as
 #' iobjectut for \code{\link{ensemble_short}} or \code{\link{ensemble}}.
-#' @param x Covariate matrix of training sample.
-#' @param y Vector of outcomes of training sample.
-#' @param w_mat Logical matrix of treatment indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.
-#' @param z_mat Logical matrix of instrument indicators (n x T+1). For example created by \code{\link{prep_w_mat}}.
+#' @param X Covariate matrix of training sample.
+#' @param Y Vector of outcomes of training sample.
+#' @param d_mat Logical matrix of treatment indicators (N X T+1). For example created by \code{\link{prep_w_mat}}.
+#' @param z_mat Logical matrix of instrument indicators (N X T+1). For example created by \code{\link{prep_w_mat}}.
 #' @param subset Logical vector indicating which observations to use for determining
 #' ensemble weights. If not provided, all observations are used.
 #' @param cv Number of cross-validation folds when estimating ensemble model.
@@ -21,17 +21,12 @@
 #' console.
 #' @param ... Ignore unused arguments
 #'
-#' @return Matrix of dimension \code{nrow(x)} x \code{nrow(x)} containing
+#' @return Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing
 #' ensemble smoother weights, or list of such matrices if multiple models are requested.
 #'
 #' @export
 get_outcome_weights = function(np_object, 
                                NuPa, 
-                               ml, 
-                               x, y, 
-                               w_mat, z_mat,
-                               cv = 1, 
-                               cf_mat, 
                                quiet = TRUE,
                                subset = NULL,
                                ...) {
@@ -43,7 +38,8 @@ get_outcome_weights = function(np_object,
     
   } else if (is.character(np_object) && length(np_object) == 1) {
     loaded_object <- readRDS(np_object)
-    np_object <- list(models = loaded_object)
+    np_object <- list(models = loaded_object$models, 
+                      numbers = loaded_object$numbers)
     
   } else if (!is.list(np_object)) {
     stop("np_object must be either a list or a valid path to an RDS file.")
@@ -60,50 +56,55 @@ get_outcome_weights = function(np_object,
   }
   if (length(existing_models) == 0) {stop("No valid (ensemble) models found in np_object[['models']].")}
   
-  if (is.null(subset)) subset = rep(TRUE, length(y))
+  if (is.null(subset)) subset = rep(TRUE, length(Y))
   
+  
+  ## Extract numbers 
+  cv = np_object$numbers$cv
+  d_mat = np_object$numbers$d_mat
+  z_mat = np_object$numbers$z_mat
+  cf_mat = np_object$numbers$cf_mat
+  ml = np_object$numbers$ml
+  X = np_object$numbers$X
+  Y = np_object$numbers$Y
+
+
   # Process each existing model: Iterate over each top-level model
   for (model in existing_models) {
     
     current_model <- np_object[["models"]][[model]]
-
+    
     if (cv == 1) {
-      # cv = 1
       if ("ens_object" %in% names(current_model)) {
-        
-        results[[model]] <- get_smoother(current_model, ml = ml, x = X, y = Y, nnls_w = NULL, cv = cv, cf_mat = cf_mat, quiet = quiet)
-        
+        results[[model]] <- get_smoother(current_model, ml = ml, X = X, Y = Y, nnls_w = NULL, cv = cv, cf_mat = cf_mat, quiet = quiet)
       } else {
         sub_results <- list()
         for (i in seq_along(current_model)) {
           sub_element <- current_model[[i]]
           if (is.list(sub_element) && "ens_object" %in% names(sub_element)) {
-            sub_results[[i]] <- get_smoother(sub_element, ml = ml, x = X, y = Y, nnls_w = NULL, cv = cv, cf_mat = cf_mat, quiet = quiet)
+            sub_results[[i]] <- get_smoother(sub_element, ml = ml, X = X, Y = Y, nnls_w = NULL, cv = cv, cf_mat = cf_mat, quiet = quiet)
           }
         }
-        if (length(sub_results) > 0) {
-          results[[model]] <- sub_results
-        }
+        results[[model]] <- sub_results
       }
-    } else {
-      # cv > 1
+    } else { # cv > 1
+
       # Check the first element of the current model
       if (!inherits(current_model, "ens.learner")) {
         # If first element is ens.learner, process each sub-element
         sub_results <- list()
         for (i in seq_along(current_model)) {
-          
           sub_element <- current_model[[i]]
           
           # Two days of work to solve this
           ######
-          if (identical(sub_element, np_object[["models"]][["Yw.hat_ml"]][[1]])) {
-            subset <- w_mat[, 1]
-          } else if (identical(sub_element, np_object[["models"]][["Yw.hat_ml"]][[2]])) {
-            subset <- w_mat[, 2]
-          } else if (identical(sub_element, np_object[["models"]][["Yz.hat_ml"]][[1]])) {
+          if (identical(sub_element, np_object[["models"]][["Y.hat.d_ml"]][[1]])) {
+            subset <- d_mat[, 1]
+          } else if (identical(sub_element, np_object[["models"]][["Y.hat.d_ml"]][[2]])) {
+            subset <- d_mat[, 2]
+          } else if (identical(sub_element, np_object[["models"]][["Y.hat.z_ml"]][[1]])) {
             subset <- z_mat[, 1]
-          } else if (identical(sub_element, np_object[["models"]][["Yz.hat_ml"]][[2]])) {
+          } else if (identical(sub_element, np_object[["models"]][["Y.hat.z_ml"]][[2]])) {
             subset <- z_mat[, 2]
           } else {
             subset <- NULL
@@ -111,20 +112,85 @@ get_outcome_weights = function(np_object,
           #####
         
           if (is.list(sub_element)) {
-            sub_results[[i]] <- get_smoother(sub_element, ml = ml, x = X, y = Y, nnls_w = NULL, cv = cv, cf_mat = cf_mat, subset = subset, quiet = quiet)
+            sub_results[[i]] <- get_smoother(sub_element, ml = ml, X = X, Y = Y, nnls_w = NULL, cv = cv, cf_mat = cf_mat, subset = subset, quiet = quiet)
           }
         }
-        if (length(sub_results) > 0) {
-          results[[model]] <- sub_results
-        }
+        results[[model]] <- sub_results
       } else {
         # If not, process the whole model
-        results[[model]] <- get_smoother(current_model, ml = ml, x = X, y = Y, nnls_w = NULL, cv = cv, cf_mat = cf_mat, subset = NULL, quiet = quiet)
+        results[[model]] <- get_smoother(current_model, ml = ml, X = X, Y = Y, nnls_w = NULL, cv = cv, cf_mat = cf_mat, subset = NULL, quiet = quiet)
       }
     }
   }
   
   return(results)
+}
+
+
+#' Extraction of smoother weights for ensemble learner
+#'
+#' @description
+#' Extract smoother weights from short- or standard-stacked ensemble model 
+#' created by \code{\link{ensemble_short}} or \code{\link{ensemble}}.
+#'
+#' @param object Stacked ensemble learner from \code{\link{ensemble_short}} or \code{\link{ensemble}}.
+#' @param ml List of ML models by \code{\link{create_method}} that was used as
+#' input for \code{\link{ensemble_short}} or \code{\link{ensemble}}.
+#' @param X Covariate matrix of training sample.
+#' @param Y Vector of outcomes of training sample.
+#' @param subset Logical vector indicating which observations to use for determining
+#' ensemble weights. If not provided, all observations are used.
+#' @param nnls_w Ensemble weights to aggregate predictions from different learners (optional).
+#' Needs to be a vector of length \code{ncol(object$fit_cv)}.
+#' @param cv Number of cross-validation folds when estimating ensemble model.
+#' @param cf_mat Logical matrix with k columns of indicators representing the different folds
+#' (for example created by \code{\link{prep_cf_mat}}).
+#' @param quiet If FALSE, method that is currently computed is printed into the
+#' console.
+#' @param ... Ignore unused arguments
+#'
+#' @return Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing
+#' ensemble smoother weights.
+#'
+#' @export
+get_smoother = function(object,
+                        ml,
+                        X, Y,
+                        subset= NULL,
+                        nnls_w = NULL,
+                        cv = cv,
+                        cf_mat,
+                        quiet = TRUE,
+                        ...) {
+  
+  if (is.null(object)) stop("Ensemble models were not saved after training.")
+  if (is.null(subset)) subset = rep(TRUE, length(Y))
+  
+  
+  ### Short-Stacking ###
+  if (cv == 1) {
+    w = weights(object[["ens_object"]], ml = ml, X = X, Y = Y, subset = subset, w = object[["nnls_w"]], cf_mat = cf_mat, quiet = quiet)
+    
+    
+    ### Standard-Stacking ###
+    
+  } else if (cv > 1) {
+    w = matrix(0, nrow = nrow(X), ncol = nrow(X))
+    
+    for (i in 1:ncol(cf_mat)) {
+      fold = cf_mat[, i]
+      X_tr = X[!fold & subset, ]
+      Y_tr = Y[!fold & subset]
+      X_te = X[fold, ]
+      
+      w_array = weights(object[[i]][["ens_object"]], ml, X = X_tr, Y = Y_tr, Xnew = X_te, quiet = quiet)
+      w[fold, !fold & subset] = apply(w_array, c(1, 2), function(x) sum(x * object[[i]][["ens_object"]]$nnls_weights))
+    }
+    
+  }
+  
+  return(w)
+  
 }
 
 
@@ -135,7 +201,7 @@ get_outcome_weights = function(np_object,
 #' arithmetic mean fitting of the training sample.
 #'
 #' @param mean_fit Output of \code{\link{mean_fit}}
-#' @param xnew Covariate matrix of test sample
+#' @param Xnew Covariate matrix of test sample
 #' @param ... Ignore unused arguments
 #'
 #' @return Matrix of smoother weights.
@@ -144,9 +210,9 @@ get_outcome_weights = function(np_object,
 #'
 #' @keywords internal
 #'
-weights.mean_fit = function(mean_fit, xnew, ...) {
+weights.mean_fit = function(mean_fit, Xnew, ...) {
   
-  w = matrix(1 / mean_fit$n, nrow = nrow(xnew), ncol = mean_fit$n)
+  w = matrix(1 / mean_fit$N, nrow = nrow(Xnew), ncol = mean_fit$N)
   
   return(w)
   
@@ -159,8 +225,8 @@ weights.mean_fit = function(mean_fit, xnew, ...) {
 #' Extract smoother weights for test sample from an OLS model.
 #'
 #' @param ols_fit Output of \code{\link{ols_fit}}
-#' @param x Covariate matrix of training sample
-#' @param xnew Covariate matrix of test sample
+#' @param X Covariate matrix of training sample
+#' @param Xnew Covariate matrix of test sample
 #' @param ... Ignore unused arguments
 #'
 #' @return Matrix of smoother weights.
@@ -169,17 +235,17 @@ weights.mean_fit = function(mean_fit, xnew, ...) {
 #'
 #' @keywords internal
 #'
-weights.ols_fit = function(ols_fit, x, xnew, ...) {
+weights.ols_fit = function(ols_fit, X, Xnew, ...) {
   
-  x = add_intercept(x)
-  xnew = add_intercept(xnew)
+  X = add_intercept(X)
+  Xnew = add_intercept(Xnew)
   
   # remove variables that were dropped due to collinearity
-  x = x[, !is.na(ols_fit)]
-  xnew = xnew[, !is.na(ols_fit)]
+  X = X[, !is.na(ols_fit)]
+  Xnew = Xnew[, !is.na(ols_fit)]
   
   # calculate hat matrix
-  hat_mat = xnew %*% solve(crossprod(x), tol = 2.225074e-308) %*% t(x)
+  hat_mat = Xnew %*% solve(crossprod(X), tol = 2.225074e-308) %*% t(X)
   
   return(hat_mat)
   
@@ -192,9 +258,9 @@ weights.ols_fit = function(ols_fit, x, xnew, ...) {
 #' Extract smoother weights for test sample from a Ridge regression model.
 #'
 #' @param ridge_fit Output of \code{\link{ridge_fit}}
-#' @param x Covariate matrix of training sample
-#' @param y Vector of outcomes of training sample
-#' @param xnew Covariate matrix of test sample.
+#' @param X Covariate matrix of training sample
+#' @param Y Vector of outcomes of training sample
+#' @param Xnew Covariate matrix of test sample.
 #' If not provided, prediction is done for the training sample.
 #' @param ... Ignore unused arguments
 #'
@@ -204,24 +270,24 @@ weights.ols_fit = function(ols_fit, x, xnew, ...) {
 #'
 #' @keywords internal
 #'
-weights.ridge_fit = function(ridge_fit, x, y, xnew = NULL, ...) {
+weights.ridge_fit = function(ridge_fit, X, Y, Xnew = NULL, ...) {
   
-  if (is.null(xnew)) xnew = x
-  n = nrow(x)
+  if (is.null(Xnew)) Xnew = X
+  N = nrow(X)
   
-  x = scale(x, ridge_fit$x_means, ridge_fit$x_sds)
-  x = add_intercept(x)
-  xnew = scale(xnew, ridge_fit$x_means, ridge_fit$x_sds)
-  xnew = add_intercept(xnew)
+  X = scale(X, ridge_fit$x_means, ridge_fit$x_sds)
+  X = add_intercept(X)
+  Xnew = scale(Xnew, ridge_fit$x_means, ridge_fit$x_sds)
+  Xnew = add_intercept(Xnew)
   
-  p = ncol(x) - 1
+  p = ncol(X) - 1
   
-  sd_y = sqrt(stats::var(y) * ((n - 1) / n))
-  lambda = (1 / sd_y) * ridge_fit$lambda.min * n
+  sd_y = sqrt(stats::var(Y) * ((N - 1) / N))
+  lambda = (1 / sd_y) * ridge_fit$lambda.min * N
   
   # calculate hat matrix
   # reference: https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat
-  hat_mat = xnew %*% solve(crossprod(x) + lambda * diag(x = c(0, rep(1, p)))) %*% t(x)
+  hat_mat = Xnew %*% solve(crossprod(X) + lambda * diag(X = c(0, rep(1, p)))) %*% t(X)
   
   return(hat_mat)
 }
@@ -233,7 +299,7 @@ weights.ridge_fit = function(ridge_fit, x, y, xnew = NULL, ...) {
 #' Extract smoother weights for test sample from a Post-Lasso regression model.
 #'
 #' @param plasso_fit Output of \code{\link{plasso_fit}}
-#' @param xnew Covariate matrix of test sample.
+#' @param Xnew Covariate matrix of test sample.
 #' If not provided, prediction is done for the training sample.
 #' @param ... Ignore unused arguments
 #'
@@ -243,20 +309,20 @@ weights.ridge_fit = function(ridge_fit, x, y, xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-weights.plasso_fit = function(plasso_fit, xnew = NULL, ...) {
+weights.plasso_fit = function(plasso_fit, Xnew = NULL, ...) {
   
-  if (is.null(xnew)) xnew = plasso_fit$x
+  if (is.null(Xnew)) Xnew = plasso_fit$X
   
-  x = add_intercept(plasso_fit$x)
-  xnew = add_intercept(xnew)
+  X = add_intercept(plasso_fit$X)
+  Xnew = add_intercept(Xnew)
   
-  colnames(x)[1] = "(Intercept)"
-  colnames(xnew) = colnames(x)
+  colnames(X)[1] = "(Intercept)"
+  colnames(Xnew) = colnames(X)
   
-  xact = x[, plasso_fit$names_pl, drop = FALSE]
-  xactnew = xnew[, plasso_fit$names_pl, drop = FALSE]
+  Xact = X[, plasso_fit$names_pl, drop = FALSE]
+  Xactnew = Xnew[, plasso_fit$names_pl, drop = FALSE]
   
-  hat_mat = xactnew %*% solve(crossprod(xact), tol = 2.225074e-308) %*% t(xact)
+  hat_mat = Xactnew %*% solve(crossprod(Xact), tol = 2.225074e-308) %*% t(Xact)
   
   return(hat_mat)
 }
@@ -268,7 +334,7 @@ weights.plasso_fit = function(plasso_fit, xnew = NULL, ...) {
 #' Extract smoother weights for test sample from a Random Forest model.
 #'
 #' @param forest_grf_fit Output of \code{\link{forest_grf_fit}}
-#' @param xnew Covariate matrix of test sample.
+#' @param Xnew Covariate matrix of test sample.
 #' If not provided, prediction is done for the training sample.
 #' @param ... Ignore unused arguments
 #'
@@ -278,14 +344,14 @@ weights.plasso_fit = function(plasso_fit, xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-weights.forest_grf_fit = function(forest_grf_fit, xnew = NULL, ...) {
+weights.forest_grf_fit = function(forest_grf_fit, Xnew = NULL, ...) {
   
-  if(is.null(xnew)) xnew = forest_grf_fit$X.orig
+  if(is.null(Xnew)) Xnew = forest_grf_fit$X.orig
   
   if (utils::packageVersion("grf") < "2.0.0") {
-    w = grf::get_sample_weights(forest_grf_fit, newdata = xnew)
+    w = grf::get_sample_weights(forest_grf_fit, newdata = Xnew)
   } else {
-    w = grf::get_forest_weights(forest_grf_fit, newdata = xnew)
+    w = grf::get_forest_weights(forest_grf_fit, newdata = Xnew)
   }
   w = as.matrix(w)
   
@@ -301,8 +367,8 @@ weights.forest_grf_fit = function(forest_grf_fit, xnew = NULL, ...) {
 #' 'neighbors' and 0 for all 'non-neighbors' (for a given test set observation).
 #'
 #' @param arguments Output of \code{\link{knn_fit}}
-#' @param x Covariate matrix of training sample
-#' @param xnew Covariate matrix of test sample
+#' @param X Covariate matrix of training sample
+#' @param Xnew Covariate matrix of test sample
 #' @param ... Ignore unused arguments
 #'
 #' @return Matrix of smoother weights.
@@ -311,9 +377,9 @@ weights.forest_grf_fit = function(forest_grf_fit, xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-weights.knn_fit = function(arguments, x, xnew = NULL, ...) {
+weights.knn_fit = function(arguments, X, Xnew = NULL, ...) {
   
-  if (is.null(xnew)) xnew = x
+  if (is.null(Xnew)) Xnew = X
   if (is.null(arguments$k)) {
     k = 10
   } else if ( all.equal(arguments$k, as.integer(arguments$k))) {
@@ -322,7 +388,7 @@ weights.knn_fit = function(arguments, x, xnew = NULL, ...) {
     k = 10
   }
   
-  distance = as.matrix(FastKNN::Distance_for_KNN_test(xnew, x))
+  distance = as.matrix(FastKNN::Distance_for_KNN_test(Xnew, X))
   
   get_binary_vector = function(row) {
     min_indices = order(row)[1:k]
@@ -346,7 +412,7 @@ weights.knn_fit = function(arguments, x, xnew = NULL, ...) {
 #' Distributional Random Forest model.
 #'
 #' @param ridge_fit Output of \code{\link{forest_drf_fit}}
-#' @param xnew Covariate matrix of test sample.
+#' @param Xnew Covariate matrix of test sample.
 #' If not provided, prediction is done for the training sample.
 #' @param ... Ignore unused arguments
 #'
@@ -356,12 +422,12 @@ weights.knn_fit = function(arguments, x, xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-weights.forest_drf_fit = function(forest_drf_fit, xnew = NULL, ...) {
+weights.forest_drf_fit = function(forest_drf_fit, Xnew = NULL, ...) {
   
-  if(is.null(xnew)) xnew = forest_drf_fit$X.orig
+  if(is.null(Xnew)) Xnew = forest_drf_fit$X.orig
   
   class(forest_drf_fit) = "drf"
-  w = as.matrix(predict(forest_drf_fit, newdata = xnew)$weights)
+  w = as.matrix(predict(forest_drf_fit, newdata = Xnew)$weights)
   
   return(w)
 }

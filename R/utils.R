@@ -1,35 +1,38 @@
-#' One-hot encoding of treatment vector
+#' One-hot encoding of categorical variables
 #'
 #' @description
-#' \code{\link{prep_w_mat}} creates a matrix of binary treatment indicators
-#' (n x T+1 with T being the number of treatments)
-#' where each column contains a binary indicator for one treatment (i.e. one-hot
-#' encoding).
+#' Creates a logical matrix of binary indicators (N x C) where each column 
+#' represents a unique category from the input vector. Useful for encoding 
+#' treatments, instruments, or other categorical variables.
 #'
-#' @param w Treatment vector.
-#' Provide as factor to control ordering of the treatments,
-#' otherwise arranged in ascending order or alphabetically.
+#' @param x Categorical vector (treatment, instrument, etc.). 
+#'   Provide as factor to control category ordering, otherwise arranged in 
+#'   ascending order or alphabetically.
 #'
-#' @return Logical matrix of treatment indicators (n x T+1).
+#' @return Logical matrix (N x C) where C is the number of unique categories in `x`.
+#'   Each column is a binary indicator for one category.
 #'
 #' @importFrom stats model.matrix
-#'
 #' @export
 #'
 #' @examples
-#' w = factor(c("A", "B", "A", "C", "B", "C"))
-#' w_mat = prep_w_mat(w)
-#' head(w_mat)
+#' D = factor(c("A", "B", "A", "C", "B", "C"))
+#' d_mat = prep_indicator_mat(D)
+#' head(d_mat)
 #'
-prep_w_mat = function(w) {
-  # Checks
-  if (length(unique(w)) <= 1) stop("Need at least two values in treatment vector")
-  if (!is.factor(w)) w = factor(w, levels = sort(unique(w)))
-
-  # Create one-hot matrix for each category
-  w_mat = stats::model.matrix(~ 0 + w)
-  colnames(w_mat) = gsub("w", "", colnames(w_mat))
-  return(w_mat == 1)
+prep_indicator_mat <- function(x) {
+  # Input validation
+  if (length(unique(x)) <= 1) {
+    stop("Input vector must contain at least two unique values.")
+  }
+  if (!is.factor(x)) {
+    x <- factor(x, levels = sort(unique(x)))
+  }
+  
+  # One-hot encoding
+  mat <- stats::model.matrix(~ 0 + x)
+  colnames(mat) <- gsub("x", "", colnames(mat))
+  return(mat == 1L)
 }
 
 
@@ -72,58 +75,58 @@ check_cluster_compatibility = function(cl, cf) {
 #'
 #' @description
 #' \code{\link{prep_cf_mat}} creates a matrix of binary cross-fitting fold
-#' indicators (n x # cross-folds)
+#' indicators (N x # cross-folds)
 #'
-#' @param n Number of observations
+#' @param N Number of observations
 #' @param cf Number of cross-fitting folds
-#' @param cl Optional vector of cluster variable if cross-fitting should account
+#' @param cluster Optional vector of cluster variable if cross-fitting should account
 #' for clusters within the data.
-#' @param w_mat Optional logical matrix of treatment indicators (n x T+1 with T
+#' @param d_mat Optional logical matrix of treatment indicators (N x T+1 with T
 #' being the number of treatments).
 #' For example created by \code{\link{prep_w_mat}}.
 #' If specified, cross-fitting folds will preserve the treatment ratios from full sample.
-#' However, if cluster vector is provided, w_mat is ignored due to computational
+#' However, if cluster vector is provided, d_mat is ignored due to computational
 #' constraints and randomization as well as feasibility issues.
 #'
-#' @return Logical matrix of cross-fitting folds (n x # folds).
+#' @return Logical matrix of cross-fitting folds (N x # folds).
 #'
 #' @importFrom stats model.matrix quantile
 #'
 #' @export
 #'
 #' @examples
-#' n = 1000
-#' w_mat = prep_w_mat(sample(3, n, replace = TRUE))
-#' cf_mat = prep_cf_mat(n, cf = 5, w_mat = w_mat)
+#' N = 1000
+#' d_mat = prep_w_mat(sample(3, N, replace = TRUE))
+#' cf_mat = prep_cf_mat(N, cf = 5, d_mat = d_mat)
 #' head(cf_mat)
 #'
-prep_cf_mat = function(n, cf, cl = NULL, w_mat = NULL) {
+prep_cf_mat = function(N, cf, cluster = NULL, d_mat = NULL) {
 
   # check if both cluster vector and treatment matrix are provided
-  if (!is.null(cl) & !is.null(w_mat)) {
+  if (!is.null(cluster) & !is.null(d_mat)) {
     warning("You provided both a cluster vector and a treatment matrix. This is not feasible due to computational constraints and randomization issues. Thus, only cluster vector is considered.")
-    w_mat = NULL
+    d_mat = NULL
   }
 
   # only one fold (i.e. no cross-fitting)
   if (cf == 1) {
 
-    cf_mat = matrix(rep(1, n), ncol = 1)
+    cf_mat = matrix(rep(1, N), ncol = 1)
 
   # neither treatment matrix nor cluster vector provided
-  } else if (is.null(w_mat) & is.null(cl)) {
+  } else if (is.null(d_mat) & is.null(cluster)) {
 
-    rnd_id = sample(1:n, n)
+    rnd_id = sample(1:N, N)
     fold = factor(as.numeric(cut(rnd_id, breaks = stats::quantile(rnd_id, probs = seq(0, 1, length = cf + 1)), include.lowest = TRUE)))
     cf_mat = (stats::model.matrix(~ 0 + fold) == 1)
 
   # treatment matrix but no cluster vector provided
-  } else if (!is.null(w_mat) & is.null(cl)) {
+  } else if (!is.null(d_mat) & is.null(cluster)) {
 
-    cf_mat = matrix(NA, nrow = n, ncol = cf)
-    nw = colSums(w_mat)
+    cf_mat = matrix(NA, nrow = N, ncol = cf)
+    nw = colSums(d_mat)
 
-    for (i in 1:ncol(w_mat)) {
+    for (i in 1:ncol(d_mat)) {
 
       cf_mat_w = matrix(FALSE, nrow = nw[i], ncol = cf)
       rnd_id = sample(1:nw[i], nw[i])
@@ -135,18 +138,18 @@ prep_cf_mat = function(n, cf, cl = NULL, w_mat = NULL) {
 
       }
 
-      cf_mat[w_mat[, i], ] = cf_mat_w
+      cf_mat[d_mat[, i], ] = cf_mat_w
 
     }
 
   # no treatment matrix but cluster vector provided
-  } else if (is.null(w_mat) & !is.null(cl)) {
+  } else if (is.null(d_mat) & !is.null(cluster)) {
 
-    check_cluster_compatibility(cl, cf)
+    check_cluster_compatibility(cluster, cf)
 
-    rnd_id = sample(1:length(unique(cl)), length(unique(cl)))
+    rnd_id = sample(1:length(unique(cluster)), length(unique(cluster)))
     fold = as.numeric(cut(rnd_id, breaks = stats::quantile(rnd_id, probs = seq(0, 1, length = cf + 1)), include.lowest = TRUE))
-    fold = factor(fold[match(cl, unique(cl))])
+    fold = factor(fold[match(cluster, unique(cluster))])
     cf_mat = (stats::model.matrix(~ 0 + fold) == 1)
 
     cf_mat_balance = colSums(cf_mat) / nrow(cf_mat)
@@ -171,7 +174,7 @@ prep_cf_mat = function(n, cf, cl = NULL, w_mat = NULL) {
 #'
 #' @param X A matrix where each column represents a different predictor variable
 #' and each row represents an observation
-#' @param y A numeric vector of actual target values
+#' @param Y A numeric vector of actual target values
 #'
 #' @return A numeric vector of the non-negative least weights.
 #'
@@ -181,11 +184,11 @@ prep_cf_mat = function(n, cf, cl = NULL, w_mat = NULL) {
 #'
 #' @examples
 #' X = matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2)
-#' y = c(0.25, 0.45, 0.65)
-#' \donttest{nnls_w = nnls_weights(X, y)}
+#' Y = c(0.25, 0.45, 0.65)
+#' \donttest{nnls_w = nnls_weights(X, Y)}
 #'
-nnls_weights = function(X, y) {
-  nnls_result = nnls::nnls(X, y)
+nnls_weights = function(X, Y) {
+  nnls_result = nnls::nnls(X, Y)
   nnls_w = nnls_result$x
 
   # in case of perfectly agreeing predictions, nnls provides only zeros
@@ -254,22 +257,22 @@ agg_array = function(a, w) {
 #'
 #' @param ml List of methods built via \code{\link{create_method}} to be used in
 #' ensemble model
-#' @param n Number of observations.
+#' @param N Number of observations.
 #' @param learner Vector of characters indicating whether to use S or T learner
 #' or both.
 #'
-#' @return A matrix of NAs with dimensions \code{n} x \code{length(ml)}
+#' @return A matrix of NAs with dimensions \code{N} x \code{length(ml)}
 #'
 #' @keywords internal
 #'
-make_fit_cv = function(ml, n, learner = c("t", "s", "both")) {
+make_fit_cv = function(ml, N, learner = c("t", "s", "both")) {
 
   learner = match.arg(learner)
 
-  fit_cv = matrix(NA, n, length(ml))
+  fit_cv = matrix(NA, N, length(ml))
   colnames(fit_cv) = sprintf("method%s", seq(1:length(ml)))
   for (i in 1:length(ml)) {
-    if (!is.null(ml[[i]]$name)) colnames(fit_cv)[i] = ml[[i]]$name
+    if (!is.null(names(ml))) colnames(fit_cv)[i] = names(ml)[i]
   }
 
   if(learner == "t") {
@@ -308,60 +311,6 @@ which_stacking = function(cv = 1) {
 }
 
 
-#' Visualize ensemble weights
-#'
-#' @description
-#' This function plots the non-negative ensemble learner weights for both either
-#' a short-stacked or standard-stacked ensemble learner.
-#'
-#' @param x Object containing predictions by ensemble learner (fit_cv)
-#' and the cross-validated ensemble weights.
-#' @param methods Vector of method names. In order of initial \code{\link{create_method}}
-#' specification.
-#' @param legend_pos Legend position.
-#' @param legend_size Font size of legend.
-#' @param ... Pass generic \code{\link[base]{plot}} options.
-#' @return Plot object.
-#'
-#' @export
-#'
-#' @method plot ens.learner
-#'
-plot.ens.learner = function(x,
-                            methods = NULL,
-                            legend_pos = c("center", "bottomright", "bottom", "bottomleft", "left", "topleft", "top", "topright", "right"),
-                            legend_size = 1,
-                            ...) {
-
-  legend_pos = match.arg(legend_pos)
-
-  if (is.null(names(x[[1]]))) {
-    w = matrix(x$nnls_w, nrow = 1)
-    colnames(w) = names(x$nnls_w)
-    xlab = ""
-    x_labels = NULL
-  } else {
-    w = do.call(rbind, lapply(x, function(l) l$nnls_w))
-    xlab = "Cross-Fitting Fold"
-    x_labels = 1:nrow(w)
-  }
-
-  if(!is.null(methods)) colnames(w) = methods
-  w_t = t(w)
-
-  colors = grDevices::rainbow(ncol(w))
-  names(colors) = colnames(w)
-
-  graphics::barplot(w_t, beside = FALSE, col = colors,
-                    names.arg = x_labels,
-                    xlab = xlab, ylab = "Ensemble Weight", main = "Cross-Validated Ensemble Weights",
-                    ...)
-  graphics::legend(x = legend_pos, title = "Method", xpd = NA, legend = names(colors), col = colors,
-                   ncol = 1, cex = legend_size, lty = 1)
-
-}
-
-
 #' Update progress bar
 #' 
 #' @description
@@ -385,10 +334,134 @@ update_progress <- function(pb, pb_np, pb_cf, pb_cv, task, method) {
   }
   
   pb$tick(tokens = list(
-    nuisance = format_center(pb_np, 11),
+    nuisance = format_center(pb_np, 12),
     pb_cf    = format_center(pb_cf, 2),
     pb_cv    = format_center(pb_cv, 2), 
     task     = format_center(task, 7),
     model    = format_center(method, 10)
   ))
+}
+
+
+#' Format ensemble weights list for standard stacking
+#'
+#' @description 
+#' Internal helper function that processes ensemble weights into a standardized 
+#' format for cross-validated stacking (when cv > 1).
+#'
+#' @param ens_weights List of ensemble weights to be formatted
+#' 
+#' @return A list of data frames with formatted weights, where each element 
+#'         corresponds to a NuPa (Y.hat.z0/Y.hat.z1) and contains fold-specific weights
+#' 
+#' @keywords internal
+format_weights <- function(ens_weights) {
+  weight_list <- list()
+  for (NuPa in names(ens_weights)) {
+    weight_matrix <- do.call(cbind, lapply(ens_weights[[NuPa]], unlist))
+    colnames(weight_matrix) <- paste0("fold", seq_len(ncol(weight_matrix)))
+    weight_list[[NuPa]] <- as.data.frame(weight_matrix)
+  }
+  return(weight_list)
+}
+
+
+#' Visualize standard-stacked ensemble weights
+#'
+#' @description
+#' Plots cross-validated ensemble weights for standard stacking (multiple folds),
+#' showing weight distributions across learners for each fold.
+#'
+#' @param x Object containing cross-validated ensemble weights
+#' @param ncols Number of columns for facet grid (default: 3)
+#' @param base_size Base font size for plot elements (default: 12)
+#' @param ... Additional arguments passed to plotting functions
+#'
+#' @return A ggplot object showing weights by fold and learner
+#'
+#' @export
+#'
+#' @method plot ens_weights_stand
+plot.ens_weights_stand <- function(x, 
+                                   ncols = 3, 
+                                   base_size = 12, 
+                                   ...) {
+  
+  palette <- c("#FB8072", "#80B1D3",  "#FFED6F", "#BEBADA", 
+               "#8DD3C7", "#FDB462", "#B3DE69", "#BC80BD")
+
+  # Prepare plotting function (returns plot without legend)
+  create_weight_plot <- function(model_name, model_data) {
+    
+    df <- as.data.frame(t(model_data))
+    df$fold <- rownames(df)
+    melted <- reshape2::melt(df, id.vars = "fold")
+    
+    ggplot2::ggplot(melted, ggplot2::aes(x = fold, y = value, fill = variable)) +
+      ggplot2::geom_col(position = "stack", width = 0.7) +
+      ggplot2::scale_fill_manual(values = palette) +
+      ggplot2::scale_y_continuous(limits = c(0, 1.01), expand = c(0, 0)) +
+      ggplot2::labs(title = model_name, x = NULL, y = NULL) +
+      ggplot2::theme_minimal(base_size = base_size * 0.75) +
+      ggplot2::theme(
+        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = base_size * 0.6),
+        plot.margin = ggplot2::unit(c(2, 2, 2, 2), "pt"), legend.position = "none"
+      )
+  }
+  
+  # Generate all plots (without legends)
+  plot_list <- mapply(create_weight_plot, names(x), x, SIMPLIFY = FALSE)
+  
+  # Extract legend from first plot
+  tmp_plot <- create_weight_plot(names(x)[1], x[[1]]) + 
+    ggplot2::labs(fill = "Learners") +
+    ggplot2::theme(
+      legend.position = "bottom",
+      legend.title = ggplot2::element_text(size = base_size * 0.8),
+      legend.text = ggplot2::element_text(size = base_size * 0.7))
+  legend <- gtable::gtable_filter(ggplot2::ggplotGrob(tmp_plot), "guide-box")
+  
+  # Calculate grid dimensions and arrange
+  n_plots <- length(plot_list)
+  n_rows <- ceiling(n_plots / ncols)
+  
+  plots <- gridExtra::arrangeGrob(
+    grobs = plot_list, ncol = ncols, nrow = n_rows, padding = ggplot2::unit(0, "line"))
+  
+  gridExtra::grid.arrange(plots, legend, nrow = 2, heights = c(0.85, 0.15))
+}
+
+
+#' Visualize short-stacked ensemble weights
+#' 
+#' @description 
+#' Plots single set of ensemble weights for short stacking (no cross-validation),
+#' showing the final weight assigned to each learner.
+#'
+#' @param x Object containing final ensemble weights
+#' @param base_size Base font size for plot elements (default: 12)
+#' @param ... Additional arguments passed to ggplot
+#'
+#' @return A ggplot object showing final learner weights
+#'
+#' @export
+#'
+#' @method plot ens_weights_short
+plot.ens_weights_short <- function(x, 
+                                   base_size = 12, 
+                                   ...) {
+
+  palette <- c("#FB8072", "#80B1D3",  "#FFED6F", "#BEBADA", 
+               "#8DD3C7", "#FDB462", "#B3DE69", "#BC80BD")
+  
+  df <- as.data.frame(x)
+  df$learner <- rownames(df)
+  df_long <- reshape2::melt(df, id.vars = "learner")
+  
+  ggplot2::ggplot(df_long, ggplot2::aes(x = variable, y = value, fill = learner)) +
+    ggplot2::geom_col(position = "stack", width = 0.7) +
+    ggplot2::scale_fill_manual(values = palette) +
+    ggplot2::labs(x = "Nuisance Parameter", y = "Weight", fill = "Learner") +
+    ggplot2::theme_minimal(base_size = base_size) +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
 }

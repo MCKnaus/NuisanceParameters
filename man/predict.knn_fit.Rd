@@ -4,16 +4,16 @@
 \alias{predict.knn_fit}
 \title{Prediction of fitted values based on the k-Nearest-Neighbor algorithm}
 \usage{
-\method{predict}{knn_fit}(arguments, x, y, xnew = NULL, ...)
+\method{predict}{knn_fit}(arguments, X, Y, Xnew = NULL, ...)
 }
 \arguments{
 \item{arguments}{Output of \code{\link{knn_fit}}}
 
-\item{x}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of training sample}
 
-\item{y}{Vector of outcomes of training sample}
+\item{Y}{Vector of outcomes of training sample}
 
-\item{xnew}{Covariate matrix of test sample}
+\item{Xnew}{Covariate matrix of test sample}
 
 \item{...}{Ignore unused arguments}
 }

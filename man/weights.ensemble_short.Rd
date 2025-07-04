@@ -4,7 +4,7 @@
 \alias{weights.ensemble_short}
 \title{Extraction of smoother weights for short-stacked ensemble learner}
 \usage{
-\method{weights}{ensemble_short}(object, ml, x, y, subset, w = NULL, cf_mat, quiet = TRUE, ...)
+\method{weights}{ensemble_short}(object, ml, X, Y, subset, w = NULL, cf_mat, quiet = TRUE, ...)
 }
 \arguments{
 \item{object}{Short-stacked ensemble learner from \code{\link{ensemble_short}}.}
@@ -12,9 +12,9 @@
 \item{ml}{List of ML models by \code{\link{create_method}} that was used as
 input for \code{\link{ensemble_short}}.}
 
-\item{x}{Covariate matrix of training sample.}
+\item{X}{Covariate matrix of training sample.}
 
-\item{y}{Vector of outcomes of training sample.}
+\item{Y}{Vector of outcomes of training sample.}
 
 \item{subset}{Logical vector indicating which observations to use for determining
 ensemble weights. If not provided, all observations are used.}
@@ -31,7 +31,7 @@ console.}
 \item{...}{Ignore unused arguments}
 }
 \value{
-Matrix of dimension \code{nrow(x)} x \code{nrow(x)} containing
+Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing
 ensemble smoother weights.
 }
 \description{
