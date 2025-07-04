@@ -1,5 +1,5 @@
 
-# NuisanceParameters
+# NuisanceParameters <img src="assets/temp_logo.png" align="right" height="139" style="width:auto;"/>
 
 <!-- # NuisanceParameters <img src='assets/NuisanceParameters.png' align="right" height="139" /> -->
 
