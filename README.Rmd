@@ -3,7 +3,7 @@ bibliography: vignettes/assets/NuisanceParameters_refs.bib
 output: github_document
 ---
 
-# NuisanceParameters <img src="assets/temp_logo.png" align="right" height="139">
+<!-- # NuisanceParameters <img src="assets/temp_logo.png" align="right" height="139" /> -->
 
 <!-- # NuisanceParameters <img src='assets/NuisanceParameters.png' align="right" height="139" /> -->
 
