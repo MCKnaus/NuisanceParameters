@@ -6,7 +6,7 @@
 \usage{
 MLeffect(
   Y,
-  W,
+  D,
   X,
   Z = NULL,
   NuPa.hat,
@@ -17,8 +17,6 @@ MLeffect(
 \arguments{
 \item{Y}{Numeric vector containing the outcome variable.}
 
-\item{W}{Optional binary treatment variable.}
-
 \item{X}{Covariate matrix with N rows and p columns.}
 
 \item{Z}{Optional binary instrumental variable.}
@@ -27,6 +25,8 @@ MLeffect(
 Current menu: c("PLR","PLR_IV","AIPW_ATE","Wald_AIPW")}
 
 \item{...}{Options to be passed to smoothers.}
+
+\item{W}{Optional binary treatment variable.}
 
 \item{smoother}{Indicate which smoother to be used for nuisance parameter estimation.
 Currently only available option \code{"honest_forest"} from the \pkg{grf} package.}

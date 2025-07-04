@@ -419,14 +419,15 @@ plot.ens_weights_stand <- function(x,
       legend.position = "bottom",
       legend.title = ggplot2::element_text(size = base_size * 0.8),
       legend.text = ggplot2::element_text(size = base_size * 0.7))
-  legend <- gtable::gtable_filter(ggplot2::ggplotGrob(tmp_plot), "guide-box")
   
-  # Calculate grid dimensions and arrange
   n_plots <- length(plot_list)
   n_rows <- ceiling(n_plots / ncols)
   
-  plots <- gridExtra::arrangeGrob(
-    grobs = plot_list, ncol = ncols, nrow = n_rows, padding = ggplot2::unit(0, "line"))
+  # Prevent empty slate printing 
+  pdf(file = nullfile())
+  legend <- gtable::gtable_filter(ggplot2::ggplotGrob(tmp_plot), "guide-box")
+  plots <- gridExtra::arrangeGrob(grobs = plot_list, ncol = ncols, nrow = n_rows, padding = ggplot2::unit(0, "line"))
+  invisible(dev.off())
   
   gridExtra::grid.arrange(plots, legend, nrow = 2, heights = c(0.85, 0.15))
 }

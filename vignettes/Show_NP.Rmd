@@ -23,8 +23,7 @@ if (!require("dplyr")) install.packages("dplyr", dependencies = TRUE); library(d
 if (!require("purrr")) install.packages("purrr", dependencies = TRUE); library(purrr)
 if (!require("ggplot2")) install.packages("ggplot2", dependencies = TRUE); library(ggplot2)
 
-devtools::document()
-library(NuisanceParameters)
+#devtools::document()
 
 set.seed(1234)
 ```
@@ -73,106 +72,34 @@ np_short <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.ha
                                 X, Y, D, Z,
                                 ml = ml, cf = 5, stacking = "short",
                                 cluster = NULL, stratify = FALSE, learner = c("t"), 
-                                storeModels = "Memory", path = NULL, quiet = FALSE)
-})
-
-plot(np_short$numbers$ens_weights)
+                                storeModels = "Memory", path = NULL, quiet = TRUE)})
 ```
 
-To make sure the result makes sense, let's manually estimate some target parameters and compare the result to `dml_with_smoother` of `OutcomeWeights`:
+To be sure the result makes sense, let's estimate some target parameters using early `MLeffect` function and compare them to `dml_with_smoother` of `OutcomeWeights`:
 
 ```{r}
-ehat = mean(W)
+TargetParam <- MLeffect(Y, D, X, Z, 
+                        NuPa.hat = np_short$nuisance_parameters,
+                        estimators = c("PLR","PLR_IV","AIPW_ATE","Wald_AIPW"))
 
-mxhat = np_short$nuisance_parameters$Y.hat
-exhat = np_short$nuisance_parameters$W.hat
-hhat  = np_short$nuisance_parameters$Z.hat
-
-mwhat0 = np_short$nuisance_parameters$Yw.hat[,1]
-mwhat1 = np_short$nuisance_parameters$Yw.hat[,2]
-
-mzhat0 = np_short$nuisance_parameters$Yz.hat[,1]
-mzhat1 = np_short$nuisance_parameters$Yz.hat[,2]
-
-ezhat0 = np_short$nuisance_parameters$Wz.hat[,1]
-ezhat1 = np_short$nuisance_parameters$Wz.hat[,2]
-
-pa_pl = -(W - exhat)^2
-pb_pl = (Y - mxhat) * (W - exhat)
-
-pa_ate = rep(-1,length(Y))
-pb_ate = mwhat1 - mwhat0 + W * (Y - mwhat1) / ehat - (1 - W) * (Y - mwhat0) / (1-ehat)
-
-pa_iv = -(W - exhat) * (Z - hhat)
-pb_iv = (Y - mxhat) * (Z - hhat) 
-
-pa_late = -( ezhat1 - ezhat0 + Z * (W - ezhat1) / hhat - (1 - Z) * (W - ezhat0) / (1-hhat) )
-pb_late = mzhat1 - mzhat0 + Z * (Y - mzhat1) / hhat - (1 - Z) * (Y - mzhat0) / (1-hhat)
-
-DML_inference = function(psi_a,psi_b) {
-  N = length(psi_a)
-  theta = -sum(psi_b) / sum(psi_a)
-  psi = theta * psi_a + psi_b
-  Psi = - psi / mean(psi_a)
-  sigma2 = var(Psi)
-  se = sqrt(sigma2 / N)
-  t = theta / se
-  p = 2 * pt(abs(t),N,lower = FALSE)
-  result = c(theta,se,t,p)
-  return(result)
-}
+summary(TargetParam)
+plot(TargetParam)
 ```
 
-We work with only a fraction of `401k`, so the estimates are noisy:
+We work with only a fraction of `401k`, so the estimates are noisy.
+
+Observe that the results are very close to those from the 5-fold `dml_with_smoother` routine:
 
 ```{r}
-results = matrix(NA,4,4)
-rownames(results) = c("PLR","PLR-IV","AIPW-ATE","Wald-AIPW")
-colnames(results) = c("Effect","S.E.","t","p")
-results[1,] = DML_inference(pa_pl,pb_pl)
-results[2,] = DML_inference(pa_iv,pb_iv)
-results[3,] = DML_inference(pa_ate,pb_ate)
-results[4,] = DML_inference(pa_late,pb_late)
-
-printCoefmat(results,has.Pvalue = TRUE)
-
-data.frame(
-  thetas = results[, 1],ses = results[, 2],Estimator = rownames(results),
-  cil = results[, 1] - 1.96 * results[, 2],ciu = results[, 1] + 1.96 * results[, 2]) %>% 
-  mutate(Estimator = factor(Estimator, levels = rownames(results))) %>% 
-  ggplot(aes(x = Estimator, y = thetas, ymin = cil, ymax = ciu)) + 
-  geom_point(size = 2.5) + geom_errorbar(width = 0.15) + geom_hline(yintercept = 0)
-```
-
-Observe that the results are very close to those from the 5-fold `dml_with_smoother` routine
-
-```{r}
-dml_5f = dml_with_smoother(Y,W,X,Z, n_cf_folds = 5)
+dml_5f = dml_with_smoother(Y,D,X,Z, n_cf_folds = 5)
 results_dml_5f = summary(dml_5f)
 plot(dml_5f)
 ```
 
-We can also check the ensemble weights:
+We can also check the ensemble weights for short stacking:
 
 ```{r}
-ens_weights(np_short$models, names(ml))
-
-debug(plot.ens.learner)
-plot.ens.learner(np_short$models$Y.hat.d_ml)
-
-plot(np_short$models$Y.hat.d_ml[[1]])
-
-for_plot <- readRDS("/Users/romanrakov/Desktop/nuisance_models.rds")
-plot(for_plot$models$Y.hat.d_ml[[1]])
-
-
-undebug(plot)
-x=np_short$models$Y.hat.d_ml
-(is.null(names(x[[1]])))
-
-fit_cv = make_fit_cv(ml = ml, N = nrow(X), learner = "t")
-
-names(ml)[1]
+plot(np_short$numbers$ens_weights)
 ```
 
 ## Extract smoother matrices S
@@ -182,8 +109,7 @@ Here comes the second function, which will later move to the `OutcomeWeights` pa
 ```{r}
 S <- NuisanceParameters::get_outcome_weights(
   np_object = np_short, 
-  NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat")
-  )
+  NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"))
 
 # Check if SY = Y_hat
 checks <- c(
@@ -200,8 +126,6 @@ At this point, this function is a bit of a misnomer: it gives smoother matrices 
 
 Stripping the "weight" functionality (which was creating smoother matrices) away from the `nuisance_parameters` routine made the code much less elegant.
 
--   To double-check: do we expect smoother extraction within `nuisance_parameters` or within `get_outcome_weights`?
-
 ### Standard stacking
 
 Now, let's repeat for standard stacking and print the progress. Here, we first save it to disk and then load it back in to check that everything works:
@@ -213,29 +137,24 @@ np_stand <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat.z","D.
                                 X, Y, D, Z,
                                 ml = ml, cf = 5, stacking = 2,
                                 cluster = NULL, stratify = FALSE, learner = c("t"), 
-                                storeModels = "Memory", quiet = FALSE, 
-                                path = NULL)
-})
-
-plot(np_stand$numbers$ens_weights)
+                                storeModels = "Disk", quiet = FALSE, 
+                                path = "/Users/romanrakov/Desktop")})
 ```
 
-The progress bar looks amazing in the console, but something breaks when knitting a notebook. I will replace it with something better looking, because I don't seem to find a way to get rid of these extra "G3" symbols.
+The progress bar looks amazing in the console, but something breaks when knitting a notebook.
 
 It is useful for giving more information on what exactly is being done:
 
 -   `cv = 1, 2, ...`: Each candidate learner *j* is trained on the data excluding the current cross-validation hold-out fold, i.e., $T_k \setminus T_{k,v}$ in the notation of Ahrens et al. (2024)
 
--   `cv = fs`: After cross-validating the individual learners within each cross-fitting fold, we re-fit our learners on the full training portion of the cross-fitting fold (full sample, fs)
+-   `cv = .`: After cross-validating the individual learners within each cross-fitting fold, we re-fit our learners on the full training portion of the cross-fitting fold (full sample, fs)
 
--   `cv = op`: We use the learners fitted in `cv = fs` and make predictions on the held-out part of the cross-fitting fold using ensemble weights obtained from `cv = 1, 2, ...`. (out-of-sample prediction, op)
+-   `cv = .`: We use the learners fitted in `cv = .` and make predictions on the held-out part of the cross-fitting fold using ensemble weights obtained from `cv = 1, 2, ...`.
 
 ```{r}
 S2 <- NuisanceParameters::get_outcome_weights(
   np_object = "/Users/romanrakov/Desktop/nuisance_models.rds", 
-  NuPa = c("Y.hat","Y.hat.d","Y.hat.z")
-  )
-
+  NuPa = c("Y.hat","Y.hat.d","Y.hat.z"))
 
 # Check if SY = Y_hat
 checks <- c(
@@ -248,11 +167,17 @@ checks <- c(
 all(sapply(checks, isTRUE))
 ```
 
+We can also display the weights for standard stacking. The format is slightly different: for each nuisance parameter, weights are computed for every cross-fitting fold:
+
+```{r}
+plot(np_stand$numbers$ens_weights)
+```
+
 ## Hyperparameter tuning
 
 As of now, only `grf`'s regression forest can be tuned.
 
-On full sample by specifying `arguments = list("tune_full")`..
+It can be done on full sample by specifying `arguments = list("tune_full")`..
 
 ```{r}
 ml = list(
@@ -260,22 +185,15 @@ ml = list(
  "forest_grf" = create_method("forest_grf", arguments = list("tune_full"))
 )
 
-# Measure execution time
 time_short_tune_full <- system.time({
-np_short <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
-                                ml = ml, x = X, y = Y, w = W, z = Z,
-                                cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
-                                cl = NULL, cv = 1, learner = c("t"), 
-                                storeModels = "Memory", path = NULL, quiet = TRUE)
-})
+np_short <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
+                                X, Y, D, Z, ml = ml, cf = 5, stacking = "short",
+                                learner = c("t"), storeModels = "Memory")})
 
 time_stand_tune_full <- system.time({
-np_stand <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
-                      ml = ml, x = X, y = Y, w = W, z = Z,
-                      cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
-                      cv = 2, learner = c("t"), 
-                      storeModels = "Disk", path = "/Users/romanrakov/Desktop", quiet = TRUE)
-})
+np_stand <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
+                                X, Y, D, Z, ml = ml, cf = 5, stacking = 2,
+                                learner = c("t"), storeModels = "Memory")})
 ```
 
 Or on the fold by specifying `arguments = list("tune_fold")`..
@@ -288,23 +206,17 @@ ml = list(
 
 # Measure execution time
 time_short_tune_fold <- system.time({
-np_short <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
-                                ml = ml, x = X, y = Y, w = W, z = Z,
-                                cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
-                                cl = NULL, cv = 1, learner = c("t"), 
-                                storeModels = "Memory", path = NULL, quiet = TRUE)
-})
+np_short <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
+                                X, Y, D, Z, ml = ml, cf = 5, stacking = "short",
+                                learner = c("t"), storeModels = "No")})
 
 time_stand_tune_fold <- system.time({
-np_stand <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
-                      ml = ml, x = X, y = Y, w = W, z = Z,
-                      cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
-                      cv = 2, learner = c("t"), 
-                      storeModels = "Memory", path = NULL, quiet = TRUE)
-})
+np_stand <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
+                                X, Y, D, Z, ml = ml, cf = 5, stacking = 2,
+                                learner = c("t"), storeModels = "No")})
 ```
 
-The warnings appear because there is very little variation in $W$ when $Z = 0$.
+The warnings appear because there is very little variation in $D$ when $Z = 0$.
 
 And print the training time:
 

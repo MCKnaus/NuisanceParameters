@@ -56,7 +56,7 @@
 #'      
 #' @export
 #' 
-MLeffect = function(Y,W,X,Z=NULL,
+MLeffect = function(Y,D,X,Z=NULL,
                     NuPa.hat,
                     estimators = c("PLR","PLR_IV","AIPW_ATE","Wald_AIPW"),
                     ...) {
@@ -68,7 +68,7 @@ MLeffect = function(Y,W,X,Z=NULL,
     stop(paste("Error: The following specified estimators are not supported:", 
                paste(not_supported, collapse = ", ")))}
   
-  supported_NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat","Wz.hat","Z.hat")
+  supported_NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat")
   not_supported = names(NuPa.hat)[!names(NuPa.hat) %in% supported_NuPa]
   if (length(not_supported) > 0) {
     stop(paste("Error: The following passed nuisance parameters are not supported:", 
@@ -89,36 +89,36 @@ MLeffect = function(Y,W,X,Z=NULL,
   
   # Run the specified DML estimators
   if ("PLR" %in% estimators) {
-    W.hat = NuPa.hat$W.hat
+    D.hat = NuPa.hat$D.hat
     Y.hat = NuPa.hat$Y.hat
-    psi.a = -(W - W.hat)^2
-    psi.b = (Y - Y.hat) * (W - W.hat)
+    psi.a = -(D - D.hat)^2
+    psi.b = (Y - Y.hat) * (D - D.hat)
     dml_plr = dml_inference(psi.a,psi.b)
   }
   if ("PLR_IV" %in% estimators) {
-    W.hat = NuPa.hat$W.hat
+    D.hat = NuPa.hat$D.hat
     Y.hat = NuPa.hat$Y.hat
     Z.hat = NuPa.hat$Z.hat
-    psi.a = -(W - W.hat) * (Z - Z.hat)
+    psi.a = -(D - D.hat) * (Z - Z.hat)
     psi.b = (Y - Y.hat) * (Z - Z.hat) 
     dml_PLR_IV = dml_inference(psi.a,psi.b)
   }
   if ("AIPW_ATE" %in% estimators) {
-    W.hat = NuPa.hat$W.hat
-    Yw.hat0 = NuPa.hat$Yw.hat[,1]
-    Yw.hat1 = NuPa.hat$Yw.hat[,2]
+    D.hat = NuPa.hat$D.hat
+    Y.hat.d0 = NuPa.hat$Y.hat.d[,1]
+    Y.hat.d1 = NuPa.hat$Y.hat.d[,2]
     psi.a = matrix(-1,N)
-    psi.b = Yw.hat1 - Yw.hat0 + W * (Y - Yw.hat1) / W.hat - (1 - W) * (Y - Yw.hat0) / (1-W.hat)
+    psi.b = Y.hat.d1 - Y.hat.d0 + D * (Y - Y.hat.d1) / D.hat - (1 - D) * (Y - Y.hat.d0) / (1-D.hat)
     dml_AIPW_ATE = dml_inference(psi.a,psi.b)
   }
   if ("Wald_AIPW" %in% estimators) {
     Z.hat = NuPa.hat$Z.hat
-    W.hat.z0 = NuPa.hat$Wz.hat[,1]
-    W.hat.z1 = NuPa.hat$Wz.hat[,2]
-    Yz.hat0 = NuPa.hat$Yz.hat[,1]
-    Yz.hat1 = NuPa.hat$Yz.hat[,2]
-    psi.a = -( W.hat.z1 - W.hat.z0 + Z * (W - W.hat.z1) / Z.hat - (1 - Z) * (W - W.hat.z0) / (1-Z.hat) )
-    psi.b = Yz.hat1 - Yz.hat0 + Z * (Y - Yz.hat1) / Z.hat - (1 - Z) * (Y - Yz.hat0) / (1-Z.hat)
+    D.hat.z0 = NuPa.hat$D.hat.z[,1]
+    D.hat.z1 = NuPa.hat$D.hat.z[,2]
+    Y.hat.z0 = NuPa.hat$Y.hat.z[,1]
+    Y.hat.z1 = NuPa.hat$Y.hat.z[,2]
+    psi.a = -( D.hat.z1 - D.hat.z0 + Z * (D - D.hat.z1) / Z.hat - (1 - Z) * (D - D.hat.z0) / (1-Z.hat) )
+    psi.b = Y.hat.z1 - Y.hat.z0 + Z * (Y - Y.hat.z1) / Z.hat - (1 - Z) * (Y - Y.hat.z0) / (1-Z.hat)
     dml_Wald_AIPW = dml_inference(psi.a,psi.b)
   }
   
@@ -130,7 +130,7 @@ MLeffect = function(Y,W,X,Z=NULL,
   
   list_data = list(
     "Y" = Y,
-    "W" = W,
+    "D" = D,
     "Z" = Z,
     "X" = X )
   

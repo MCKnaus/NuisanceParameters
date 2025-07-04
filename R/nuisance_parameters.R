@@ -110,7 +110,7 @@ nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.h
     if ("Z.hat" %in% NuPa) total_ticks <- total_ticks + 1
     
     # Multiply by folds and models (fitting + prediction)
-    total_ticks <- total_ticks * cf_folds * length(models) * 2 * if (cv_folds > 1 && length(models) > 1) (cv_folds+1) else 1
+    total_ticks <- total_ticks * cf_folds * length(models) * 2 * if (cv_folds > 1 && length(models) > 1) (cv_folds+1) else 1 * if (learner == "both") 2 else 1 
     
     pb <- progress::progress_bar$new(
       format = "[:bar] :percent | :current/:total | :nuisance | cf =:pb_cf, cv =:pb_cv | :task :model",
@@ -337,7 +337,7 @@ nuisance_cf = function(ml, Y, X, cf_mat,
       
       ### Hyperparameter tuning
       if (!is.null(ml_fold$forest_grf) && identical(ml_fold$forest_grf$arguments, list("tune_fold"))) {
-        tuning <- grf::regression_forest(X = x_tr, Y = y_tr, tune.parameters = "all")
+        tuning <- grf::regression_forest(X = X_tr, Y = Y_tr, tune.parameters = "all")
         ml_fold$forest_grf$arguments <- as.list(tuning$tuning.output$params)
       }
 

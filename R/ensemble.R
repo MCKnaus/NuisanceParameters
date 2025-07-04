@@ -56,7 +56,7 @@ ensemble = function(ml,
     nnls_w = nnls_weights(X = fit_cv, Y = Y)
 
     # run all methods on the full sample (fs)
-    ml_fit_full = ensemble_core(ml, X, Y, quiet = quiet, pb = pb, pb_cf = pb_cf, pb_cv = "fs", pb_np = pb_np)
+    ml_fit_full = ensemble_core(ml, X, Y, quiet = quiet, pb = pb, pb_cf = pb_cf, pb_cv = ".", pb_np = pb_np)
   }
 
 
@@ -109,12 +109,12 @@ predict.ensemble = function(object,
 
   if (length(object$ml) > 1) {
 
-    pred = predict.ensemble_core(object = object$ml_fit, ml = ml, X_tr = X, Y_tr = Y, X_te = Xnew, quiet = quiet, pb = pb, pb_cf = pb_cf, pb_cv = "op", pb_np = pb_np)
+    pred = predict.ensemble_core(object = object$ml_fit, ml = ml, X_tr = X, Y_tr = Y, X_te = Xnew, quiet = quiet, pb = pb, pb_cf = pb_cf, pb_cv = ".", pb_np = pb_np)
     np = as.vector(pred %*% object$nnls_weights)
 
   } else if (length(object$ml) == 1) {
 
-    pred = predict.ensemble_core(object = object$ml_fit, ml = ml, X_tr = X, Y_tr = Y, X_te = Xnew, quiet = quiet, pb = pb, pb_cf = pb_cf, pb_cv = "op", pb_np = pb_np)
+    pred = predict.ensemble_core(object = object$ml_fit, ml = ml, X_tr = X, Y_tr = Y, X_te = Xnew, quiet = quiet, pb = pb, pb_cf = pb_cf, pb_cv = ".", pb_np = pb_np)
     np = as.vector(pred)
 
   }
