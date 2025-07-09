@@ -48,7 +48,7 @@ ensemble_short = function(ml,
 
   # parameter configuration
   learner = match.arg(learner)
-  if(all(subset == TRUE)) learner = "t"
+  # if(all(subset == TRUE)) learner = "t"
   storeModels = match.arg(storeModels)
   saveModels = (storeModels != "No")
 
@@ -84,11 +84,11 @@ ensemble_short = function(ml,
 
     if (learner %in% c("s", "both")) {
 
-      X_tr_s = cbind(X_tr, subset_tr*1)
-      X_te_s = cbind(X_te, rep(1, nrow(X_te)))
+      # X_tr_s = cbind(X_tr, subset_tr*1)
+      # X_te_s = cbind(X_te, rep(1, nrow(X_te)))
 
-      ml_fit = ensemble_core(ml_fold, X_tr_s, Y_tr, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
-      fit_cv[fold, grepl("^s", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml_fold, X_tr_s, Y_tr, X_te_s, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+      ml_fit = ensemble_core(ml_fold, X_tr, Y_tr, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+      fit_cv[fold, grepl("^s", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml_fold, X_tr, Y_tr, X_te, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
 
       if(saveModels) s[[ncol(cf_mat) + i]] = ml_fit
 
@@ -204,9 +204,9 @@ weights.ensemble_short = function(object,
     }
     if ("s" %in% learner) {
       subset_tr = subset[!fold]
-      X_tr_s = cbind(X_tr, subset_tr*1)
-      X_te_s = cbind(X_te, rep(1, nrow(X_te)))
-      w_array = abind::abind(w_array, weights.ensemble_core(object = ml_fit[[ncol(cf_mat) + i]], ml = ml, X_tr = X_tr_s, Y_tr = Y_tr, X_te = X_te_s, quiet))
+      # X_tr_s = cbind(X_tr, subset_tr*1)
+      # X_te_s = cbind(X_te, rep(1, nrow(X_te)))
+      w_array = abind::abind(w_array, weights.ensemble_core(object = ml_fit[[ncol(cf_mat) + i]], ml = ml, X_tr = X_tr, Y_tr = Y_tr, X_te = X_te, quiet))
     }
 
     smoother_weights[fold, !fold] = agg_array(w_array, w)

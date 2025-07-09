@@ -67,6 +67,10 @@ nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.h
     cv <- as.integer(stacking)
   } else { stop("`stacking` must be either 'short' or an integer > 1") }
   
+  if (length(ml) == 1) {cv <- 1
+    message("With a single learner provided, estimation defaults to cross-fitted predictions.")
+  }
+  
 
   ## Preps
   N = nrow(X)
@@ -311,7 +315,7 @@ nuisance_cf = function(ml, Y, X, cf_mat,
         storeModels = storeModels, path = path, quiet = quiet, pb = pb, pb_np = pb_np
       )
       
-      nnls_w <- nnls_weights(ens$fit_cv[subset, ], Y[subset])
+      nnls_w <- if (length(ml) == 1) 1 else nnls_weights(ens$fit_cv[subset, ], Y[subset])
       np <- predict(ens, w = nnls_w)
       
       fit_sub <- list("ens_object" = ens, "nnls_w" = nnls_w)

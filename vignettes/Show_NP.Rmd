@@ -91,7 +91,7 @@ We work with only a fraction of `401k`, so the estimates are noisy.
 Observe that the results are very close to those from the 5-fold `dml_with_smoother` routine:
 
 ```{r}
-dml_5f = dml_with_smoother(Y,D,X,Z, n_cf_folds = 5)
+dml_5f = dml_with_smoother(Y,D,X,Z, n_cf_folds = 5, n_reps = 2)
 results_dml_5f = summary(dml_5f)
 plot(dml_5f)
 ```
