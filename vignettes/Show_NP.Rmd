@@ -1,14 +1,16 @@
 ---
-title: "NuisanceParameters - progress as of 26.06"
-subtitle: ""
+title: "NuisanceParameters"
+subtitle: "Version: July 9th 2025"
 author: "Roman Rakov"
-date: "06/25"
+date: "07/25"
 output: 
   html_notebook:
     toc: true
     toc_float: true
     code_folding: show
 ---
+
+*The notebook is under development.*
 
 This notebook shows some functionality of the `NuisanceParameters` package.
 
@@ -23,16 +25,16 @@ if (!require("dplyr")) install.packages("dplyr", dependencies = TRUE); library(d
 if (!require("purrr")) install.packages("purrr", dependencies = TRUE); library(purrr)
 if (!require("ggplot2")) install.packages("ggplot2", dependencies = TRUE); library(ggplot2)
 
-#devtools::document()
+devtools::document()
 
-set.seed(1234)
+set.seed(12)
 ```
 
 Next, load the data. Here we use a sample from the 401(k) data of the `hdm` package.
 
 ```{r}
 data(pension)
-idx <- sample(nrow(pension), size = round(0.1 * nrow(pension)))
+idx <- sample(nrow(pension), size = round(0.15 * nrow(pension)))
 sub <- pension[idx, ]
 
 # subset
@@ -43,39 +45,32 @@ X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc + male + marr + pir
                   data = sub)
 ```
 
-We just pass `W`, `Z`, and `cf`, and `nuisance_parameters` handles the rest, returning `cf_mat`.
-
-**Reminder**: `cf_mat` creates a matrix of binary cross-fitting fold indicators (n x cross-folds). It can account for clusters within the data (specify `cl`) and preserve the treatment ratios from full sample (specify `w_mat`). If both are provided, `w_mat` is ignored due to computational constraints and feasibility issues.
-
-Along with the estimated models, `cf_mat` will later be passed to `get_outcome_weights`.
-
 Lastly, we specify the methods used in the ensemble with `create_method`:
 
 ```{r}
 ml = list(
  "ols" = create_method("ols"),
- "forest_grf" = create_method("forest_grf"),
- # "lasso" = create_method("lasso"),
- # "ridge" = create_method("ridge"),
- "knn" = create_method("knn", arguments = list("k" = 3))
+ #"forest_grf" = create_method("forest_grf"),
+ "xgboost" = create_method("xgboost")
 )
 ```
 
 ## Run `nuisance_parameters`
 
+Note: cross-fitting procedure can account for clusters within the data (provide `cluster` variable) and preserve the treatment ratios from full sample (specify `stratify=TRUE`). If both are provided, stratification on treatment is ignored due to computational constraints and feasibility issues.
+
 Now, we are ready to run the main function:
 
 ```{r}
 # Short stacking 
-time_short_notune <- system.time({
 np_short <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
                                 X, Y, D, Z,
                                 ml = ml, cf = 5, stacking = "short",
-                                cluster = NULL, stratify = FALSE, learner = c("t"), 
-                                storeModels = "Memory", path = NULL, quiet = TRUE)})
+                                cluster = NULL, stratify = FALSE, learner = c("both"), 
+                                storeModels = "Memory", path = NULL, quiet = FALSE)
 ```
 
-To be sure the result makes sense, let's estimate some target parameters using early `MLeffect` function and compare them to `dml_with_smoother` of `OutcomeWeights`:
+For a sanity check, let's estimate some target parameters using early `MLeffect` function and compare them to `dml_with_smoother` of `OutcomeWeights`:
 
 ```{r}
 TargetParam <- MLeffect(Y, D, X, Z, 
@@ -96,35 +91,49 @@ results_dml_5f = summary(dml_5f)
 plot(dml_5f)
 ```
 
-We can also check the ensemble weights for short stacking:
+We can also check the ensemble weights in the short stacking procedure. These are obtained by regressing the outcome on the individual cross-fitted ML learners using non-negative least squares:
 
 ```{r}
 plot(np_short$numbers$ens_weights)
 ```
 
+Note that for `D.hat.z0`, equal ensemble weights are used due to data peculiarities: $D$ and $Z$ are nearly identical in the subsample where $Z = 0$ ($D$ shows little variation as it is almost always 0).
+
+Issue: do not understand the difference between S- and T- learners...
+
 ## Extract smoother matrices S
 
-Here comes the second function, which will later move to the `OutcomeWeights` package:
+Here comes the second function, which will later be moved to the `OutcomeWeights` package. It extracts outcome smoother matrices (for nuisance parameters starting with `Y.hat..`) using the trained models saved in the previous step:
 
 ```{r}
+debug(NuisanceParameters::get_outcome_weights)
 S <- NuisanceParameters::get_outcome_weights(
   np_object = np_short, 
-  NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"))
+  NuPa = c("Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat")) # "Y.hat",
 
 # Check if SY = Y_hat
-checks <- c(
-  all.equal(as.numeric(S$Y.hat_ml %*% Y), np_short$nuisance_parameters$Y.hat),
-  all.equal(as.numeric(S$Y.hat.d_ml[[1]] %*% Y), np_short$nuisance_parameters$Y.hat.d[, 1]),
-  all.equal(as.numeric(S$Y.hat.d_ml[[2]] %*% Y), np_short$nuisance_parameters$Y.hat.d[, 2]),
-  all.equal(as.numeric(S$Y.hat.z_ml[[1]] %*% Y), np_short$nuisance_parameters$Y.hat.z[, 1]),
-  all.equal(as.numeric(S$Y.hat.z_ml[[2]] %*% Y), np_short$nuisance_parameters$Y.hat.z[, 2]))
+check_pairs <- list(
+  #list(A = S$Y.hat_ml %*% Y,         B = np_short$nuisance_parameters$Y.hat),
+  list(A = S$Y.hat.d_ml[[1]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.d[, 1]),
+  list(A = S$Y.hat.d_ml[[2]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.d[, 2]),
+  list(A = S$Y.hat.z_ml[[1]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.z[, 1]),
+  list(A = S$Y.hat.z_ml[[2]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.z[, 2]))
 
-all(sapply(checks, isTRUE))
+checks <- sapply(check_pairs, function(pair) {isTRUE(all.equal(as.numeric(pair$A), pair$B))})
+all(checks)
 ```
 
-At this point, this function is a bit of a misnomer: it gives smoother matrices instead of outcome weights. In the future, it will also take in the target parameters estimated in `MLeffects` or elsewhere—and provide a vector of outcome weights.
+Seeing `FALSE` should not throw us off: the current smoother matrix construction for XGBoost leaves a tiny wedge between weighted outcomes and estimated nuisance parameters. Once we allow for some slack by setting a tolerance level, the equality is restored:
 
-Stripping the "weight" functionality (which was creating smoother matrices) away from the `nuisance_parameters` routine made the code much less elegant.
+```{r}
+checks <- sapply(check_pairs, function(pair) {
+  isTRUE(all.equal(as.numeric(pair$A), pair$B, tolerance = 1e-7))
+})
+
+all(checks)
+```
+
+At this point, the `get_outcome_weights` function is a bit of a misnomer: it gives smoother matrices instead of outcome weights. In the future, it will also take in the target parameters estimated in `MLeffects` or elsewhere—and provide a vector of outcome weights.
 
 ### Standard stacking
 
@@ -132,42 +141,41 @@ Now, let's repeat for standard stacking and print the progress. Here, we first s
 
 ```{r}
 # Standard stacking 
-time_stand_notune <- system.time({
 np_stand <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat.z","D.hat","Z.hat"),
                                 X, Y, D, Z,
                                 ml = ml, cf = 5, stacking = 2,
                                 cluster = NULL, stratify = FALSE, learner = c("t"), 
                                 storeModels = "Disk", quiet = FALSE, 
-                                path = "/Users/romanrakov/Desktop")})
+                                path = "/Users/romanrakov/Desktop")
 ```
 
-The progress bar looks amazing in the console, but something breaks when knitting a notebook.
+The progress bar is useful for giving more information on what exactly is being done:
 
-It is useful for giving more information on what exactly is being done:
-
--   `cv = 1, 2, ...`: Each candidate learner *j* is trained on the data excluding the current cross-validation hold-out fold, i.e., $T_k \setminus T_{k,v}$ in the notation of Ahrens et al. (2024)
+-   `cv = 1, 2, ...`: Each candidate learner $j$ is trained on the data excluding the current cross-validation hold-out fold, i.e., $T_k \setminus T_{k,v}$ in the notation of Ahrens et al. (2024)
 
 -   `cv = .`: After cross-validating the individual learners within each cross-fitting fold, we re-fit our learners on the full training portion of the cross-fitting fold (full sample, fs)
 
 -   `cv = .`: We use the learners fitted in `cv = .` and make predictions on the held-out part of the cross-fitting fold using ensemble weights obtained from `cv = 1, 2, ...`.
 
 ```{r}
-S2 <- NuisanceParameters::get_outcome_weights(
+S <- NuisanceParameters::get_outcome_weights(
   np_object = "/Users/romanrakov/Desktop/nuisance_models.rds", 
   NuPa = c("Y.hat","Y.hat.d","Y.hat.z"))
 
 # Check if SY = Y_hat
-checks <- c(
-  all.equal(as.numeric(S2$Y.hat_ml %*% Y), np_stand$nuisance_parameters$Y.hat),
-  all.equal(as.numeric(S2$Y.hat.d_ml[[1]] %*% Y), np_stand$nuisance_parameters$Y.hat.d[, 1]),
-  all.equal(as.numeric(S2$Y.hat.d_ml[[2]] %*% Y), np_stand$nuisance_parameters$Y.hat.d[, 2]),
-  all.equal(as.numeric(S2$Y.hat.z_ml[[1]] %*% Y), np_stand$nuisance_parameters$Y.hat.z[, 1]),
-  all.equal(as.numeric(S2$Y.hat.z_ml[[2]] %*% Y), np_stand$nuisance_parameters$Y.hat.z[, 2]))
+check_pairs <- list(
+  list(A = S$Y.hat_ml %*% Y,         B = np_short$nuisance_parameters$Y.hat),
+  list(A = S$Y.hat.d_ml[[1]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.d[, 1]),
+  list(A = S$Y.hat.d_ml[[2]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.d[, 2]),
+  list(A = S$Y.hat.z_ml[[1]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.z[, 1]),
+  list(A = S$Y.hat.z_ml[[2]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.z[, 2]))
 
-all(sapply(checks, isTRUE))
+checks <- sapply(check_pairs, function(pair) {
+  isTRUE(all.equal(as.numeric(pair$A), pair$B, tolerance = 1e-7))})
+all(checks)
 ```
 
-We can also display the weights for standard stacking. The format is slightly different: for each nuisance parameter, weights are computed for every cross-fitting fold:
+We can also display the weights for standard stacking. The format is slightly different: for each nuisance parameter, weights are computed within every cross-fitting fold:
 
 ```{r}
 plot(np_stand$numbers$ens_weights)
@@ -180,40 +188,40 @@ As of now, only `grf`'s regression forest can be tuned.
 It can be done on full sample by specifying `arguments = list("tune_full")`..
 
 ```{r}
-ml = list(
- "ols" = create_method("ols"),
- "forest_grf" = create_method("forest_grf", arguments = list("tune_full"))
-)
-
-time_short_tune_full <- system.time({
-np_short <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
-                                X, Y, D, Z, ml = ml, cf = 5, stacking = "short",
-                                learner = c("t"), storeModels = "Memory")})
-
-time_stand_tune_full <- system.time({
-np_stand <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
-                                X, Y, D, Z, ml = ml, cf = 5, stacking = 2,
-                                learner = c("t"), storeModels = "Memory")})
+# ml = list(
+#  "ols" = create_method("ols"),
+#  "forest_grf" = create_method("forest_grf", arguments = list("tune_full"))
+# )
+# 
+# time_short_tune_full <- system.time({
+# np_short <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
+#                                 X, Y, D, Z, ml = ml, cf = 5, stacking = "short",
+#                                 learner = c("t"), storeModels = "Memory")})
+# 
+# time_stand_tune_full <- system.time({
+# np_stand <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
+#                                 X, Y, D, Z, ml = ml, cf = 5, stacking = 2,
+#                                 learner = c("t"), storeModels = "Memory")})
 ```
 
 Or on the fold by specifying `arguments = list("tune_fold")`..
 
 ```{r}
-ml = list(
- "ols" = create_method("ols"),
- "forest_grf" = create_method("forest_grf", arguments = list("tune_fold"))
-)
-
-# Measure execution time
-time_short_tune_fold <- system.time({
-np_short <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
-                                X, Y, D, Z, ml = ml, cf = 5, stacking = "short",
-                                learner = c("t"), storeModels = "No")})
-
-time_stand_tune_fold <- system.time({
-np_stand <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
-                                X, Y, D, Z, ml = ml, cf = 5, stacking = 2,
-                                learner = c("t"), storeModels = "No")})
+# ml = list(
+#  "ols" = create_method("ols"),
+#  "forest_grf" = create_method("forest_grf", arguments = list("tune_fold"))
+# )
+# 
+# # Measure execution time
+# time_short_tune_fold <- system.time({
+# np_short <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
+#                                 X, Y, D, Z, ml = ml, cf = 5, stacking = "short",
+#                                 learner = c("t"), storeModels = "No")})
+# 
+# time_stand_tune_fold <- system.time({
+# np_stand <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
+#                                 X, Y, D, Z, ml = ml, cf = 5, stacking = 2,
+#                                 learner = c("t"), storeModels = "No")})
 ```
 
 The warnings appear because there is very little variation in $D$ when $Z = 0$.
@@ -221,14 +229,10 @@ The warnings appear because there is very little variation in $D$ when $Z = 0$.
 And print the training time:
 
 ```{r}
-cat("
-Short stacking not tuned:    ", time_short_notune[3], "s
-Standard stacking not tuned: ", time_stand_notune[3], "s
-\nShort stacking full-tuned:   ", time_short_tune_full[3], "s  
-Standard stacking full-tuned:", time_stand_tune_full[3], "s
-\nShort stacking fold-tuned:   ", time_short_tune_fold[3], "s  
-Standard stacking fold-tuned:", time_stand_tune_fold[3], "s"
-    )
+# cat("Short stacking not tuned:    ", time_short_notune[3], "s
+#      Standard stacking not tuned: ", time_stand_notune[3], "s
+#      \nShort stacking full-tuned:   ", time_short_tune_full[3], "s  
+#      Standard stacking full-tuned:", time_stand_tune_full[3], "s
+#      \nShort stacking fold-tuned:   ", time_short_tune_fold[3], "s  
+#     Standard stacking fold-tuned:", time_stand_tune_fold[3], "s")
 ```
-
-This is it. This notebook will become a vignette when it’s ready.

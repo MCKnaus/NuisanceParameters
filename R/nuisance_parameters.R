@@ -71,6 +71,7 @@ nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.h
     message("With a single learner provided, estimation defaults to cross-fitted predictions.")
   }
   
+  if (learner == "both") message("learner='both': Y/D/Z.hat default to T-learner (learners are identical).")
 
   ## Preps
   N = nrow(X)
@@ -104,17 +105,19 @@ nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.h
   
   
   ## Experimental: progress printing
-  setup_progress_bar <- function(NuPa, n_w, n_z, cf_folds, cv_folds, models) {
-    total_ticks <- 0
-    if ("Y.hat.d" %in% NuPa) total_ticks <- total_ticks + n_w
-    if ("Y.hat.z" %in% NuPa) total_ticks <- total_ticks + n_z
-    if ("D.hat.z" %in% NuPa) total_ticks <- total_ticks + n_z
-    if ("Y.hat" %in% NuPa) total_ticks <- total_ticks + 1
-    if ("D.hat" %in% NuPa) total_ticks <- total_ticks + 1
-    if ("Z.hat" %in% NuPa) total_ticks <- total_ticks + 1
+  setup_progress_bar <- function(NuPa, n_d, n_z, cf_folds, cv_folds, models) {
     
-    # Multiply by folds and models (fitting + prediction)
-    total_ticks <- total_ticks * cf_folds * length(models) * 2 * if (cv_folds > 1 && length(models) > 1) (cv_folds+1) else 1 * if (learner == "both") 2 else 1 
+    # Base ticks for each nuisance parameter
+    base_ticks <- c("Y.hat.d"=n_d,"Y.hat.z"=n_z,"D.hat.z"=n_z,"Y.hat"=1,"D.hat"=1,"Z.hat"= 1)
+    total_ticks <- sum(base_ticks[names(base_ticks) %in% NuPa])
+    
+    # Learner-specific multiplier
+    if (learner == "both") {
+      learner_multiplier <- ifelse(names(base_ticks) %in% c("Y.hat.d", "Y.hat.z", "D.hat.z"), 2, 1)
+      total_ticks <- sum(base_ticks[names(base_ticks) %in% NuPa] * learner_multiplier[names(base_ticks) %in% NuPa])}
+    
+    # Final ticks: folds × models × fitting/prediction × CV adjustment
+    total_ticks <- total_ticks * cf_folds * length(models) * 2 * if (cv_folds > 1 && length(models) > 1) (cv_folds + 1) else 1
     
     pb <- progress::progress_bar$new(
       format = "[:bar] :percent | :current/:total | :nuisance | cf =:pb_cf, cv =:pb_cv | :task :model",
@@ -162,7 +165,7 @@ nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.h
     pb_np <- "Y.hat"
     
     temp <- nuisance_cf(
-      ml = ml, Y = Y, X = X, cf_mat = cf_mat, learner = learner, cv = cv,
+      ml = ml, Y = Y, X = X, cf_mat = cf_mat, learner = "t", cv = cv,
       subset = NULL, storeModels = "Memory", path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
     
     Y.hat <- temp$np
@@ -191,7 +194,7 @@ nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.h
     pb_np <- "D.hat"
     
     temp <- nuisance_cf(
-      ml = ml, Y = D, X = X, cf_mat = cf_mat, learner = learner, cv = cv,
+      ml = ml, Y = D, X = X, cf_mat = cf_mat, learner = "t", cv = cv,
       subset = NULL, storeModels = "No", path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
     
     D.hat <- temp$np
@@ -205,7 +208,7 @@ nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.h
     pb_np <- "Z.hat"
     
     temp <- nuisance_cf(
-      ml = ml, Y = Z, X = X, cf_mat = cf_mat, learner = learner, cv = cv,
+      ml = ml, Y = Z, X = X, cf_mat = cf_mat, learner = "t", cv = cv,
       subset = NULL, storeModels = "No", path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
     
     Z.hat <- temp$np
@@ -214,7 +217,8 @@ nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.h
   
   # Combine all collected ens_weights into a matrix
   if (cv == 1) {
-    ens_weights_mat <- as.data.frame(do.call(cbind, ens_weights))
+    ens_weights_mat <- as.data.frame(lapply(ens_weights, `length<-`, max(lengths(ens_weights))))
+    ens_weights_mat[is.na(ens_weights_mat)] <- 0
     class(ens_weights_mat) <- c("ens_weights_short", "data.frame")
   } else {
     ens_weights_mat <- format_weights(ens_weights)

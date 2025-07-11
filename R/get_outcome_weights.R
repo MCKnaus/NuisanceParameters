@@ -54,6 +54,12 @@ get_outcome_weights = function(np_object,
     cat("The following ensemble models were not found:", paste(missing_models, collapse = ", "), "\n")
     cat("Continuing with available models:", paste(existing_models, collapse = ", "), "\n")
   }
+  
+  if (length(missing_models) > 0) {
+    message("The following ensemble models were not found: ", paste(missing_models, collapse = ", "), "\n",
+      "Continuing with available models: ", paste(existing_models, collapse = ", "))
+  }
+  
   if (length(existing_models) == 0) {stop("No valid (ensemble) models found in np_object[['models']].")}
   
   if (is.null(subset)) subset = rep(TRUE, length(Y))
@@ -81,8 +87,24 @@ get_outcome_weights = function(np_object,
         sub_results <- list()
         for (i in seq_along(current_model)) {
           sub_element <- current_model[[i]]
+          
+          # Two days of work to solve this
+          ######
+          if (identical(sub_element, np_object[["models"]][["Y.hat.d_ml"]][[1]])) {
+            subset <- d_mat[, 1]
+          } else if (identical(sub_element, np_object[["models"]][["Y.hat.d_ml"]][[2]])) {
+            subset <- d_mat[, 2]
+          } else if (identical(sub_element, np_object[["models"]][["Y.hat.z_ml"]][[1]])) {
+            subset <- z_mat[, 1]
+          } else if (identical(sub_element, np_object[["models"]][["Y.hat.z_ml"]][[2]])) {
+            subset <- z_mat[, 2]
+          } else {
+            subset <- NULL
+          }
+          #####
+          
           if (is.list(sub_element) && "ens_object" %in% names(sub_element)) {
-            sub_results[[i]] <- get_smoother(sub_element, ml = ml, X = X, Y = Y, nnls_w = NULL, cv = cv, cf_mat = cf_mat, quiet = quiet)
+            sub_results[[i]] <- get_smoother(sub_element, ml = ml, X = X, Y = Y, subset = subset, nnls_w = NULL, cv = cv, cf_mat = cf_mat, quiet = quiet)
           }
         }
         results[[model]] <- sub_results
@@ -156,7 +178,7 @@ get_outcome_weights = function(np_object,
 get_smoother = function(object,
                         ml,
                         X, Y,
-                        subset= NULL,
+                        subset = NULL,
                         nnls_w = NULL,
                         cv = cv,
                         cf_mat,
@@ -357,6 +379,35 @@ weights.forest_grf_fit = function(forest_grf_fit, Xnew = NULL, ...) {
   
   return(w)
 }
+
+
+#' Smoother weights from XGBoost model
+#'
+#' @description
+#' Extract smoother weights for test sample from a XGBoost model.
+#'
+#' @param xgboost_fit Output of \code{\link{xgboost_fit}}
+#' @param Xnew Covariate matrix of test sample.
+#' If not provided, prediction is done for the training sample.
+#' @param ... Ignore unused arguments
+#'
+#' @return Matrix of smoother weights.
+#'
+#' @method weights xgboost_fit
+#'
+#' @keywords internal
+#'
+weights.xgboost_fit = function(xgboost_fit, X, Xnew = NULL, ...) {
+  
+  dtrain = xgboost::xgb.DMatrix(data = as.matrix(X))
+  dtest = xgboost::xgb.DMatrix(data = as.matrix(Xnew))
+  
+  w = get_xgboost_weights(xgboost_fit, dtrain=dtrain, dtest=dtest)
+  w = as.matrix(w$S_test)
+  
+  return(w)
+}
+
 
 
 #' Smoother weights from k-Nearest-Neighbor algorithm

@@ -61,34 +61,38 @@ ensemble_short = function(ml,
   for (i in 1:ncol(cf_mat)) {
 
     fold = cf_mat[, i]
-    X_tr = X[!fold, ]
-    Y_tr = Y[!fold]
-    X_te = X[fold, ]
-    subset_tr = subset[!fold]
     ml_fold = ml
+    
     
     ### Hyperparameter tuning
     if (!is.null(ml_fold$forest_grf) && identical(ml_fold$forest_grf$arguments, list("tune_fold"))) {
       tuning <- grf::regression_forest(X = X_tr, Y = Y_tr, tune.parameters = "all")
-      ml_fold$forest_grf$arguments <- as.list(tuning$tuning.output$params)
-    }
+      ml_fold$forest_grf$arguments <- as.list(tuning$tuning.output$params)}
+    
 
     if (learner %in% c("t", "both")) {
+      
+      X_tr_t = X[!fold & subset, ] # learn in a subset 
+      Y_tr_t = Y[!fold & subset]
+      X_te_t = X[fold, ]           # predict into test data
 
-      ml_fit = ensemble_core(ml_fold, X_tr, Y_tr, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
-      fit_cv[fold, grepl("^t", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml_fold, X_tr, Y_tr, X_te, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+      ml_fit = ensemble_core(ml_fold, X_tr_t, Y_tr_t, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+      fit_cv[fold, grepl("^t", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml_fold, X_tr_t, Y_tr_t, X_te_t, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
 
       if(saveModels) s[[i]] = ml_fit
 
     }
 
     if (learner %in% c("s", "both")) {
+      
+      
+      subset_tr = subset[!fold]
+      X_tr_s = cbind(X[!fold, ], subset_tr*1) # adds treatment indicator as a covariate
+      Y_tr_s = Y[!fold]
+      X_te_s = cbind(X[fold, ], rep(1, nrow(X[fold, ])))
 
-      # X_tr_s = cbind(X_tr, subset_tr*1)
-      # X_te_s = cbind(X_te, rep(1, nrow(X_te)))
-
-      ml_fit = ensemble_core(ml_fold, X_tr, Y_tr, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
-      fit_cv[fold, grepl("^s", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml_fold, X_tr, Y_tr, X_te, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+      ml_fit = ensemble_core(ml_fold, X_tr_s, Y_tr_s, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+      fit_cv[fold, grepl("^s", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml_fold, X_tr_s, Y_tr_s, X_te_s, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
 
       if(saveModels) s[[ncol(cf_mat) + i]] = ml_fit
 
@@ -184,35 +188,102 @@ weights.ensemble_short = function(object,
 
   # estimate nnls weights if not provided
   if (is.null(w)) w = rep(1 / ncol(object$fit_cv), ncol(object$fit_cv))
-
+  
   # create matrix to store smoother weights
   smoother_weights = matrix(0, nrow = nrow(X), ncol = nrow(X))
-
+  
   # extract learner
   learner = unique((substr(colnames(object$fit_cv), 1, 1)))
-
+  
   for (i in 1:ncol(cf_mat)) {
-
+    
     fold = cf_mat[, i]
-    X_tr = X[!fold, ]
-    Y_tr = Y[!fold]
-    X_te = X[fold, ]
-
     w_array = NULL
+    
+    # initialize dimensions
+    test_idx = which(fold)
+    train_idx = which(!fold)
+    train_idx_t = which(!fold & subset)
+    
+    # Create mapping from train_idx_t to positions in train_idx
+    train_pos_in_full = match(train_idx_t, train_idx)
+    
     if ("t" %in% learner) {
-      w_array = weights.ensemble_core(object = ml_fit[[i]], ml = ml, X_tr = X_tr, Y_tr = Y_tr, X_te = X_te, quiet)
+      X_tr_t = X[train_idx_t, ]
+      Y_tr_t = Y[train_idx_t]
+      X_te_t = X[test_idx, ]
+      
+      # get T-learner smoother weights (test × training)
+      w_t_raw = weights.ensemble_core(object = ml_fit[[i]], ml = ml,
+                                      X_tr = X_tr_t, Y_tr = Y_tr_t,
+                                      X_te = X_te_t, quiet)
+      
+      # pad T-learner weights: test × full training set
+      padded_w_t = array(0, dim = c(length(test_idx), length(train_idx), length(ml)))
+      
+      # insert raw weights in the correct columns using the mapping
+      padded_w_t[, train_pos_in_full, ] = w_t_raw      
+      
+      w_array = padded_w_t
     }
+    
     if ("s" %in% learner) {
       subset_tr = subset[!fold]
-      # X_tr_s = cbind(X_tr, subset_tr*1)
-      # X_te_s = cbind(X_te, rep(1, nrow(X_te)))
-      w_array = abind::abind(w_array, weights.ensemble_core(object = ml_fit[[ncol(cf_mat) + i]], ml = ml, X_tr = X_tr, Y_tr = Y_tr, X_te = X_te, quiet))
+      X_tr_s = cbind(X[!fold, ], subset_tr*1)
+      Y_tr_s = Y[!fold]
+      X_te_s = cbind(X[fold, ], rep(1, length(test_idx)))
+      
+      w_s = weights.ensemble_core(object = ml_fit[[ncol(cf_mat) + i]], ml = ml,
+                                  X_tr = X_tr_s, Y_tr = Y_tr_s,
+                                  X_te = X_te_s, quiet)
+      
+      if (is.null(w_array)) {
+        w_array = w_s
+      } else {
+        w_array = abind::abind(w_array, w_s, along = 3)  # stack T and S
+      }
     }
-
-    smoother_weights[fold, !fold] = agg_array(w_array, w)
-
+    
+    smoother_weights[test_idx, !fold] = agg_array(w_array, w)
+    
   }
-
+  
   return(smoother_weights)
-
+  
 }
+
+#   # create matrix to store smoother weights
+#   smoother_weights = matrix(0, nrow = nrow(X), ncol = nrow(X))
+# 
+#   # extract learner
+#   learner = unique((substr(colnames(object$fit_cv), 1, 1)))
+# 
+#   for (i in 1:ncol(cf_mat)) {
+# 
+#     fold = cf_mat[, i]
+#     w_array = NULL
+#     
+#     if ("t" %in% learner) {
+#       X_tr_t = X[!fold & subset, ]
+#       Y_tr_t = Y[!fold & subset]
+#       X_te_t = X[fold, ]
+#       
+#       w_array = weights.ensemble_core(object = ml_fit[[i]], ml = ml, X_tr = X_tr_t, Y_tr = Y_tr_t, X_te = X_te_t, quiet)
+#     }
+#     
+#     if ("s" %in% learner) {
+#       subset_tr = subset[!fold]
+#       X_tr_s = cbind(X[!fold, ], subset_tr*1)
+#       Y_tr_s = Y[!fold]
+#       X_te_s = cbind(X[fold, ], rep(1, nrow(X[fold, ])))
+#       
+#       w_array = abind::abind(w_array, weights.ensemble_core(object = ml_fit[[ncol(cf_mat) + i]], ml = ml, X_tr = X_tr_s, Y_tr = Y_tr_s, X_te = X_te_s, quiet))
+#     }
+# 
+#     smoother_weights[fold, !fold] = agg_array(w_array, w)
+# 
+#   }
+# 
+#   return(smoother_weights)
+# 
+# }

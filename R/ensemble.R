@@ -349,7 +349,7 @@ weights.ensemble_core = function(object, ml,
 #' )
 #'
 create_method = function(
-    method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf"),
+    method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf", "xgboost"),
     x_select = NULL,
     arguments = list(),
     name = NULL) {

@@ -20,6 +20,7 @@ Imports:
     abind,
     glmnet,
     grf,
+    xgboost,
     Matrix,
     matrixStats,
     nnls,

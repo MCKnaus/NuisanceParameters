@@ -6,7 +6,7 @@
 \usage{
 create_method(
   method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn",
-    "forest_drf"),
+    "forest_drf", "xgboost"),
   x_select = NULL,
   arguments = list(),
   name = NULL

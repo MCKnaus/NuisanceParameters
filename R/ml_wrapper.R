@@ -52,31 +52,6 @@ predict.mean_fit = function(mean_fit, Xnew = NULL, ...) {
 }
 
 
-#' Arithmetic mean smoother weights
-#'
-#' @description
-#' Returns smoother weights for test sample based on
-#' arithmetic mean fitting of the training sample.
-#'
-#' @param mean_fit Output of \code{\link{mean_fit}}
-#' @param Xnew Covariate matrix of test sample
-#' @param ... Ignore unused arguments
-#'
-#' @return Matrix of smoother weights.
-#'
-#' @method weights mean_fit
-#'
-#' @keywords internal
-#'
-weights.mean_fit = function(mean_fit, Xnew, ...) {
-
-  w = matrix(1 / mean_fit$n, nrow = nrow(Xnew), ncol = mean_fit$n)
-
-  return(w)
-
-}
-
-
 #' Fits OLS
 #'
 #' @description
@@ -122,38 +97,6 @@ predict.ols_fit = function(ols_fit, Xnew = NULL, ...) {
   fit = as.vector(Xnew %*% matrix(ols_fit, ncol = 1))
 
   return(fit)
-
-}
-
-#' Smoother weights from OLS prediction
-#'
-#' @description
-#' Extract smoother weights for test sample from an OLS model.
-#'
-#' @param ols_fit Output of \code{\link{ols_fit}}
-#' @param X Covariate matrix of training sample
-#' @param Xnew Covariate matrix of test sample
-#' @param ... Ignore unused arguments
-#'
-#' @return Matrix of smoother weights.
-#'
-#' @method weights ols_fit
-#'
-#' @keywords internal
-#'
-weights.ols_fit = function(ols_fit, X, Xnew, ...) {
-
-  X = add_intercept(X)
-  Xnew = add_intercept(Xnew)
-
-  # remove variables that were dropped due to collinearity
-  X = X[, !is.na(ols_fit)]
-  Xnew = Xnew[, !is.na(ols_fit)]
-
-  # calculate hat matrix
-  hat_mat = Xnew %*% solve(crossprod(X), tol = 2.225074e-308) %*% t(X)
-
-  return(hat_mat)
 
 }
 
@@ -211,47 +154,6 @@ predict.ridge_fit = function(ridge_fit, Xnew, ...) {
 }
 
 
-#' Smoother weights from Ridge regression prediction
-#'
-#' @description
-#' Extract smoother weights for test sample from a Ridge regression model.
-#'
-#' @param ridge_fit Output of \code{\link{ridge_fit}}
-#' @param X Covariate matrix of training sample
-#' @param Y Vector of outcomes of training sample
-#' @param Xnew Covariate matrix of test sample.
-#' If not provided, prediction is done for the training sample.
-#' @param ... Ignore unused arguments
-#'
-#' @return Matrix of smoother weights.
-#'
-#' @method weights ridge_fit
-#'
-#' @keywords internal
-#'
-weights.ridge_fit = function(ridge_fit, X, Y, Xnew = NULL, ...) {
-
-  if (is.null(Xnew)) Xnew = X
-  n = nrow(X)
-
-  X = scale(X, ridge_fit$x_means, ridge_fit$x_sds)
-  X = add_intercept(X)
-  Xnew = scale(Xnew, ridge_fit$x_means, ridge_fit$x_sds)
-  Xnew = add_intercept(Xnew)
-
-  p = ncol(X) - 1
-
-  sd_y = sqrt(stats::var(Y) * ((n - 1) / n))
-  lambda = (1 / sd_y) * ridge_fit$lambda.min * n
-
-  # calculate hat matrix
-  # reference: https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat
-  hat_mat = Xnew %*% solve(crossprod(X) + lambda * diag(X = c(0, rep(1, p)))) %*% t(X)
-
-  return(hat_mat)
-}
-
-
 #' Fits Post-Lasso regression
 #'
 #' @description
@@ -297,41 +199,6 @@ predict.plasso_fit = function(plasso_fit, Xnew = NULL, ...) {
   fit = as.vector(predict(plasso_fit, newx = Xnew, type = "response", s = "optimal", se_rule = 0)$plasso)
 
   return(fit)
-}
-
-
-#' Smoother weights from Post-Lasso prediction
-#'
-#' @description
-#' Extract smoother weights for test sample from a Post-Lasso regression model.
-#'
-#' @param plasso_fit Output of \code{\link{plasso_fit}}
-#' @param Xnew Covariate matrix of test sample.
-#' If not provided, prediction is done for the training sample.
-#' @param ... Ignore unused arguments
-#'
-#' @return Matrix of smoother weights.
-#'
-#' @method weights plasso_fit
-#'
-#' @keywords internal
-#'
-weights.plasso_fit = function(plasso_fit, Xnew = NULL, ...) {
-
-  if (is.null(Xnew)) Xnew = plasso_fit$X
-
-  X = add_intercept(plasso_fit$X)
-  Xnew = add_intercept(Xnew)
-
-  colnames(X)[1] = "(Intercept)"
-  colnames(Xnew) = colnames(X)
-
-  xact = X[, plasso_fit$names_pl, drop = FALSE]
-  xactnew = Xnew[, plasso_fit$names_pl, drop = FALSE]
-
-  hat_mat = xactnew %*% solve(crossprod(xact), tol = 2.225074e-308) %*% t(xact)
-
-  return(hat_mat)
 }
 
 
@@ -384,34 +251,69 @@ predict.forest_grf_fit = function(forest_grf_fit, Xnew = NULL, ...) {
 }
 
 
-#' Smoother weights from Random Forest model
+#' Fits XGBoost
 #'
 #' @description
-#' Extract smoother weights for test sample from a Random Forest model.
+#' \code{\link{xgboost_fit}} fits an XGBoost using the
+#' \code{\link{xgboost}} package.
 #'
-#' @param forest_grf_fit Output of \code{\link{forest_grf_fit}}
+#' @param X Matrix of covariates
+#' @param Y vector of outcomes
+#' @param arguments List of arguments passed to \code{\link[xgboost]{xgboost}}
+#'
+#' @return An object with S3 class \code{\link[xgboost]{xgboost}}
+#'
+#' @keywords internal
+#'
+xgboost_fit = function(X, Y, arguments = list()) {
+  
+  # Convert to DMatrix object
+  dtrain = xgboost::xgb.DMatrix(data = as.matrix(X), label = Y)
+  
+  # Ali's settings:
+  params = list(
+    booster = "gbtree",
+    objective = "reg:squarederror",
+    eta = 0.1,
+    max_depth = 1,
+    min_child_weight = 80,
+    subsample = 1,
+    colsample_bytree = 1,
+    lambda = 10,
+    base_score = 0.0
+  )
+  
+  # Fit the model:
+  xgb = do.call(xgboost::xgb.train, c(list(data = dtrain, nrounds = 100, params = params)))
+  # class(xgb) = "xgboost_fit"
+  
+  return(xgb)
+}
+
+
+#' Predictions based on XGBoost
+#'
+#' @description
+#' Prediction of fitted values (for a potentially new set of covariates Xnew)
+#' from an XGBoost.
+#'
+#' @param xgboost_fit Output of \code{\link{xgboost_fit}}
 #' @param Xnew Covariate matrix of test sample.
 #' If not provided, prediction is done for the training sample.
 #' @param ... Ignore unused arguments
 #'
-#' @return Matrix of smoother weights.
+#' @return Vector of fitted values.
 #'
-#' @method weights forest_grf_fit
+#' @method predict xgboost_fit
 #'
 #' @keywords internal
 #'
-weights.forest_grf_fit = function(forest_grf_fit, Xnew = NULL, ...) {
+predict.xgboost_fit = function(xgboost_fit, Xnew = NULL, ...) {
 
-  if(is.null(Xnew)) Xnew = forest_grf_fit$X.orig
-
-  if (utils::packageVersion("grf") < "2.0.0") {
-    w = grf::get_sample_weights(forest_grf_fit, newdata = Xnew)
-  } else {
-    w = grf::get_forest_weights(forest_grf_fit, newdata = Xnew)
-  }
-  w = as.matrix(w)
-
-  return(w)
+  dtest = xgboost::xgb.DMatrix(data = as.matrix(Xnew))
+  fit <- predict(xgboost_fit, newdata = dtest)
+  
+  return(fit)
 }
 
 
@@ -480,52 +382,6 @@ predict.lasso_fit = function(lasso_fit, Xnew = NULL, ...) {
 knn_fit = function(arguments = list(), ...) {
   class(arguments) = "knn_fit"
   return(arguments)
-}
-
-
-#' Smoother weights from k-Nearest-Neighbor algorithm
-#'
-#' @description
-#' Extract smoother weights for k-Nearest Neighbor algorithm.
-#' This comes quite naturally here as the weight will be \code{1 / k} for all
-#' 'neighbors' and 0 for all 'non-neighbors' (for a given test set observation).
-#'
-#' @param arguments Output of \code{\link{knn_fit}}
-#' @param X Covariate matrix of training sample
-#' @param Xnew Covariate matrix of test sample
-#' @param ... Ignore unused arguments
-#'
-#' @return Matrix of smoother weights.
-#'
-#' @method weights knn_fit
-#'
-#' @keywords internal
-#'
-weights.knn_fit = function(arguments, X, Xnew = NULL, ...) {
-
-  if (is.null(Xnew)) Xnew = X
-  if (is.null(arguments$k)) {
-    k = 10
-  } else if ( all.equal(arguments$k, as.integer(arguments$k))) {
-    k = arguments$k
-  } else {
-    k = 10
-  }
-
-  distance = as.matrix(FastKNN::Distance_for_KNN_test(Xnew, X))
-
-  get_binary_vector = function(row) {
-    min_indices = order(row)[1:k]
-    binary_vector = rep(0, length(row))
-    binary_vector[min_indices] = 1
-
-    return(binary_vector)
-  }
-
-  w = apply(distance, 1, get_binary_vector)
-  w = t(w) / k
-
-  return(w)
 }
 
 
@@ -608,30 +464,3 @@ predict.forest_drf_fit = function(forest_drf_fit, Xnew = NULL, functional = "mea
   return(fit)
 }
 
-
-#' Smoother weights from Distributional Random Forest model
-#'
-#' @description
-#' Extract smoother (or adaptive nearest neighbor) weights for test sample from
-#' Distributional Random Forest model.
-#'
-#' @param ridge_fit Output of \code{\link{forest_drf_fit}}
-#' @param Xnew Covariate matrix of test sample.
-#' If not provided, prediction is done for the training sample.
-#' @param ... Ignore unused arguments
-#'
-#' @return Matrix of smoother weights.
-#'
-#' @method weights forest_drf_fit
-#'
-#' @keywords internal
-#'
-weights.forest_drf_fit = function(forest_drf_fit, Xnew = NULL, ...) {
-
-  if(is.null(Xnew)) Xnew = forest_drf_fit$X.orig
-
-  class(forest_drf_fit) = "drf"
-  w = as.matrix(predict(forest_drf_fit, newdata = Xnew)$weights)
-
-  return(w)
-}
