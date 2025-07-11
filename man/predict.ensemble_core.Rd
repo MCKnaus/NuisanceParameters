@@ -6,7 +6,7 @@
 \usage{
 \method{predict}{ensemble_core}(
   object,
-  ml,
+  method,
   X_tr,
   Y_tr,
   X_te,
@@ -21,7 +21,7 @@
 \arguments{
 \item{object}{List of fitted methods (from \code{\link{ensemble_core}}}
 
-\item{ml}{List of raw methods built via \code{\link{create_method}}}
+\item{method}{List of raw methods built via \code{\link{create_method}}}
 
 \item{X_tr}{Covariate matrix of training sample}
 
@@ -35,7 +35,7 @@ console}
 \item{...}{Ignore unused arguments}
 }
 \value{
-Returns matrix of dimension \code{nrow(X_te)} X \code{length(ml)}
+Returns matrix of dimension \code{nrow(X_te)} X \code{length(method)}
 that contains the predictions of fitted values for each method in the ensemble.
 }
 \description{

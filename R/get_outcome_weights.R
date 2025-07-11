@@ -6,7 +6,7 @@
 #'
 #' @param NuPa String vector specifying which nuisance parameters to extract smoother matrices for.
 #' @param np_object Stacked ensemble learner from \code{\link{ensemble_short}} or \code{\link{ensemble}}.
-#' @param ml List of ML models by \code{\link{create_method}} that was used as
+#' @param method List of models by \code{\link{create_method}} that was used as
 #' iobjectut for \code{\link{ensemble_short}} or \code{\link{ensemble}}.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
@@ -31,7 +31,7 @@ get_outcome_weights = function(np_object,
                                subset = NULL,
                                ...) {
   
-  results <- list()
+  ## Input checks 
   
   if (is.null(np_object)) {
     stop("Ensemble models were not saved after training.")
@@ -45,106 +45,84 @@ get_outcome_weights = function(np_object,
     stop("np_object must be either a list or a valid path to an RDS file.")
   }
   
-  # Check for available models
-  model_names <- paste0(NuPa, "_ml")
+  model_names <- paste0(NuPa, "_m")
   existing_models <- model_names[model_names %in% names(np_object[["models"]])]
   missing_models <- setdiff(model_names, existing_models)
   
   if (length(missing_models) > 0) {
-    cat("The following ensemble models were not found:", paste(missing_models, collapse = ", "), "\n")
-    cat("Continuing with available models:", paste(existing_models, collapse = ", "), "\n")
+    message("The following ensemble models were not found: ", 
+            paste(missing_models, collapse = ", "), "\n",
+            "Continuing with available models: ", 
+            paste(existing_models, collapse = ", "))
   }
   
-  if (length(missing_models) > 0) {
-    message("The following ensemble models were not found: ", paste(missing_models, collapse = ", "), "\n",
-      "Continuing with available models: ", paste(existing_models, collapse = ", "))
+  if (length(existing_models) == 0) {
+    stop("No valid (ensemble) models found in np_object[['models']].")
   }
-  
-  if (length(existing_models) == 0) {stop("No valid (ensemble) models found in np_object[['models']].")}
   
   if (is.null(subset)) subset = rep(TRUE, length(Y))
   
+  # Extract numbers 
   
-  ## Extract numbers 
   cv = np_object$numbers$cv
   d_mat = np_object$numbers$d_mat
   z_mat = np_object$numbers$z_mat
   cf_mat = np_object$numbers$cf_mat
-  ml = np_object$numbers$ml
+  method = np_object$numbers$method
   X = np_object$numbers$X
   Y = np_object$numbers$Y
-
-
-  # Process each existing model: Iterate over each top-level model
-  for (model in existing_models) {
-    
+  
+  # Helper function to determine subset
+  
+  get_subset <- function(sub_element, np_models) {
+    if (identical(sub_element, np_models[["Y.hat.d_m"]][[1]])) return(d_mat[, 1])
+    if (identical(sub_element, np_models[["Y.hat.d_m"]][[2]])) return(d_mat[, 2])
+    if (identical(sub_element, np_models[["Y.hat.z_m"]][[1]])) return(z_mat[, 1])
+    if (identical(sub_element, np_models[["Y.hat.z_m"]][[2]])) return(z_mat[, 2])
+    NULL
+  }
+  
+  # Process each model
+  
+  results <- list()
+  results <- lapply(existing_models, function(model) {
     current_model <- np_object[["models"]][[model]]
     
     if (cv == 1) {
       if ("ens_object" %in% names(current_model)) {
-        results[[model]] <- get_smoother(current_model, ml = ml, X = X, Y = Y, nnls_w = NULL, cv = cv, cf_mat = cf_mat, quiet = quiet)
+        return(get_smoother(current_model, method = method, X = X, Y = Y, 
+                            nnls_w = NULL, cv = cv, cf_mat = cf_mat, quiet = quiet))
       } else {
-        sub_results <- list()
-        for (i in seq_along(current_model)) {
+        return(lapply(seq_along(current_model), function(i) {
           sub_element <- current_model[[i]]
-          
-          # Two days of work to solve this
-          ######
-          if (identical(sub_element, np_object[["models"]][["Y.hat.d_ml"]][[1]])) {
-            subset <- d_mat[, 1]
-          } else if (identical(sub_element, np_object[["models"]][["Y.hat.d_ml"]][[2]])) {
-            subset <- d_mat[, 2]
-          } else if (identical(sub_element, np_object[["models"]][["Y.hat.z_ml"]][[1]])) {
-            subset <- z_mat[, 1]
-          } else if (identical(sub_element, np_object[["models"]][["Y.hat.z_ml"]][[2]])) {
-            subset <- z_mat[, 2]
-          } else {
-            subset <- NULL
-          }
-          #####
-          
           if (is.list(sub_element) && "ens_object" %in% names(sub_element)) {
-            sub_results[[i]] <- get_smoother(sub_element, ml = ml, X = X, Y = Y, subset = subset, nnls_w = NULL, cv = cv, cf_mat = cf_mat, quiet = quiet)
+            subset <- get_subset(sub_element, np_object[["models"]])
+            get_smoother(sub_element, method = method, X = X, Y = Y, 
+                         subset = subset, nnls_w = NULL, cv = cv, 
+                         cf_mat = cf_mat, quiet = quiet)
           }
-        }
-        results[[model]] <- sub_results
+        }))
       }
     } else { # cv > 1
-
-      # Check the first element of the current model
       if (!inherits(current_model, "ens.learner")) {
-        # If first element is ens.learner, process each sub-element
-        sub_results <- list()
-        for (i in seq_along(current_model)) {
+        return(lapply(seq_along(current_model), function(i) {
           sub_element <- current_model[[i]]
-          
-          # Two days of work to solve this
-          ######
-          if (identical(sub_element, np_object[["models"]][["Y.hat.d_ml"]][[1]])) {
-            subset <- d_mat[, 1]
-          } else if (identical(sub_element, np_object[["models"]][["Y.hat.d_ml"]][[2]])) {
-            subset <- d_mat[, 2]
-          } else if (identical(sub_element, np_object[["models"]][["Y.hat.z_ml"]][[1]])) {
-            subset <- z_mat[, 1]
-          } else if (identical(sub_element, np_object[["models"]][["Y.hat.z_ml"]][[2]])) {
-            subset <- z_mat[, 2]
-          } else {
-            subset <- NULL
-          }
-          #####
-        
           if (is.list(sub_element)) {
-            sub_results[[i]] <- get_smoother(sub_element, ml = ml, X = X, Y = Y, nnls_w = NULL, cv = cv, cf_mat = cf_mat, subset = subset, quiet = quiet)
+            subset <- get_subset(sub_element, np_object[["models"]])
+            get_smoother(sub_element, method = method, X = X, Y = Y,
+                         subset = subset, nnls_w = NULL, cv = cv,
+                         cf_mat = cf_mat, quiet = quiet)
           }
-        }
-        results[[model]] <- sub_results
+        }))
       } else {
-        # If not, process the whole model
-        results[[model]] <- get_smoother(current_model, ml = ml, X = X, Y = Y, nnls_w = NULL, cv = cv, cf_mat = cf_mat, subset = NULL, quiet = quiet)
+        return(get_smoother(current_model, method = method, X = X, Y = Y,
+                            subset = NULL, nnls_w = NULL, cv = cv,
+                            cf_mat = cf_mat, quiet = quiet))
       }
     }
-  }
+  })
   
+  names(results) <- existing_models
   return(results)
 }
 
@@ -156,7 +134,7 @@ get_outcome_weights = function(np_object,
 #' created by \code{\link{ensemble_short}} or \code{\link{ensemble}}.
 #'
 #' @param object Stacked ensemble learner from \code{\link{ensemble_short}} or \code{\link{ensemble}}.
-#' @param ml List of ML models by \code{\link{create_method}} that was used as
+#' @param method List of models by \code{\link{create_method}} that was used as
 #' input for \code{\link{ensemble_short}} or \code{\link{ensemble}}.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
@@ -176,7 +154,7 @@ get_outcome_weights = function(np_object,
 #'
 #' @export
 get_smoother = function(object,
-                        ml,
+                        method,
                         X, Y,
                         subset = NULL,
                         nnls_w = NULL,
@@ -191,7 +169,7 @@ get_smoother = function(object,
   
   ### Short-Stacking ###
   if (cv == 1) {
-    w = weights(object[["ens_object"]], ml = ml, X = X, Y = Y, subset = subset, w = object[["nnls_w"]], cf_mat = cf_mat, quiet = quiet)
+    w = weights(object[["ens_object"]], method = method, X = X, Y = Y, subset = subset, w = object[["nnls_w"]], cf_mat = cf_mat, quiet = quiet)
     
     
     ### Standard-Stacking ###
@@ -205,7 +183,7 @@ get_smoother = function(object,
       Y_tr = Y[!fold & subset]
       X_te = X[fold, ]
       
-      w_array = weights(object[[i]][["ens_object"]], ml, X = X_tr, Y = Y_tr, Xnew = X_te, quiet = quiet)
+      w_array = weights(object[[i]][["ens_object"]], method, X = X_tr, Y = Y_tr, Xnew = X_te, quiet = quiet)
       w[fold, !fold & subset] = apply(w_array, c(1, 2), function(x) sum(x * object[[i]][["ens_object"]]$nnls_weights))
     }
     

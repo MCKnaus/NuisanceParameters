@@ -5,7 +5,7 @@
 \title{Ensemble learner training}
 \usage{
 ensemble(
-  ml,
+  method,
   X,
   Y,
   nfolds = 5,
@@ -17,7 +17,7 @@ ensemble(
 )
 }
 \arguments{
-\item{ml}{List of methods built via \code{\link{create_method}} to be used in
+\item{method}{List of methods built via \code{\link{create_method}} to be used in
 ensemble model}
 
 \item{X}{Covariate matrix of training sample}
@@ -32,11 +32,11 @@ console}
 }
 \value{
 List object containing:
-\item{fit_cv}{matrix of dimension \code{nrow(X)} X \code{length(ml)} containing
+\item{fit_cv}{matrix of dimension \code{nrow(X)} X \code{length(method)} containing
 the cross-fitted predictions of the machine learning methods from the ensemble}
 \item{nnls_weights}{the weights that each machine learning method receives in
 the ensemble}
-\item{ml}{list of fitted machine learning models from all cross-fitting folds
+\item{method}{list of fitted machine learning models from all cross-fitting folds
 (if storeModels is not set to "No")}
 }
 \description{

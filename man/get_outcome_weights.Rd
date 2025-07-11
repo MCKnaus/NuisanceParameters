@@ -19,7 +19,7 @@ ensemble weights. If not provided, all observations are used.}
 
 \item{...}{Ignore unused arguments}
 
-\item{ml}{List of ML models by \code{\link{create_method}} that was used as
+\item{method}{List of models by \code{\link{create_method}} that was used as
 iobjectut for \code{\link{ensemble_short}} or \code{\link{ensemble}}.}
 
 \item{X}{Covariate matrix of training sample.}

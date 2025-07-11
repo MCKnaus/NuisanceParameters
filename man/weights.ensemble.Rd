@@ -4,12 +4,12 @@
 \alias{weights.ensemble}
 \title{Smoother weights from cross-validated ensemble learner}
 \usage{
-\method{weights}{ensemble}(object, ml, X, Y, Xnew, quiet = TRUE, ...)
+\method{weights}{ensemble}(object, method, X, Y, Xnew, quiet = TRUE, ...)
 }
 \arguments{
 \item{object}{Trained ensemble object from \code{\link{ensemble}}}
 
-\item{ml}{List of raw methods built via \code{\link{create_method}}}
+\item{method}{List of raw methods built via \code{\link{create_method}}}
 
 \item{X}{Covariate matrix of training sample}
 

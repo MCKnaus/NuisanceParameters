@@ -5,11 +5,10 @@
 \title{Cross-fitting of nuisance parameters}
 \usage{
 nuisance_cf(
-  ml,
+  method,
   Y,
   X,
   cf_mat,
-  learner = c("t", "s", "both"),
   cv = 5,
   subset = NULL,
   storeModels = c("No", "Memory", "Disk"),
@@ -20,7 +19,7 @@ nuisance_cf(
 )
 }
 \arguments{
-\item{ml}{List of methods to be used in \code{\link{ensemble}} estimation.
+\item{method}{List of methods to be used in \code{\link{ensemble}} estimation.
 Methods can be created by \code{\link{create_method}}.}
 
 \item{Y}{Vector of variable to be predicted.}
@@ -29,9 +28,6 @@ Methods can be created by \code{\link{create_method}}.}
 
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
 (for example created by \code{\link{prep_cf_mat}}).}
-
-\item{learner}{Vector of characters indicating whether to use S or T learner
-or a combination of the two.}
 
 \item{cv}{Number of cross-validation folds when estimating ensemble model.
 Default value is 1 which then evaluates to a short-stacking procedure which

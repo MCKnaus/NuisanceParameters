@@ -4,7 +4,7 @@
 #' \code{\link{ensemble_short}} trains an ensemble learner on the given training data
 #' in the spirit of a short-stacking procedure.
 #'
-#' @param ml List of methods built via \code{\link{create_method}} to be used in
+#' @param method List of methods built via \code{\link{create_method}} to be used in
 #' ensemble model.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
@@ -12,8 +12,6 @@
 #' ensemble weights. If not provided, all observations are used.
 #' @param cf_mat Logical matrix with k columns of indicators representing the different folds
 #' (for example created by \code{\link{prep_cf_mat}}).
-#' @param learner Vector of characters indicating whether to use S or T learner
-#' or a combination of the two.
 #' @param storeModels Specifies whether and where to store the models.
 #' If smoother weights should be computed in a second step (using the weights method),
 #' the models need to be stored somewhere (either in memory or on disk).
@@ -25,84 +23,59 @@
 #' console.
 #'
 #' @return List object containing:
-#' \item{fit_cv}{matrix of dimension \code{nrow(X)} X \code{length(ml)} containing
+#' \item{fit_cv}{matrix of dimension \code{nrow(X)} X \code{length(method)} containing
 #' the cross-fitted predictions of the machine learning methods from the ensemble}
-#' \item{ml}{list of fitted machine learning models from all cross-fitting folds
+#' \item{method}{list of fitted machine learning models from all cross-fitting folds
 #' (if storeModels is not set to "No")}
 #'
 #' @export
 #'
-ensemble_short = function(ml,
+ensemble_short = function(method,
                           X, Y,
                           cf_mat,
                           subset = NULL,
-                          learner = c("t", "s", "both"),
                           storeModels = c("No", "Memory", "Disk"),
                           path = NULL,
                           quiet = TRUE, pb = NULL, pb_np = NULL
                           ) {
 
 
-  # check if subset vector is provided
+  ## Checks
   if(is.null(subset)) subset = rep(TRUE, nrow(X))
-
-  # parameter configuration
-  learner = match.arg(learner)
-  # if(all(subset == TRUE)) learner = "t"
   storeModels = match.arg(storeModels)
   saveModels = (storeModels != "No")
 
   s = NULL
   if(saveModels) s = vector("list", length = ncol(cf_mat))
 
-  # matrix to store the cross-validated predictions
-  fit_cv = make_fit_cv(ml = ml, N = nrow(X), learner = learner)
+  # Matrix to store the cross-validated predictions
+  fit_cv = make_fit_cv(method = method, N = nrow(X))
 
   for (i in 1:ncol(cf_mat)) {
 
     fold = cf_mat[, i]
-    ml_fold = ml
-    
-    
-    ### Hyperparameter tuning
-    if (!is.null(ml_fold$forest_grf) && identical(ml_fold$forest_grf$arguments, list("tune_fold"))) {
+    X_tr = X[!fold & subset, ] # learn in a subset D=d (or Z=z)
+    Y_tr = Y[!fold & subset]
+    X_te = X[fold, ]           # predict into test data
+    method_fold = method
+  
+    # Hyperparameter tuning
+    if (!is.null(method_fold$forest_grf) && identical(method_fold$forest_grf$arguments, list("tune_fold"))) {
       tuning <- grf::regression_forest(X = X_tr, Y = Y_tr, tune.parameters = "all")
-      ml_fold$forest_grf$arguments <- as.list(tuning$tuning.output$params)}
+      method_fold$forest_grf$arguments <- as.list(tuning$tuning.output$params)}
     
+    
+    ## Core functionality
+    method_fit = ensemble_core(method_fold, X_tr, Y_tr, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+    fit_cv[fold] = predict.ensemble_core(method_fit, method_fold, X_tr, Y_tr, X_te, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
 
-    if (learner %in% c("t", "both")) {
-      
-      X_tr_t = X[!fold & subset, ] # learn in a subset 
-      Y_tr_t = Y[!fold & subset]
-      X_te_t = X[fold, ]           # predict into test data
-
-      ml_fit = ensemble_core(ml_fold, X_tr_t, Y_tr_t, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
-      fit_cv[fold, grepl("^t", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml_fold, X_tr_t, Y_tr_t, X_te_t, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
-
-      if(saveModels) s[[i]] = ml_fit
-
-    }
-
-    if (learner %in% c("s", "both")) {
-      
-      
-      subset_tr = subset[!fold]
-      X_tr_s = cbind(X[!fold, ], subset_tr*1) # adds treatment indicator as a covariate
-      Y_tr_s = Y[!fold]
-      X_te_s = cbind(X[fold, ], rep(1, nrow(X[fold, ])))
-
-      ml_fit = ensemble_core(ml_fold, X_tr_s, Y_tr_s, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
-      fit_cv[fold, grepl("^s", colnames(fit_cv))] = predict.ensemble_core(ml_fit, ml_fold, X_tr_s, Y_tr_s, X_te_s, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
-
-      if(saveModels) s[[ncol(cf_mat) + i]] = ml_fit
-
-    }
+    if(saveModels) s[[i]] = method_fit
 
   }
 
   output = list(
     "fit_cv" = fit_cv,
-    "ml" = s
+    "method" = s
   )
 
   class(output) = "ensemble_short"
@@ -147,7 +120,7 @@ predict.ensemble_short = function(object, w = NULL, ...) {
 #' \code{\link{ensemble_short}}.
 #'
 #' @param object Short-stacked ensemble learner from \code{\link{ensemble_short}}.
-#' @param ml List of ML models by \code{\link{create_method}} that was used as
+#' @param method List of method models by \code{\link{create_method}} that was used as
 #' input for \code{\link{ensemble_short}}.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
@@ -169,7 +142,7 @@ predict.ensemble_short = function(object, w = NULL, ...) {
 #' @method weights ensemble_short
 #'
 weights.ensemble_short = function(object,
-                                  ml,
+                                  method,
                                   X, Y,
                                   subset,
                                   w = NULL,
@@ -177,13 +150,13 @@ weights.ensemble_short = function(object,
                                   quiet = TRUE,
                                   ...) {
 
-  # load fitted ml object
-  if(is.null(object$ml)) {
+  # load fitted method object
+  if(is.null(object$method)) {
     stop("Ensemble models were not saved after training.")
-  } else if (is.character(object$ml) & length(object$ml) == 1) {
-    ml_fit = readRDS(object$ml)
+  } else if (is.character(object$method) & length(object$method) == 1) {
+    method_fit = readRDS(object$method)
   } else {
-    ml_fit = object$ml
+    method_fit = object$method
   }
 
   # estimate nnls weights if not provided
@@ -192,15 +165,11 @@ weights.ensemble_short = function(object,
   # create matrix to store smoother weights
   smoother_weights = matrix(0, nrow = nrow(X), ncol = nrow(X))
   
-  # extract learner
-  learner = unique((substr(colnames(object$fit_cv), 1, 1)))
   
   for (i in 1:ncol(cf_mat)) {
     
     fold = cf_mat[, i]
-    w_array = NULL
     
-    # initialize dimensions
     test_idx = which(fold)
     train_idx = which(!fold)
     train_idx_t = which(!fold & subset)
@@ -208,43 +177,18 @@ weights.ensemble_short = function(object,
     # Create mapping from train_idx_t to positions in train_idx
     train_pos_in_full = match(train_idx_t, train_idx)
     
-    if ("t" %in% learner) {
-      X_tr_t = X[train_idx_t, ]
-      Y_tr_t = Y[train_idx_t]
-      X_te_t = X[test_idx, ]
-      
-      # get T-learner smoother weights (test × training)
-      w_t_raw = weights.ensemble_core(object = ml_fit[[i]], ml = ml,
-                                      X_tr = X_tr_t, Y_tr = Y_tr_t,
-                                      X_te = X_te_t, quiet)
-      
-      # pad T-learner weights: test × full training set
-      padded_w_t = array(0, dim = c(length(test_idx), length(train_idx), length(ml)))
-      
-      # insert raw weights in the correct columns using the mapping
-      padded_w_t[, train_pos_in_full, ] = w_t_raw      
-      
-      w_array = padded_w_t
-    }
+    X_tr = X[train_idx_t, ]
+    Y_tr = Y[train_idx_t]
+    X_te = X[test_idx, ]
     
-    if ("s" %in% learner) {
-      subset_tr = subset[!fold]
-      X_tr_s = cbind(X[!fold, ], subset_tr*1)
-      Y_tr_s = Y[!fold]
-      X_te_s = cbind(X[fold, ], rep(1, length(test_idx)))
-      
-      w_s = weights.ensemble_core(object = ml_fit[[ncol(cf_mat) + i]], ml = ml,
-                                  X_tr = X_tr_s, Y_tr = Y_tr_s,
-                                  X_te = X_te_s, quiet)
-      
-      if (is.null(w_array)) {
-        w_array = w_s
-      } else {
-        w_array = abind::abind(w_array, w_s, along = 3)  # stack T and S
-      }
-    }
+    # Get T-learner smoother weights (test × train&subset)
+    w_array_raw = weights.ensemble_core(object = method_fit[[i]], method = method, X_tr = X_tr, Y_tr = Y_tr, X_te = X_te, quiet)
     
-    smoother_weights[test_idx, !fold] = agg_array(w_array, w)
+    # Pad T-learner weights (to test × full train) and insert raw weights
+    padded_w = array(0, dim = c(length(test_idx), length(train_idx), length(method)))
+    padded_w[, train_pos_in_full, ] = w_array_raw      
+
+    smoother_weights[fold, !fold] = agg_array(padded_w, w)
     
   }
   
@@ -252,38 +196,6 @@ weights.ensemble_short = function(object,
   
 }
 
-#   # create matrix to store smoother weights
-#   smoother_weights = matrix(0, nrow = nrow(X), ncol = nrow(X))
-# 
-#   # extract learner
-#   learner = unique((substr(colnames(object$fit_cv), 1, 1)))
-# 
-#   for (i in 1:ncol(cf_mat)) {
-# 
-#     fold = cf_mat[, i]
-#     w_array = NULL
-#     
-#     if ("t" %in% learner) {
-#       X_tr_t = X[!fold & subset, ]
-#       Y_tr_t = Y[!fold & subset]
-#       X_te_t = X[fold, ]
-#       
-#       w_array = weights.ensemble_core(object = ml_fit[[i]], ml = ml, X_tr = X_tr_t, Y_tr = Y_tr_t, X_te = X_te_t, quiet)
-#     }
-#     
-#     if ("s" %in% learner) {
-#       subset_tr = subset[!fold]
-#       X_tr_s = cbind(X[!fold, ], subset_tr*1)
-#       Y_tr_s = Y[!fold]
-#       X_te_s = cbind(X[fold, ], rep(1, nrow(X[fold, ])))
-#       
-#       w_array = abind::abind(w_array, weights.ensemble_core(object = ml_fit[[ncol(cf_mat) + i]], ml = ml, X_tr = X_tr_s, Y_tr = Y_tr_s, X_te = X_te_s, quiet))
-#     }
-# 
-#     smoother_weights[fold, !fold] = agg_array(w_array, w)
-# 
-#   }
-# 
-#   return(smoother_weights)
-# 
-# }
+
+
+

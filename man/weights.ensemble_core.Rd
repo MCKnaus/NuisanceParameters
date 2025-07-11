@@ -4,12 +4,12 @@
 \alias{weights.ensemble_core}
 \title{Ensemble smoother weights}
 \usage{
-\method{weights}{ensemble_core}(object, ml, X_tr, Y_tr, X_te, quiet = TRUE, ...)
+\method{weights}{ensemble_core}(object, method, X_tr, Y_tr, X_te, quiet = TRUE, ...)
 }
 \arguments{
 \item{object}{List of fitted methods (from \code{\link{ensemble_core}}}
 
-\item{ml}{List of raw methods built via \code{\link{create_method}}}
+\item{method}{List of raw methods built via \code{\link{create_method}}}
 
 \item{X_tr}{Covariate matrix of training sample}
 
@@ -24,7 +24,7 @@ console}
 }
 \value{
 Returns a three-dimensional array of dimension
-\code{nrow(Xnew)} X \code{nrow(X)} X \code{length(ml)}
+\code{nrow(Xnew)} X \code{nrow(X)} X \code{length(method)}
 containing the smoother weights that deliver predictions of each method
 where each row gives the weight that each training outcome received in the
 prediction of the respective test set observation.

@@ -25,9 +25,9 @@ if (!require("dplyr")) install.packages("dplyr", dependencies = TRUE); library(d
 if (!require("purrr")) install.packages("purrr", dependencies = TRUE); library(purrr)
 if (!require("ggplot2")) install.packages("ggplot2", dependencies = TRUE); library(ggplot2)
 
-devtools::document()
+# devtools::document()
 
-set.seed(12)
+set.seed(123)
 ```
 
 Next, load the data. Here we use a sample from the 401(k) data of the `hdm` package.
@@ -48,9 +48,9 @@ X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc + male + marr + pir
 Lastly, we specify the methods used in the ensemble with `create_method`:
 
 ```{r}
-ml = list(
+method = list(
  "ols" = create_method("ols"),
- #"forest_grf" = create_method("forest_grf"),
+ "forest_grf" = create_method("forest_grf"),
  "xgboost" = create_method("xgboost")
 )
 ```
@@ -65,8 +65,8 @@ Now, we are ready to run the main function:
 # Short stacking 
 np_short <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
                                 X, Y, D, Z,
-                                ml = ml, cf = 5, stacking = "short",
-                                cluster = NULL, stratify = FALSE, learner = c("both"), 
+                                method = method, cf = 5, stacking = "short",
+                                cluster = NULL, stratify = FALSE,
                                 storeModels = "Memory", path = NULL, quiet = FALSE)
 ```
 
@@ -99,25 +99,22 @@ plot(np_short$numbers$ens_weights)
 
 Note that for `D.hat.z0`, equal ensemble weights are used due to data peculiarities: $D$ and $Z$ are nearly identical in the subsample where $Z = 0$ ($D$ shows little variation as it is almost always 0).
 
-Issue: do not understand the difference between S- and T- learners...
-
 ## Extract smoother matrices S
 
 Here comes the second function, which will later be moved to the `OutcomeWeights` package. It extracts outcome smoother matrices (for nuisance parameters starting with `Y.hat..`) using the trained models saved in the previous step:
 
 ```{r}
-debug(NuisanceParameters::get_outcome_weights)
 S <- NuisanceParameters::get_outcome_weights(
   np_object = np_short, 
-  NuPa = c("Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat")) # "Y.hat",
+  NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"))
 
 # Check if SY = Y_hat
 check_pairs <- list(
-  #list(A = S$Y.hat_ml %*% Y,         B = np_short$nuisance_parameters$Y.hat),
-  list(A = S$Y.hat.d_ml[[1]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.d[, 1]),
-  list(A = S$Y.hat.d_ml[[2]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.d[, 2]),
-  list(A = S$Y.hat.z_ml[[1]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.z[, 1]),
-  list(A = S$Y.hat.z_ml[[2]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.z[, 2]))
+  list(A = S$Y.hat_m %*% Y,         B = np_short$nuisance_parameters$Y.hat),
+  list(A = S$Y.hat.d_m[[1]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.d[, 1]),
+  list(A = S$Y.hat.d_m[[2]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.d[, 2]),
+  list(A = S$Y.hat.z_m[[1]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.z[, 1]),
+  list(A = S$Y.hat.z_m[[2]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.z[, 2]))
 
 checks <- sapply(check_pairs, function(pair) {isTRUE(all.equal(as.numeric(pair$A), pair$B))})
 all(checks)
@@ -143,8 +140,8 @@ Now, let's repeat for standard stacking and print the progress. Here, we first s
 # Standard stacking 
 np_stand <- nuisance_parameters(NuPa=c("Y.hat","Y.hat.d","Y.hat.z","D.hat.z","D.hat","Z.hat"),
                                 X, Y, D, Z,
-                                ml = ml, cf = 5, stacking = 2,
-                                cluster = NULL, stratify = FALSE, learner = c("t"), 
+                                method = method, cf = 5, stacking = 2,
+                                cluster = NULL, stratify = FALSE,
                                 storeModels = "Disk", quiet = FALSE, 
                                 path = "/Users/romanrakov/Desktop")
 ```
@@ -164,11 +161,11 @@ S <- NuisanceParameters::get_outcome_weights(
 
 # Check if SY = Y_hat
 check_pairs <- list(
-  list(A = S$Y.hat_ml %*% Y,         B = np_short$nuisance_parameters$Y.hat),
-  list(A = S$Y.hat.d_ml[[1]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.d[, 1]),
-  list(A = S$Y.hat.d_ml[[2]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.d[, 2]),
-  list(A = S$Y.hat.z_ml[[1]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.z[, 1]),
-  list(A = S$Y.hat.z_ml[[2]] %*% Y,  B = np_short$nuisance_parameters$Y.hat.z[, 2]))
+  list(A = S$Y.hat_m %*% Y,         B = np_stand$nuisance_parameters$Y.hat),
+  list(A = S$Y.hat.d_m[[1]] %*% Y,  B = np_stand$nuisance_parameters$Y.hat.d[, 1]),
+  list(A = S$Y.hat.d_m[[2]] %*% Y,  B = np_stand$nuisance_parameters$Y.hat.d[, 2]),
+  list(A = S$Y.hat.z_m[[1]] %*% Y,  B = np_stand$nuisance_parameters$Y.hat.z[, 1]),
+  list(A = S$Y.hat.z_m[[2]] %*% Y,  B = np_stand$nuisance_parameters$Y.hat.z[, 2]))
 
 checks <- sapply(check_pairs, function(pair) {
   isTRUE(all.equal(as.numeric(pair$A), pair$B, tolerance = 1e-7))})

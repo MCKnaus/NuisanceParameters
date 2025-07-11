@@ -6,7 +6,7 @@
 \usage{
 \method{predict}{ensemble}(
   object,
-  ml,
+  method,
   X,
   Y,
   Xnew,
@@ -20,7 +20,7 @@
 \arguments{
 \item{object}{Trained ensemble object from \code{\link{ensemble}}}
 
-\item{ml}{List of raw methods built via \code{\link{create_method}}}
+\item{method}{List of raw methods built via \code{\link{create_method}}}
 
 \item{X}{Covariate matrix of training sample}
 

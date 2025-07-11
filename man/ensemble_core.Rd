@@ -5,7 +5,7 @@
 \title{Ensemble core fitting}
 \usage{
 ensemble_core(
-  ml,
+  method,
   X_tr,
   Y_tr,
   quiet = TRUE,
@@ -16,7 +16,7 @@ ensemble_core(
 )
 }
 \arguments{
-\item{ml}{List of methods built via \code{\link{create_method}} to be used in
+\item{method}{List of methods built via \code{\link{create_method}} to be used in
 ensemble model}
 
 \item{X_tr}{Covariate matrix of training sample}

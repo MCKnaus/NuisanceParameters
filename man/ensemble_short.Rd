@@ -5,12 +5,11 @@
 \title{Ensemble learner training for short stacking}
 \usage{
 ensemble_short(
-  ml,
+  method,
   X,
   Y,
   cf_mat,
   subset = NULL,
-  learner = c("t", "s", "both"),
   storeModels = c("No", "Memory", "Disk"),
   path = NULL,
   quiet = TRUE,
@@ -19,7 +18,7 @@ ensemble_short(
 )
 }
 \arguments{
-\item{ml}{List of methods built via \code{\link{create_method}} to be used in
+\item{method}{List of methods built via \code{\link{create_method}} to be used in
 ensemble model.}
 
 \item{X}{Covariate matrix of training sample.}
@@ -31,9 +30,6 @@ ensemble model.}
 
 \item{subset}{Logical vector indicating which observations to use for determining
 ensemble weights. If not provided, all observations are used.}
-
-\item{learner}{Vector of characters indicating whether to use S or T learner
-or a combination of the two.}
 
 \item{storeModels}{Specifies whether and where to store the models.
 If smoother weights should be computed in a second step (using the weights method),
@@ -49,9 +45,9 @@ console.}
 }
 \value{
 List object containing:
-\item{fit_cv}{matrix of dimension \code{nrow(X)} X \code{length(ml)} containing
+\item{fit_cv}{matrix of dimension \code{nrow(X)} X \code{length(method)} containing
 the cross-fitted predictions of the machine learning methods from the ensemble}
-\item{ml}{list of fitted machine learning models from all cross-fitting folds
+\item{method}{list of fitted machine learning models from all cross-fitting folds
 (if storeModels is not set to "No")}
 }
 \description{

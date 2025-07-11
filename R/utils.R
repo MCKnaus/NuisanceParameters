@@ -255,34 +255,23 @@ agg_array = function(a, w) {
 #' @description
 #' This function creates a matrix to store cross-fitted ensemble predictions.
 #'
-#' @param ml List of methods built via \code{\link{create_method}} to be used in
+#' @param method List of methods built via \code{\link{create_method}} to be used in
 #' ensemble model
 #' @param N Number of observations.
 #' @param learner Vector of characters indicating whether to use S or T learner
 #' or both.
 #'
-#' @return A matrix of NAs with dimensions \code{N} x \code{length(ml)}
+#' @return A matrix of NAs with dimensions \code{N} x \code{length(method)}
 #'
 #' @keywords internal
 #'
-make_fit_cv = function(ml, N, learner = c("t", "s", "both")) {
+make_fit_cv = function(method, N) {
 
-  learner = match.arg(learner)
-
-  fit_cv = matrix(NA, N, length(ml))
-  colnames(fit_cv) = sprintf("method%s", seq(1:length(ml)))
-  for (i in 1:length(ml)) {
-    if (!is.null(names(ml))) colnames(fit_cv)[i] = names(ml)[i]
-  }
-
-  if(learner == "t") {
-    colnames(fit_cv) = paste0("t-", colnames(fit_cv))
-  } else if (learner == "s") {
-    colnames(fit_cv) = paste0("s-", colnames(fit_cv))
-  } else if (learner == "both") {
-    ml_names = colnames(fit_cv)
-    fit_cv = cbind(fit_cv, fit_cv)
-    colnames(fit_cv) = c(paste0("t-", ml_names), paste0("s-", ml_names))
+  fit_cv = matrix(NA, N, length(method))
+  colnames(fit_cv) = sprintf("method%s", seq(1:length(method)))
+  
+  for (i in 1:length(method)) {
+    if (!is.null(names(method))) colnames(fit_cv)[i] = names(method)[i]
   }
 
   return(fit_cv)
@@ -414,7 +403,7 @@ plot.ens_weights_stand <- function(x,
   
   # Extract legend from first plot
   tmp_plot <- create_weight_plot(names(x)[1], x[[1]]) + 
-    ggplot2::labs(fill = "Learners") +
+    ggplot2::labs(fill = "Method") +
     ggplot2::theme(
       legend.position = "bottom",
       legend.title = ggplot2::element_text(size = base_size * 0.8),
@@ -456,13 +445,13 @@ plot.ens_weights_short <- function(x,
                "#8DD3C7", "#FDB462", "#B3DE69", "#BC80BD")
   
   df <- as.data.frame(x)
-  df$learner <- rownames(df)
-  df_long <- reshape2::melt(df, id.vars = "learner")
+  df$method <- rownames(df)
+  df_long <- reshape2::melt(df, id.vars = "method")
   
-  ggplot2::ggplot(df_long, ggplot2::aes(x = variable, y = value, fill = learner)) +
+  ggplot2::ggplot(df_long, ggplot2::aes(x = variable, y = value, fill = method)) +
     ggplot2::geom_col(position = "stack", width = 0.7) +
     ggplot2::scale_fill_manual(values = palette) +
-    ggplot2::labs(x = "Nuisance Parameter", y = "Weight", fill = "Learner") +
+    ggplot2::labs(x = "Nuisance Parameter", y = "Weight", fill = "Method") +
     ggplot2::theme_minimal(base_size = base_size) +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
 }

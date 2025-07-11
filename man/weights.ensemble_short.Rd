@@ -4,12 +4,12 @@
 \alias{weights.ensemble_short}
 \title{Extraction of smoother weights for short-stacked ensemble learner}
 \usage{
-\method{weights}{ensemble_short}(object, ml, X, Y, subset, w = NULL, cf_mat, quiet = TRUE, ...)
+\method{weights}{ensemble_short}(object, method, X, Y, subset, w = NULL, cf_mat, quiet = TRUE, ...)
 }
 \arguments{
 \item{object}{Short-stacked ensemble learner from \code{\link{ensemble_short}}.}
 
-\item{ml}{List of ML models by \code{\link{create_method}} that was used as
+\item{method}{List of method models by \code{\link{create_method}} that was used as
 input for \code{\link{ensemble_short}}.}
 
 \item{X}{Covariate matrix of training sample.}

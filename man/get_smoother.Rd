@@ -6,7 +6,7 @@
 \usage{
 get_smoother(
   object,
-  ml,
+  method,
   X,
   Y,
   subset = NULL,
@@ -20,7 +20,7 @@ get_smoother(
 \arguments{
 \item{object}{Stacked ensemble learner from \code{\link{ensemble_short}} or \code{\link{ensemble}}.}
 
-\item{ml}{List of ML models by \code{\link{create_method}} that was used as
+\item{method}{List of models by \code{\link{create_method}} that was used as
 input for \code{\link{ensemble_short}} or \code{\link{ensemble}}.}
 
 \item{X}{Covariate matrix of training sample.}
