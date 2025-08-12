@@ -111,7 +111,7 @@ nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.h
   method <- create_final_method(method, NuPa, K = K)
   
   ## Progress bar
-  pb <- if (isFALSE(quiet)) {setup_progress_bar(NuPa=NuPa, n_d=ncol(d_mat), n_z=ncol(z_mat), cf_folds=cf+5, cv_folds=cv, models=method)} else {NULL}
+  pb <- if (isFALSE(quiet)) {setup_progress_bar(NuPa=NuPa, n_d=ncol(d_mat), n_z=ncol(z_mat), cf_folds=cf, cv_folds=cv, models=method)} else {NULL}
 
 
   ######

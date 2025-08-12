@@ -524,18 +524,18 @@ plot.ens_weights_short <- function(x,
 #' @export
 setup_progress_bar <- function(NuPa, n_d, n_z, cf_folds, cv_folds, models) {
   
-  count_nested_lists <- function(method, n_d, n_z) {
+  count_nested_lists <- function(models, n_d, n_z) {
     multipliers <- list("Y.hat.d" = n_d, "Y.hat.z" = n_z, "D.hat.z" = n_z)
     
     # Calculate weighted counts
-    sum(sapply(names(method), function(key) {
-      base_count <- length(method[[key]])
+    sum(sapply(names(models), function(key) {
+      base_count <- length(models[[key]])
       multiplier <- ifelse(key %in% names(multipliers), multipliers[[key]], 1)
       base_count * multiplier}))
   }
   
   # Final ticks: cf folds × models × fitting/prediction × cv folds
-  total_ticks <- cf_folds * count_nested_lists(method, n_d, n_z) * 2 * if (cv_folds > 1) (cv_folds + 1) else 1 # && length(models) > 1
+  total_ticks <- cf_folds * count_nested_lists(models, n_d, n_z) * 2 * if (cv_folds > 1) (cv_folds + 1) else 1 # && length(models) > 1
   
   pb <- progress::progress_bar$new(
     format = "[:bar] :percent | :current/:total | :nuisance | cf =:pb_cf, cv =:pb_cv | :task :model",
@@ -737,9 +737,10 @@ add_nupa <- function(np, np_new, NuPa = NULL, replace = FALSE) {
     stop("Both np and np_new must be of class 'NuisanceParameters' (created by nuisance_parameters function)")
   }
   
-  # Check if sample size (N) is identical
-  if (np$numbers$N != np_new$numbers$N) {
-    stop("The sample size differs between np (", np$numbers$N, ") and np_new (", np_new$numbers$N, ")")
+  # Check if cross-fitting splits (cf_mat) are identical
+  if (!identical(np$numbers$cf_mat, np_new$numbers$cf_mat)) {
+    stop("Cross-fitting splits are not identical. ",
+         "Make sure to use the same cf_mat in both NuisanceParameters objects")
   }
   
   # If NuPa not specified, use all available parameters from np_new
