@@ -15,9 +15,7 @@ RoxygenNote: 7.3.2
 Suggests:
     testthat (>= 3.0.0), knitr, rmarkdown, xfun, mvtnorm
 Imports:
-    utils,
     stats,
-    abind,
     glmnet,
     grf,
     xgboost,
@@ -29,9 +27,13 @@ Imports:
     drf,
     progress,
     ggplot2,
-    gridExtra,
     reshape2,
-    gtable
+    hdm, 
+    nnet,
+    naivebayes, 
+    e1071,
+    kknn, 
+    ranger
 Config/testthat/edition: 3
 Depends: 
     R (>= 2.10)

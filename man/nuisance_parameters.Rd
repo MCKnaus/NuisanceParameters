@@ -7,13 +7,14 @@
 nuisance_parameters(
   NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat"),
   X,
-  Y,
-  D,
-  Z,
+  Y = NULL,
+  D = NULL,
+  Z = NULL,
   method,
   cluster = NULL,
   stratify = FALSE,
   cf,
+  cf_mat = NULL,
   stacking,
   storeModels = c("No", "Memory", "Disk"),
   path = NULL,
@@ -36,6 +37,9 @@ Currently supported options:
 \item{method}{List of methods to use for \code{\link{ensemble}} estimation.
 Methods can be created using \code{\link{create_method}}.}
 
+\item{cluster}{Optional vector of cluster variables if cross-fitting should account
+for clusters within the data.}
+
 \item{stratify}{Logical. If \code{TRUE}, cross-fitting folds will preserve the
 treatment ratios from the full sample. Note: If cluster vector
 is provided, stratification is ignored due to computational
@@ -54,9 +58,6 @@ models for future processing (default: "No").}
 later processing (saved as a list of models).}
 
 \item{quiet}{Logical. If \code{FALSE}, progress output is printed to the console.}
-
-\item{cl}{Optional vector of cluster variables if cross-fitting should account
-for clusters within the data.}
 }
 \value{
 A list containing:

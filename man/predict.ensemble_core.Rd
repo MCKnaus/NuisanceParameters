@@ -32,7 +32,18 @@
 \item{quiet}{If FALSE, method that is currently computed is printed into the
 console}
 
-\item{...}{Ignore unused arguments}
+\item{pb}{A progress bar object to track overall computation progress.}
+
+\item{pb_cf}{Integer indicating the current cross-fitting fold
+(for progress bar updates).}
+
+\item{pb_cv}{Integer indicating the current cross-validation fold
+(for progress bar updates).}
+
+\item{pb_np}{String indicating the current nuisance parameter being
+estimated/predicted (for progress bar updates).}
+
+\item{...}{Additional arguments.}
 }
 \value{
 Returns matrix of dimension \code{nrow(X_te)} X \code{length(method)}

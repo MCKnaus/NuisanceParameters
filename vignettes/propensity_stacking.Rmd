@@ -1,0 +1,651 @@
+---
+title: "Stacking Multiclass Propensity Scores Estimates"
+subtitle: "Version: August 5th 2025"
+author: "Roman Rakov"
+date: "08/25"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+    code_folding: show
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+# get the packages:
+devtools::document(pkg = "/Users/romanrakov/Desktop/Work SA/NuisanceParameters")
+
+if (!require("dplyr")) install.packages("dplyr", dependencies = TRUE); library(dplyr)
+if (!require("sl3")) install.packages("sl3", dependencies = TRUE); library(sl3)
+if (!require("ggplot2")) install.packages("ggplot2", dependencies = TRUE); library(ggplot2)
+if (!require("tidyr")) install.packages("tidyr", dependencies = TRUE); library(tidyr)
+if (!require("Rsolnp")) install.packages("Rsolnp", dependencies = TRUE); library(Rsolnp)
+if (!require("origami")) install.packages("origami", dependencies = TRUE); library(origami)
+if (!require("caret")) install.packages("caret", dependencies = TRUE); library(caret)
+if (!require("readr")) install.packages("readr", dependencies = TRUE); library(readr)
+if (!require("caretEnsemble")) install.packages("caretEnsemble", dependencies = TRUE); library(caretEnsemble)
+```
+
+This notebook reviews existing results on stacking propensity score estimates for categorical treatments. It begins with a literature review, explores methods for aggregating base learners, does simulations to determine the optimal stacking approach, and concludes by applying these methods to an observational dataset.
+
+<br>
+
+## Literature
+
+### Papers
+
+Several studies discuss ensemble methods for multi-level treatments.
+
+Poulos et al. ([2019](https://pubmed.ncbi.nlm.nih.gov/38314950/)) simulated a six-arm treatment study and compared targeted minimum loss-based estimation (TMLE) estimators using Super Learner (SL) for the treatment model. They implemented two versions: one with a joint multinomial SL model and another with SL applied to each binary (one-vs-rest) treatment indicator. The multinomial SL ensemble produced treatment probability estimates with essentially no bias, while the repeated binary SL approach showed some systematic bias and greater variability. In their simulations, the multinomial SL-based TMLE yielded coverage closer to nominal, especially under good overlap. Poulos et al. argue that a multinomial SL model improves coverage and conclude that stacking via Super Learner can be directly applied to multi-category propensity models, often outperforming the one-vs-rest strategy. They used the `sl3` package, which I'll cover in the notebook.
+
+Autenrieth et al. ([2021](https://zenodo.org/records/5048425)) proposed a general stacked ensemble specifically for propensity score (PS) weighting. They constructed a level-0 library of diverse classifiers (GLMs, tree models, SVMs, etc.) and used a gradient boosting machine as the level-1 meta-learner. In simulations, this GBM-stack reduced ATE bias more than any single method. *Their setup focused on binary treatment*, but it could likely be extended to multi-class settings.
+
+Yan et al. ([2019](https://onlinelibrary.wiley.com/doi/10.1002/sim.8146)) proposed ensemble generalized propensity score (GPS) models using rank aggregation. They considered four methods—multinomial logistic regression, Covariate Balancing Propensity Score (CBPS), Random Forest, and Generalized Boosted Model (GBM)—and used the Absolute Standardized Mean Difference (ASMD) to assess covariate balance across treatment groups. For each covariate, methods were ranked by ASMD, with the lowest ranked first, and so on. The goal was to aggregate the *p* individual rankings into a single overall list; the top-ranked method was considered the optimal GPS estimator. While they worked with multiclass treatments, *this approach did not involve stacking*—only selection of the model with the best ASMD.
+
+There are other papers that I briefly looked into, but I didn’t find them particularly useful:
+
+-   Rose ([2018](https://arxiv.org/abs/1805.07684v1)), *Stacked Propensity Score Functions for Observational Cohorts with Oversampled Exposed Subjects*.
+
+-   Gruber et al. ([2015](https://doi.org/10.1002/sim.6322)), *Ensemble learning of inverse probability weights for marginal structural modeling in large observational datasets*. *Statistics in Medicine*.
+
+-   Pirracchio et al. ([2015](https://www.semanticscholar.org/paper/e3f6fa68dbd915e1dd3dc293f07dc1ba6d356b50)), *Improving Propensity Score Estimators’ Robustness to Model Misspecification Using Super Learner*.
+
+-   Pirracchio & Carone ([2018](https://doi.org/10.1177/0962280216682055)), *The Balance Super Learner: A robust adaptation of the Super Learner to improve estimation of the average treatment effect in the treated based on propensity score matching*. *Statistical Methods in Medical Research*.
+
+-   Wyss et al. ([2018](https://doi.org/10.1097/EDE.0000000000000762)), *Using Super Learner Prediction Modeling to Improve High-dimensional Propensity Score Estimation*. *Epidemiology*.
+
+-   Ju et al. ([2017](https://doi.org/10.1080/02664763.2019.1582614)), *Propensity score prediction for electronic healthcare databases using super learner and high-dimensional propensity score methods*. *Journal of Applied Statistics*.
+
+-   Alam et al. ([2018](https://doi.org/10.1002/sim.8075)), *Should a propensity score model be super? The utility of ensemble procedures for causal adjustment*. *Statistics in Medicine*.
+
+<br>
+
+### Packages
+
+As for the packages that offer stacking:
+
+1.  [`Superlearner`](https://www.rdocumentation.org/packages/SuperLearner/versions/2.0-29/topics/SuperLearner) does not support categorical outcomes (allows only for **`gaussian`** or **`binomial`** to describe the error distribution). As for stacking methods, they offer (among others) non-negative least squares and non-negative binomial likelihood maximization via BFGS optimization (a binary analog of what I originally implemented).
+2.  [`mlr3`](https://mlr3.mlr-org.com) uses `mlr3pipelines` for stacking: cross-entropy loss is applied by default for multiclass tasks. The optimization algorithm is BFGS (quasi-Newton via `optim`), applied to the full matrix of predictions (across K classes) from each base learner.
+3.  In [`scikit-learn`](#0), the loss function is again multiclass cross-entropy (log-loss) by default. Weights are optimized via the LBFGS algorithm.
+4.  Propensity score stacking in [`caret`](https://www.rdocumentation.org/packages/caretEnsemble/versions/2.0.3/topics/caretEnsemble) can be implemented using the `caretEnsemble` package. More details will follow.
+5.  [`sl3`](https://github.com/tlverse/sl3) natively supports stacking of multivalued propensity scores. More details will follow.
+
+I will explore `sl3` and `caret` in detail, since other packages seem to follow similar approaches.
+
+<br>
+
+## Methods walk-through
+
+I first simulate some propensity scores and then estimate individual models as well as stack them.
+
+I tried simulating data using Maren's DGPs—they are all complex, but it's a bit hard to tell which settings are more challenging for specific learners. That is why I went for a simple simulation for three designs: linear, nonlinear, and hard—where "hard" is a nonlinear setting that adds some treatment imbalance:
+
+```{r}
+sim_multival <- function(n = 1000, p = 5, K = 3,
+                        design = c("linear", "nonlinear", "hard"),
+                        min_prob = 0.05,  # For "hard" design only
+                        seed = NULL) {
+  set.seed(seed)
+  X <- matrix(rnorm(n*p), n, p)
+  colnames(X) <- paste0("X", 1:p)
+  
+  logits <- matrix(0, n, K)
+  
+  if (design == "linear") {
+    for (k in 1:K) logits[,k] <- X %*% rnorm(p)
+  } else if (design == "nonlinear") {
+    for (k in 1:K) logits[,k] <- sin(X[,1]+k) + X[,2]^2*(k/K) - 0.3*X[,3]*X[,4]
+  } else { # Hard design
+    base_logits <- log(c(min_prob, (1-min_prob)*c(0.3, 0.7)))
+    for (k in 1:K) logits[, k] <- base_logits[k] + 2 * tanh(X[, 1] + k * X[, 2]) - 
+        0.5 * X[, 3]^2 + 1.5 * sin(X[, 4] * k) + 0.7 * (X[, 1] * X[, 3]) -
+        ifelse(k == K, 1.2 * abs(X[, 2]), 0)
+  }
+  
+  ps <- t(apply(logits, 1, function(z) {
+    z <- z - max(z)
+    exp(z)/sum(exp(z))
+  }))
+  
+  D <- apply(ps, 1, function(p) sample(0:(K-1), 1, prob = p))
+  
+  if (design == "hard") { # Enforce minimum counts
+    for (k in 0:(K-1)) {
+      while (sum(D == k) < max(3, n*min_prob*0.5)) {
+        D[which.max(ps[,k+1]*(D != k))] <- k
+      }
+    }
+  }
+  
+  list(X = X, D = D, ps_true = ps)
+}
+```
+
+The Brier score (MSE) for multi-valued probabilistic classification is defined as
+
+$$
+BS = \frac{1}{N} \sum_{j=0}^{T} \sum_{i=1}^{N} (e_{ij} - D_{ij}(W_i))^2,
+$$
+
+where $e_{ij}$ denotes the probability of individual $i$ receiving treatment $j$ and $D_{ij}(W_i)$ the *indicator matrix* of the true, assigned treatment (using Maren's notation).
+
+This is the loss function I will primarily focus on.
+
+The negative log-likelihood (cross-entropy) loss for multi-class classification is defined as $$
+\text{NLL} = -\frac{1}{N} \sum_{i=1}^{N} \sum_{j=0}^{T} D_{ij}(W_i) \log(e_{ij})
+$$
+
+Now I define some functions for downstream use:
+
+```{r}
+softmax <- function(z) { z <- z - max(z); exp(z) / sum(exp(z)) }
+one_hot <- function(x) { class.ind(as.matrix(x)) }
+
+# negative log likelihood (i.e. cross-entropy) loss
+obj_fun_log <- function(weights_unconstrained) {
+  weights <- softmax(weights_unconstrained)
+  ens_pred <- apply(preds, c(1, 2), function(x) sum(x * weights))
+  -sum(one_hot_D * log(ens_pred + 1e-10))
+  }
+
+# MSE (i.e. the Brier score) loss
+obj_fun_MSE <- function(weights_unconstrained) {
+  weights <- softmax(weights_unconstrained)
+  ens_pred <- apply(preds, c(1, 2), function(x) sum(x * weights))
+  mean((one_hot_D - ens_pred)^2)
+  }
+
+# computes the Brier score (rowSums instead of rowMeans in Maren's code)
+brier_score <- function(probs, one_hot_outcome) {
+  mean(rowSums((probs - one_hot_outcome)^2, na.rm = TRUE))
+  }
+```
+
+Let's first go through the pipeline using a single set of data to understand the mechanics:
+
+```{r}
+set.seed(123)
+dta <- sim_multival(n = 1000, design = "linear")
+
+X <- dta$X
+D <- dta$D
+
+one_hot_D <- one_hot(dta$D)
+```
+
+I now estimate individual learners and organize them in a 3-dimensional array: $N \times K$ (unique treatments) $\times M$ (base learners). With a single learner provided, estimation defaults to cross-fitted predictions:
+
+```{r}
+# Arbitrary method specifications supported by NuisanceParameters
+all_methods = list(
+ "logit_ovo" = create_method("logit", multinomial = "one-vs-one"),
+ "logit_nnet_ovo" = create_method("logit_nnet", multinomial = "one-vs-one"),
+ "nb_gaussian_ovo" = create_method("nb_gaussian", multinomial = "one-vs-one"),
+ "nb_bernoulli_ovr" = create_method("nb_bernoulli", multinomial = "one-vs-rest"),
+ "xgboost_prop_ovr" = create_method("xgboost_prop", multinomial = "one-vs-rest"),
+ "svm_ovr" = create_method("svm", multinomial = "one-vs-rest"),
+ "prob_forest" = create_method("prob_forest", multinomial = "multiclass"),
+ "ranger" = create_method("ranger", multinomial = "multiclass"),
+ "knn_prop" = create_method("knn_prop", multinomial = "multiclass")
+ )
+
+# Call our package repeatedly
+prop_est <- suppressMessages(lapply(all_methods, function(m) {
+  nuisance_parameters(NuPa = "D.hat", X = X, D = D,
+                      method = list(method = m),
+                      cf = 5, stacking = "short")$nuisance_parameters$D.hat}))
+
+# Compute Brier scores for each method
+ind_brier_scores <- sapply(names(prop_est), function(method_name) {
+  brier_score(prop_est[[method_name]], one_hot_D)
+})
+
+# Combine into 3D array: [N, K, M]
+M <- length(all_methods)
+N <- length(D)
+K <- length(unique(D))
+preds <- array(unlist(prop_est), dim = c(N, K, M))
+```
+
+Let's compute the Brier score for the base learners:
+
+```{r}
+as.data.frame(ind_brier_scores)
+```
+
+Their performance differs, and several methods exist to optimally aggregate them.
+
+### BFGS with negative log-likelihood / MSE loss
+
+I start by aggregating them using [BFGS](https://stat.ethz.ch/R-manual/R-devel/library/stats/html/optim.html)—a quasi-Newton optimization method that iteratively approximates the Hessian matrix to find local minima of smooth, unconstrained nonlinear functions.
+
+I use two objective functions: (1) negative log loss and (2) MSE.
+
+```{r}
+# Optimization wrapper
+optimize_weights <- function(obj_fun) {
+  result <- optim(
+    par = rep(0, M),
+    fn = obj_fun,
+    method = "BFGS",
+    control = list(reltol = 1e-8)
+  )
+  exp(result$par) / sum(exp(result$par))
+}
+
+weights_mse <- optimize_weights(obj_fun_MSE)
+weights_ll <- optimize_weights(obj_fun_log)
+
+ens_pred_mse <- apply(preds, c(1, 2), function(x) sum(x * weights_mse))
+ens_pred_ll <- apply(preds, c(1, 2), function(x) sum(x * weights_ll))
+
+brier_ll <- brier_score(ens_pred_ll, one_hot_D)
+brier_MSE <- brier_score(ens_pred_mse, one_hot_D)
+
+weights_df <- data.frame(
+  Method = names(all_methods),
+  weights_MSE = round(weights_mse, 4),
+  weights_log_like = round(weights_ll, 4))
+
+print(weights_df, row.names = FALSE)
+```
+
+### Treatment (i.e. column)-specific `nnls`
+
+Alternatively, we can run `nnls` (non-negative least squares) separately for each treatment (i.e., column by column) and aggregate them afterward:
+
+```{r}
+# For each class (1..K), regress its M method predictions on one_hot_D[, class]
+class_weights <- sapply(1:K, function(k) {
+  round(nnls::nnls(preds[ , k, ], one_hot_D[ , k])$x, 4)  # NNLS for class k
+})
+
+rownames(class_weights) <- names(all_methods)
+colnames(class_weights) <- paste0("D", 0:(ncol(class_weights) - 1))
+as.data.frame(class_weights)
+```
+
+We immediately see that instead of one set of weights, we get $K$, one for each unique treatment status.
+
+We then create a weighted average of base learners and normalize the estimated propensity scores to ensure they sum to 1 across treatments:
+
+```{r}
+# Compute weighted predictions for each class (K x N matrix)
+weighted_preds <- sapply(1:K, function(k) {
+  preds[, k, ] %*% class_weights[, k]  # Weighted sum for class k
+})
+
+# Normalize row-wise to ensure sum-to-1 constraint
+ens_pred <- weighted_preds / rowSums(weighted_preds)
+
+brier_nls_cols = brier_score(ens_pred, one_hot_D)
+brier_nls_cols
+```
+
+### Stacked `nnls`
+
+Another approach is to stack all treatment-specific estimates across $K$, create a single outcome vector, and run a single `nnls` estimation:
+
+```{r}
+# Stack treatments into a K*N vector
+D_stack <- as.vector(one_hot_D)
+
+# Flatten each method's predictions (ending up with K*N × M matrix)
+X_stack <- sapply(1:dim(preds)[3], function(m) { as.vector(preds[, , m]) })
+
+global_weights <- nnls(X_stack, D_stack)$x
+global_weights <- global_weights / sum(global_weights)
+
+weighted_preds <- apply(preds, 1:2, function(x) sum(x * global_weights))
+brier_nls_stack <- brier_score(weighted_preds, one_hot_D)
+brier_oracle <- brier_score(dta$ps_true, one_hot_D)
+
+results <- data.frame(
+  Approach = c("NNLS col-wise", "NNLS stacked", "BFGS-log-like", "BFGS-MSE", "Oracle"),
+  Brier_Score = round(c(brier_nls_cols, brier_nls_stack, brier_ll, brier_MSE, brier_oracle), 4)
+)
+
+print(results, row.names = FALSE)
+```
+
+It suggests that running `nnls` column-wise to get treatment-specific weights, which are then aggregated, is a good option.
+
+<br>
+
+## Existing approaches
+
+The two packages I focus on are [`sl3`](https://tlverse.org/sl3/articles/intro_sl3.html) and [`caret`](https://topepo.github.io/caret/). They both natively support stacking of multivalued propensity scores but approach it differently.
+
+### Super Learner 3 (`sl3`)
+
+When creating a Super Learner for categorical outcomes, the default settings are:
+
+-   **Meta-learner:** `Lrnr_solnp` — a constrained optimization algorithm combining augmented Lagrangian methods (to handle constraints via penalties) with sequential quadratic programming (to iteratively solve quadratic approximations).
+
+-   **Combination function:** `metalearner_linear_multinomial` — computes a weighted average of probability predictions, then normalizes rows so they sum to 1.
+
+-   **Loss function:** `loss_loglik_multinomial` — the negative log-likelihood for multinomial data; or `loss_loglik_true_cat` — another negative log-likelihood that expects the probability of the true class only (not a full probability vector).
+
+```{r}
+D_fact = as.factor(D)
+data = cbind(D_fact, as.data.frame(X))
+
+# available learners for the task
+# sl3_list_learners(properties = "categorical")
+
+# Define the learner stack for multinomial treatment model
+learner_stack <- make_learner_stack(
+  list("Lrnr_xgboost", nrounds=40, eta=0.01, objective = "multi:softprob", 
+                       eval_metric = "mlogloss", num_class = K),
+  list("Lrnr_ranger", num.trees = 100),
+  list("Lrnr_ranger", num.trees = 500),
+  list("Lrnr_glmnet", nfolds = 5, alpha = 1, family = "multinomial"),
+  list("Lrnr_glmnet", nfolds = 5, alpha = 0.5, family = "multinomial"),
+  list("Lrnr_glmnet", nfolds = 5, alpha = 0.25, family = "multinomial")
+)
+
+# Define the metalearner for multinomial outcome
+metalearner <- make_learner(
+  Lrnr_solnp,
+  learner_function = metalearner_linear_multinomial,
+  eval_function = loss_loglik_multinomial
+)
+
+# Create the task for propensity score estimation
+propensity_task <- make_sl3_Task(
+  data = data,
+  covariates = colnames(X),
+  outcome = "D_fact",
+  outcome_type = "categorical",
+  folds = origami::make_folds(data, fold_fun = folds_vfold, V = 5)
+)
+
+# Create and train the Super Learner ensemble
+propensity_sl <- make_learner(
+  Lrnr_sl,
+  learners = learner_stack,
+  metalearner = metalearner,
+  keep_extra = TRUE  # keep individual learner predictions
+)
+
+propensity_sl_fit <- propensity_sl$train(propensity_task)
+
+preds_sl3 <- propensity_sl_fit$predict(propensity_task)
+preds_mat <- do.call(rbind, lapply(preds_sl3, function(x) unlist(x)[1:3]))
+
+brier_sl3 <- brier_score(preds_mat, one_hot_D)
+brier_sl3
+```
+
+Although the results differ due to the different set of learners, their algorithm is similar to the one I initially implemented.
+
+When used for stacking, the result should be very close to BFGS with log-likelihood as the loss function:
+
+```{r}
+# Log-likelihood loss function (now takes RAW weights)
+obj_fun <- function(weights) {
+  ens_pred <- apply(preds, c(1, 2), function(x) sum(x * weights))
+  -sum(one_hot_D * log(ens_pred + 1e-10))
+}
+
+# Equality constraint: weights sum to 1
+eq_fun <- function(weights) { sum(weights) }
+
+# Lower bounds (weights >= 0)
+LB <- rep(0, M)
+
+# Some optimization settings
+params <- list(outer.iter = 400,inner.iter = 800,delta = 1e-7,tol = 1e-8,trace = 0,rho = 1)
+
+result <- solnp(
+  pars = rep(1 / M, M),
+  fun = obj_fun,
+  eqfun = eq_fun,
+  eqB = 1,  # sum(weights) = 1
+  LB = LB,  # weights >= 0
+  control = params
+)
+
+weights_df <- data.frame(
+  Method = names(all_methods),
+  weights_BFGS_ll = round(weights_ll, 4), 
+  weights_solnp_ll = round(result$pars, 4)
+)
+
+print(weights_df, row.names = FALSE)
+```
+
+And these two are indeed very similar.
+
+The goal of this part was to show that `sl3` uses a very similar “log-likelihood loss + matrix-wise optimization ($N$ by $K$ matrices for each base learner)” approach, the one I initially implemented.
+
+### `caret`
+
+The meta-learner (the stacking layer) is trained using another caret model, like those used for base learners. I managed to make it work using random forest as the meta-learner (`method = "rf"`), which means there are no explicit "$K$ weights", one for each base learner.
+
+```{r}
+# labels are important
+data$D_fact <- factor(data$D_fact, labels = paste0("Class", sort(unique(data$D_fact))))
+
+train_control <- trainControl(
+  method = "cv",
+  number = 5,
+  savePredictions = "final",
+  classProbs = TRUE
+)
+
+# Train a list of base models that support multiclass
+model_list <- caretList(
+  D_fact ~ .,
+  data = data,
+  trControl = train_control,
+  tuneList = list(
+    rf = caretModelSpec(method = "rf",tuneLength = 3,importance = TRUE),
+    glmnet = caretModelSpec(method = "glmnet",family = "multinomial",tuneLength = 3),
+    svmRadial = caretModelSpec(method = "svmRadial",prob.model = TRUE,tuneLength = 3),
+    nnet = caretModelSpec(method = "nnet",trace = FALSE,tuneLength = 3,MaxNWts = 1000)
+  )
+)
+
+# Stack the base models using random forest as meta-learner
+stacked_model <- caretStack(
+  model_list,
+  method = "rf",
+  metric = "Accuracy",
+  trControl = train_control
+)
+
+indiv_preds <- lapply(model_list, function(m) predict(m, newdata = data, type = "prob"))
+preds_ensemble <- predict(stacked_model, newdata = data)
+
+brier_scores <- c(sapply(indiv_preds, function(p) brier_score(p, one_hot_D)),
+                  ensemble = brier_score(preds_ensemble, one_hot_D))
+
+results <- data.frame(Model = names(brier_scores), Brier_Score = round(brier_scores, 4))
+print(results, row.names = FALSE)
+```
+
+I don’t understand the extraordinary performance of random forest (`rf`). There must be an error somewhere.
+
+## Multiple runs
+
+Now, we simulate to tell what approach is best.
+
+```{r}
+# Define settings and repetitions
+settings <- c("linear", "nonlinear", "hard")
+N_runs <- 20
+brier_results <- list()
+
+for (setting in settings) {
+  for (i in 1:N_runs) {
+    dta <- sim_multival(n = 500, K = 3, design = setting)
+    
+    X <- dta$X
+    D <- dta$D
+    one_hot_D <- one_hot(D)
+  
+    prop_est <- suppressMessages(lapply(all_methods, function(m) {
+      nuisance_parameters(NuPa = "D.hat", X = X, D = D,
+                         method = list(method = m),
+                         cf = 5, stacking = "short")$nuisance_parameters$D.hat}))
+  
+    # Compute individual Brier scores using your function
+    ind_brier_scores <- sapply(names(prop_est), function(method_name) {
+      brier_score(prop_est[[method_name]], one_hot_D)
+    })
+  
+    M <- length(all_methods)
+    N <- length(D)
+    K <- length(unique(D))
+    preds <- array(unlist(prop_est), dim = c(N, K, M))
+  
+    result <- optim(
+      par = rep(0, M),
+      fn = obj_fun_MSE,
+      method = "BFGS",
+      control = list(reltol = 1e-8)
+    )
+  
+    weights_BFGS <- exp(result$par) / sum(exp(result$par))
+    ens_pred <- apply(preds, c(1, 2), function(x) sum(x * weights_BFGS))
+    brier_BFGS <- brier_score(ens_pred, one_hot_D)
+    
+    weights_NNLS <- sapply(1:length(unique(D)), function(k) {
+      nnls::nnls(preds[ , k, ], one_hot_D[ , k])$x
+    })
+    
+    weighted_preds <- sapply(1:K, function(k) {
+      preds[, k, ] %*% weights_NNLS[, k]
+    })
+    
+    # Normalize row-wise to ensure sum-to-1 constraint
+    prop_score_NNLS <- weighted_preds / rowSums(weighted_preds)
+    brier_NNLS <- brier_score(prop_score_NNLS, one_hot_D)
+    
+    ## Stacked NNLS
+    D_stack <- as.vector(one_hot_D)
+    X_stack <- sapply(1:dim(preds)[3], function(m) {
+      as.vector(preds[, , m])
+    })
+    global_weights <- nnls(X_stack, D_stack)$x
+    global_weights <- global_weights / sum(global_weights)
+    
+    weighted_NNLS_global <- apply(preds, 1:2, function(x) sum(x * global_weights))
+    brier_NNLS_stack <- brier_score(weighted_NNLS_global, one_hot_D)
+    
+    brier_oracle <- brier_score(dta$ps_true, one_hot_D)
+      
+    # Store results with setting label
+    brier_long <- data.frame(
+      Method = c(names(ind_brier_scores), "Ens_BFGS", "Ens_NNLS", "Ens_NNLS_stack", "Oracle"),
+      Brier = c(ind_brier_scores, brier_BFGS, brier_NNLS, brier_NNLS_stack, brier_oracle),
+      Run = i,
+      Setting = setting
+    )
+    brier_results[[paste(setting, i)]] <- brier_long
+  }
+}
+```
+
+And plot the results. Note that the Y-axis is restricted to keep the plot readable:
+
+```{r}
+brier_all <- bind_rows(brier_results)
+
+plot_brier <- function(data, setting, color, ylim_multiplier = 1.0) {
+  filtered_data <- data %>% filter(Setting == setting)
+  y_stats <- boxplot.stats(filtered_data$Brier)$stats
+  y_min <- max(min(filtered_data$Brier), y_stats[1]-ylim_multiplier*IQR(filtered_data$Brier))
+  y_max <- min(max(filtered_data$Brier), y_stats[5]+ylim_multiplier*IQR(filtered_data$Brier))
+  
+  ggplot(filtered_data, aes(x = Method, y = Brier)) +
+    geom_boxplot(fill = color, outlier.shape = NA) +
+    coord_cartesian(ylim = c(y_min, y_max)) +
+    labs(title = setting) + theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+# Example usage:
+plot_brier(brier_all, "linear", "#4E79A7")
+plot_brier(brier_all, "nonlinear", "#E15759")
+plot_brier(brier_all, "hard", "#59A14F")
+```
+
+Given the settings, all ensembles perform well, with treatment-specific `nnls` being the slight leader.
+
+<br>
+
+## Observational data
+
+I conclude with the second observational dataset from the Maren's thesis:
+
+> The dataset contains data on enrollment information, demographics, socio-economic factors, and academic performance after the first and second semesters. This dataset is used to develop classification models predicting student dropout and academic success. The classification task is formulated with three categories, with a significant imbalance toward one class. The dataset has 4424 observations and 36 confounding variables (102 after encoding the categorical columns).
+
+```{r}
+load("/Users/romanrakov/Desktop/Work SA/NuisanceParameters/data/students_dropout.RData")
+
+# Prepare features (X) and treatment (D)
+X <- dataset %>%
+  dplyr::select(-Target) %>%
+  dplyr::mutate(
+    Course = as.factor(Course),
+    International = as.factor(International),
+    Gender = as.factor(Gender),
+    `Application mode` = as.factor(`Application mode`),
+    `Previous qualification` = as.factor(`Previous qualification`),
+    Nacionality = as.factor(Nacionality)
+  )
+
+X <- model.matrix(~ . - 1, data = X)
+X <- X[, -c(11, 12, 19, 41, 46, 47, 60, 61, 66, 73, 74)] # Remove problematic columns
+clean_colnames <- make.names(colnames(X))
+colnames(X) <- clean_colnames
+
+D <- as.numeric(factor(dataset$Target))
+K <- length(unique(D))
+N <- length(D)
+M <- length(all_methods)
+one_hot_D <- one_hot(D)
+
+prop_est <- suppressMessages(lapply(all_methods, function(m) {
+  nuisance_parameters(NuPa = "D.hat", X = X, D = D,
+                      method = list(method = m),
+                      cf = 5, stacking = "short")$nuisance_parameters$D.hat}))
+
+ind_brier_scores <- sapply(names(prop_est), function(method_name) {
+  brier_score(prop_est[[method_name]], one_hot_D)
+})
+
+preds <- array(unlist(prop_est), dim = c(N, K, M))
+result <- optim(par = rep(0, M), fn=obj_fun_MSE, method="BFGS", control = list(reltol = 1e-8))
+  
+# BFGS
+weights_BFGS <- exp(result$par) / sum(exp(result$par))
+ens_pred <- apply(preds, c(1, 2), function(x) sum(x * weights_BFGS))
+brier_BFGS <- brier_score(ens_pred, one_hot_D)
+
+# NNLS 1
+weights_NNLS <- sapply(1:length(unique(D)), function(k) {
+  nnls::nnls(preds[ , k, ], one_hot_D[ , k])$x})
+weighted_preds <- sapply(1:K, function(k) {preds[, k, ] %*% weights_NNLS[, k]})
+prop_score_NNLS <- weighted_preds / rowSums(weighted_preds)
+brier_NNLS <- brier_score(prop_score_NNLS, one_hot_D)
+    
+# NNLS 2
+D_stack <- as.vector(one_hot_D)
+X_stack <- sapply(1:dim(preds)[3], function(m) {as.vector(preds[, , m])})
+global_weights <- nnls(X_stack, D_stack)$x
+global_weights <- global_weights / sum(global_weights)
+weighted_NNLS_global <- apply(preds, 1:2, function(x) sum(x * global_weights))
+brier_NNLS_stack <- brier_score(weighted_NNLS_global, one_hot_D)
+
+brier_all <- data.frame(
+  Method = c(names(ind_brier_scores), "Ens_BFGS", "Ens_NNLS", "Ens_NNLS_stack"),
+  Brier = c(ind_brier_scores, brier_BFGS, brier_NNLS, brier_NNLS_stack))
+
+brier_all <- brier_all[order(brier_all$Brier), ]
+ggplot(brier_all, aes(x = Brier, y = reorder(Method, -Brier))) +
+  geom_point(size = 3, color = "blue") +
+  labs(title = "Brier Scores by Method",x = "Brier Score",y = "Method") +
+  theme_minimal() + theme(axis.text.y = element_text(size = 8))
+```

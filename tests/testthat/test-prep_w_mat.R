@@ -1,9 +1,9 @@
-test_that("prep_w_mat function works correctly for mickey mouse example", {
+test_that("prep_indicator_mat function works correctly for mickey mouse example", {
   # Example treatment vector
-  w = c("A", "B", "A", "C", "B", "C")
+  D = c("A", "B", "A", "C", "B", "C")
 
   # Call the function
-  w_mat = prep_w_mat(w)
+  d_mat = prep_indicator_mat(D)
 
   # Expected one-hot matrix
   expected_mat = matrix(c(
@@ -14,27 +14,27 @@ test_that("prep_w_mat function works correctly for mickey mouse example", {
     FALSE, TRUE, FALSE,
     FALSE, FALSE, TRUE
   ), ncol = 3, byrow = TRUE)
-  colnames(expected_mat) = unique(w)
-  row.names(expected_mat) = as.character(1:length(w))
+  colnames(expected_mat) = unique(D)
+  row.names(expected_mat) = as.character(1:length(D))
 
   # Check the result
-  expect_identical(w_mat, expected_mat)
+  expect_identical(d_mat, expected_mat)
 })
 
 
-test_that("prep_w_mat function works correctly for large n", {
+test_that("prep_indicator_mat function works correctly for large n", {
 
   n = 10000
-  w = sample(x = 1:4, size = n, replace = TRUE, prob = c(0.5, 0.1, 0.05, 0.35))
+  D = sample(x = 1:4, size = n, replace = TRUE, prob = c(0.5, 0.1, 0.05, 0.35))
 
-  w_mat = prep_w_mat(w)
+  d_mat = prep_indicator_mat(D)
 
-  expect = as.vector(table(w) / n)
+  expect = as.vector(table(D) / n)
   names(expect) = as.character(1:4)
 
   # Check class frequencies
-  expect_identical(expect, colMeans(w_mat))
+  expect_identical(expect, colMeans(d_mat))
   # Check one-hot encoding
-  expect_true(all(Matrix::rowSums(w_mat) == 1))
+  expect_true(all(Matrix::rowSums(d_mat) == 1))
 
 })

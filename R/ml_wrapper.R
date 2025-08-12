@@ -168,9 +168,9 @@ predict.ridge_fit = function(ridge_fit, Xnew, ...) {
 #' @keywords internal
 #'
 plasso_fit = function(X, Y, arguments = list()) {
-  p = do.call(plasso::cv.plasso, c(list(x = X, y = Y), arguments))
-  class(p) = "plasso_fit"
-  return(p)
+  plasso = do.call(plasso::cv.plasso, c(list(x = X, y = Y), arguments))
+  class(plasso) = "plasso_fit"
+  return(plasso)
 }
 
 
@@ -198,6 +198,53 @@ predict.plasso_fit = function(plasso_fit, Xnew = NULL, ...) {
 
   fit = as.vector(predict(plasso_fit, newx = Xnew, type = "response", s = "optimal", se_rule = 0)$plasso)
 
+  return(fit)
+}
+
+
+#' Fits Lasso regression using hdm::rlasso
+#'
+#' @description
+#' \code{\link{rlasso_fit}} estimates Lasso regression using the hdm package.
+#'
+#' @param X Matrix of covariates (number of observations times number of covariates matrix)
+#' @param Y vector of outcomes
+#' @param arguments List of arguments passed to \code{\link[hdm]{rlasso}}
+#'
+#' @return An object with S3 class "rlasso"
+#'
+#' @keywords internal
+#'
+rlasso_fit = function(X, Y, arguments = list()) {
+  
+  rlasso <- do.call(hdm::rlasso, c(list(x = X, y = Y), arguments))
+  class(rlasso) <- c(class(rlasso), "rlasso_fit")
+  
+  return(rlasso)
+}
+
+
+#' Predictions based on \code{hdm::rlasso} regression
+#'
+#' @description
+#' Prediction of fitted values (for a potentially new set of covariates Xnew)
+#' based on a trained Lasso model from hdm package.
+#'
+#' @param rlasso_fit Output of \code{\link{rlasso_fit}}
+#' @param Xnew Covariate matrix of test sample.
+#' If not provided, prediction is done for the training sample.
+#' @param ... Ignore unused arguments
+#'
+#' @return Vector of fitted values.
+#'
+#' @method predict rlasso_fit
+#'
+#' @keywords internal
+#'
+predict.rlasso_fit = function(rlasso_fit, Xnew = NULL, ...) {
+  
+  fit <- as.vector(predict(rlasso_fit, newdata = Xnew))
+  
   return(fit)
 }
 

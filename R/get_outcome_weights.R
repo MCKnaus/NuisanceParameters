@@ -4,22 +4,14 @@
 #' Extract smoother weights from short- or standard-stacked ensemble model 
 #' created by \code{\link{ensemble_short}} or \code{\link{ensemble}}.
 #'
+#' @param np_object A \code{NuisanceParameters} object created by 
+#'   \code{\link{nuisance_parameters}} function
 #' @param NuPa String vector specifying which nuisance parameters to extract smoother matrices for.
-#' @param np_object Stacked ensemble learner from \code{\link{ensemble_short}} or \code{\link{ensemble}}.
-#' @param method List of models by \code{\link{create_method}} that was used as
-#' iobjectut for \code{\link{ensemble_short}} or \code{\link{ensemble}}.
-#' @param X Covariate matrix of training sample.
-#' @param Y Vector of outcomes of training sample.
-#' @param d_mat Logical matrix of treatment indicators (N X T+1). For example created by \code{\link{prep_w_mat}}.
-#' @param z_mat Logical matrix of instrument indicators (N X T+1). For example created by \code{\link{prep_w_mat}}.
 #' @param subset Logical vector indicating which observations to use for determining
 #' ensemble weights. If not provided, all observations are used.
-#' @param cv Number of cross-validation folds when estimating ensemble model.
-#' @param cf_mat Logical matrix with k columns of indicators representing the different folds
-#' (for example created by \code{\link{prep_cf_mat}}).
 #' @param quiet If FALSE, method that is currently computed is printed into the
 #' console.
-#' @param ... Ignore unused arguments
+#' @param ... Additional arguments
 #'
 #' @return Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing
 #' ensemble smoother weights, or list of such matrices if multiple models are requested.
@@ -32,6 +24,10 @@ get_outcome_weights = function(np_object,
                                ...) {
   
   ## Input checks 
+
+  if (!inherits(np_object, "NuisanceParameters")) {
+    stop("Input must be a NuisanceParameters object created by nuisance_parameters().")
+  }
   
   if (is.null(np_object)) {
     stop("Ensemble models were not saved after training.")
@@ -43,6 +39,10 @@ get_outcome_weights = function(np_object,
     
   } else if (!is.list(np_object)) {
     stop("np_object must be either a list or a valid path to an RDS file.")
+  }
+  
+  if (!is.null(np_object[["numbers"]][["method"]][["lasso"]])) {
+    stop("Smoother matrices cannot be extracted if method = lasso was used.")
   }
   
   model_names <- paste0(NuPa, "_m")
@@ -83,44 +83,79 @@ get_outcome_weights = function(np_object,
   }
   
   # Process each model
-  
   results <- list()
-  results <- lapply(existing_models, function(model) {
-    current_model <- np_object[["models"]][[model]]
+  
+  for (model_name in existing_models) {
+    current_model <- np_object[["models"]][[model_name]]
+    method_name <- sub("_m$", "", model_name)
+    model_results <- list()
     
     if (cv == 1) {
+      # Case 1: Single ensemble model
       if ("ens_object" %in% names(current_model)) {
-        return(get_smoother(current_model, method = method, X = X, Y = Y, 
-                            nnls_w = NULL, cv = cv, cf_mat = cf_mat, quiet = quiet))
-      } else {
-        return(lapply(seq_along(current_model), function(i) {
+        model_results <- get_smoother(current_model, 
+                                      method = method[[method_name]], 
+                                      X = X, 
+                                      Y = Y,
+                                      nnls_w = NULL, 
+                                      cv = cv, 
+                                      cf_mat = cf_mat, 
+                                      quiet = quiet)
+      } 
+      # Case 2: List of models
+      else {
+        for (i in seq_along(current_model)) {
           sub_element <- current_model[[i]]
           if (is.list(sub_element) && "ens_object" %in% names(sub_element)) {
             subset <- get_subset(sub_element, np_object[["models"]])
-            get_smoother(sub_element, method = method, X = X, Y = Y, 
-                         subset = subset, nnls_w = NULL, cv = cv, 
-                         cf_mat = cf_mat, quiet = quiet)
+            model_results[[i]] <- get_smoother(sub_element,
+                                               method = method[[method_name]],
+                                               X = X,
+                                               Y = Y,
+                                               subset = subset,
+                                               nnls_w = NULL,
+                                               cv = cv,
+                                               cf_mat = cf_mat,
+                                               quiet = quiet)
           }
-        }))
+        }
       }
-    } else { # cv > 1
+    } 
+    else {  # cv > 1
+      # Case 1: Single ensemble model
       if (!inherits(current_model, "ens.learner")) {
-        return(lapply(seq_along(current_model), function(i) {
+        for (i in seq_along(current_model)) {
           sub_element <- current_model[[i]]
           if (is.list(sub_element)) {
             subset <- get_subset(sub_element, np_object[["models"]])
-            get_smoother(sub_element, method = method, X = X, Y = Y,
-                         subset = subset, nnls_w = NULL, cv = cv,
-                         cf_mat = cf_mat, quiet = quiet)
+            model_results[[i]] <- get_smoother(sub_element,
+                                               method = method[[method_name]],
+                                               X = X,
+                                               Y = Y,
+                                               subset = subset,
+                                               nnls_w = NULL,
+                                               cv = cv,
+                                               cf_mat = cf_mat,
+                                               quiet = quiet)
           }
-        }))
-      } else {
-        return(get_smoother(current_model, method = method, X = X, Y = Y,
-                            subset = NULL, nnls_w = NULL, cv = cv,
-                            cf_mat = cf_mat, quiet = quiet))
+        }
+      }
+      # Case 2: List of models
+      else {
+        model_results <- get_smoother(current_model,
+                                      method = method[[method_name]],
+                                      X = X,
+                                      Y = Y,
+                                      subset = NULL,
+                                      nnls_w = NULL,
+                                      cv = cv,
+                                      cf_mat = cf_mat,
+                                      quiet = quiet)
       }
     }
-  })
+    
+    results[[model_name]] <- model_results
+  }
   
   names(results) <- existing_models
   return(results)
@@ -287,7 +322,7 @@ weights.ridge_fit = function(ridge_fit, X, Y, Xnew = NULL, ...) {
   
   # calculate hat matrix
   # reference: https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat
-  hat_mat = Xnew %*% solve(crossprod(X) + lambda * diag(X = c(0, rep(1, p)))) %*% t(X)
+  hat_mat = Xnew %*% solve(crossprod(X) + lambda * diag(x = c(0, rep(1, p)))) %*% t(X)
   
   return(hat_mat)
 }
@@ -313,7 +348,7 @@ weights.plasso_fit = function(plasso_fit, Xnew = NULL, ...) {
   
   if (is.null(Xnew)) Xnew = plasso_fit$X
   
-  X = add_intercept(plasso_fit$X)
+  X = add_intercept(plasso_fit$x)
   Xnew = add_intercept(Xnew)
   
   colnames(X)[1] = "(Intercept)"
@@ -321,6 +356,50 @@ weights.plasso_fit = function(plasso_fit, Xnew = NULL, ...) {
   
   Xact = X[, plasso_fit$names_pl, drop = FALSE]
   Xactnew = Xnew[, plasso_fit$names_pl, drop = FALSE]
+  
+  hat_mat = Xactnew %*% solve(crossprod(Xact), tol = 2.225074e-308) %*% t(Xact)
+  
+  return(hat_mat)
+}
+
+
+#' Smoother weights from hdm::rlasso prediction
+#'
+#' @description
+#' Extract smoother weights for test sample from a Lasso regression model.
+#' Only works if post-lasso estimation was performed.
+#'
+#' @param rlasso_fit Output of \code{\link{rlasso_fit}}
+#' @param Xnew Covariate matrix of test sample.
+#' If not provided, prediction is done for the training sample.
+#' @param ... Ignore unused arguments
+#'
+#' @return Matrix of smoother weights.
+#'
+#' @method weights rlasso_fit
+#'
+#' @keywords internal
+#'
+weights.rlasso_fit = function(rlasso_fit, Xnew = NULL, ...) {
+  
+  # Check if post-lasso was run
+  if (!isTRUE(rlasso_fit[["options"]][["post"]])) {
+    stop("Smoother matrix can be extracted only if post-lasso specification is run")
+  }
+  
+  if (is.null(Xnew)) Xnew <- rlasso_fit$model
+  
+  X = add_intercept(rlasso_fit$model)
+  Xnew = add_intercept(Xnew)
+  
+  colnames(X)[1] = "(Intercept)"
+  colnames(Xnew) = colnames(X)
+  
+  active_vars <- which(rlasso_fit$index)
+  active_vars <- c("(Intercept)", names(rlasso_fit$beta)[active_vars])
+  
+  Xact = X[, active_vars, drop = FALSE]
+  Xactnew = Xnew[, active_vars, drop = FALSE]
   
   hat_mat = Xactnew %*% solve(crossprod(Xact), tol = 2.225074e-308) %*% t(Xact)
   
@@ -348,11 +427,7 @@ weights.forest_grf_fit = function(forest_grf_fit, Xnew = NULL, ...) {
   
   if(is.null(Xnew)) Xnew = forest_grf_fit$X.orig
   
-  if (utils::packageVersion("grf") < "2.0.0") {
-    w = grf::get_sample_weights(forest_grf_fit, newdata = Xnew)
-  } else {
-    w = grf::get_forest_weights(forest_grf_fit, newdata = Xnew)
-  }
+  w = grf::get_forest_weights(forest_grf_fit, newdata = Xnew)
   w = as.matrix(w)
   
   return(w)
@@ -440,7 +515,7 @@ weights.knn_fit = function(arguments, X, Xnew = NULL, ...) {
 #' Extract smoother (or adaptive nearest neighbor) weights for test sample from
 #' Distributional Random Forest model.
 #'
-#' @param ridge_fit Output of \code{\link{forest_drf_fit}}
+#' @param forest_drf_fit Output of \code{\link{forest_drf_fit}}
 #' @param Xnew Covariate matrix of test sample.
 #' If not provided, prediction is done for the training sample.
 #' @param ... Ignore unused arguments
@@ -459,4 +534,187 @@ weights.forest_drf_fit = function(forest_drf_fit, Xnew = NULL, ...) {
   w = as.matrix(predict(forest_drf_fit, newdata = Xnew)$weights)
   
   return(w)
+}
+
+
+#' Extraction of smoother weights for short-stacked ensemble learner
+#'
+#' @description
+#' Extract smoother weights from short-stacked ensemble model created by
+#' \code{\link{ensemble_short}}.
+#'
+#' @param object Short-stacked ensemble learner from \code{\link{ensemble_short}}.
+#' @param method List of method models by \code{\link{create_method}} that was used as
+#' input for \code{\link{ensemble_short}}.
+#' @param X Covariate matrix of training sample.
+#' @param Y Vector of outcomes of training sample.
+#' @param subset Logical vector indicating which observations to use for determining
+#' ensemble weights. If not provided, all observations are used.
+#' @param w Ensemble weights to aggregate predictions from different learners (optional).
+#' Needs to be a vector of length \code{ncol(object$fit_cv)}.
+#' @param cf_mat Logical matrix with k columns of indicators representing the different folds
+#' (for example created by \code{\link{prep_cf_mat}}).
+#' @param quiet If FALSE, method that is currently computed is printed into the
+#' console.
+#' @param ... Ignore unused arguments
+#'
+#' @return Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing
+#' ensemble smoother weights.
+#'
+#' @export
+#'
+#' @method weights ensemble_short
+#'
+weights.ensemble_short = function(object,
+                                  method,
+                                  X, Y,
+                                  subset,
+                                  w = NULL,
+                                  cf_mat,
+                                  quiet = TRUE,
+                                  ...) {
+  
+  # load fitted method object
+  if(is.null(object$method)) {
+    stop("Ensemble models were not saved after training.")
+  } else if (is.character(object$method) & length(object$method) == 1) {
+    method_fit = readRDS(object$method)
+  } else {
+    method_fit = object$method
+  }
+  
+  # estimate nnls weights if not provided
+  if (is.null(w)) w = rep(1 / ncol(object$fit_cv), ncol(object$fit_cv))
+  
+  # create matrix to store smoother weights
+  smoother_weights = matrix(0, nrow = nrow(X), ncol = nrow(X))
+  
+  
+  for (i in 1:ncol(cf_mat)) {
+    
+    fold = cf_mat[, i]
+    
+    test_idx = which(fold)
+    train_idx = which(!fold)
+    train_idx_t = which(!fold & subset)
+    
+    # Create mapping from train_idx_t to positions in train_idx
+    train_pos_in_full = match(train_idx_t, train_idx)
+    
+    X_tr = X[train_idx_t, ]
+    Y_tr = Y[train_idx_t]
+    X_te = X[test_idx, ]
+    
+    # Get T-learner smoother weights (test × train&subset)
+    w_array_raw = weights.ensemble_core(object = method_fit[[i]], method = method, X_tr = X_tr, Y_tr = Y_tr, X_te = X_te, quiet)
+    
+    # Pad T-learner weights (to test × full train) and insert raw weights
+    padded_w = array(0, dim = c(length(test_idx), length(train_idx), length(method)))
+    padded_w[, train_pos_in_full, ] = w_array_raw      
+    
+    smoother_weights[fold, !fold] = agg_array(padded_w, w)
+    
+  }
+  
+  return(smoother_weights)
+  
+}
+
+
+#' Smoother weights from cross-validated ensemble learner
+#'
+#' @description
+#' \code{\link{weights.ensemble}} extract ensemble smoother weights for some
+#' (new) covariate matrix based on a fitted and cross-validated ensemble model from
+#' \code{\link{ensemble}}.
+#'
+#' @param object Trained ensemble object from \code{\link{ensemble}}
+#' @param method List of raw methods built via \code{\link{create_method}}
+#' @param X Covariate matrix of training sample
+#' @param Y Vector of outcomes of training sample
+#' @param Xnew Covariate matrix of test sample
+#' @param quiet If FALSE, method that is currently computed is printed into the
+#' console
+#' @param ... Ignore unused arguments
+#'
+#' @return Matrix of dimension \code{nrow(Xnew)} X \code{nrow(X)} containing
+#' ensemble smoother weights.
+#'
+#' @export
+#'
+#' @method weights ensemble
+#'
+weights.ensemble = function(object,
+                            method,
+                            X, Y, Xnew,
+                            quiet = TRUE,
+                            ...) {
+  
+  if (length(object$method_fit) > 1) {
+    
+    w_array = weights.ensemble_core(object = object$method_fit, method = method, X_tr = X, Y_tr = Y, X_te = Xnew, quiet)
+    smoother_weights = agg_array(w_array, object$nnls_weights)
+    
+  } else if (length(object$method_fit) == 1) {
+    
+    w_array = weights.ensemble_core(object = object$method_fit, method = method, X_tr = X, Y_tr = Y, X_te = Xnew, quiet)
+    smoother_weights = array(w_array[, , 1], dim = dim(w_array)[-3])
+    
+  }
+  
+  return(smoother_weights)
+}
+
+
+#' Ensemble smoother weights
+#'
+#' @description
+#' Extract smoother weights for some (new) covariate matrix based on the fully
+#' trained models of the ensemble model from \code{\link{ensemble_core}}.
+#'
+#' @param object List of fitted methods (from \code{\link{ensemble_core}}
+#' @param method List of raw methods built via \code{\link{create_method}}
+#' @param X_tr Covariate matrix of training sample
+#' @param Y_tr Vector of outcomes of training sample
+#' @param X_te Covariate matrix of test sample
+#' @param quiet If FALSE, method that is currently computed is printed into the
+#' console
+#' @param ... Ignore unused arguments
+#'
+#' @return Returns a three-dimensional array of dimension
+#' \code{nrow(Xnew)} X \code{nrow(X)} X \code{length(method)}
+#' containing the smoother weights that deliver predictions of each method
+#' where each row gives the weight that each training outcome received in the
+#' prediction of the respective test set observation.
+#'
+#' @export
+#'
+#' @method weights ensemble_core
+#'
+weights.ensemble_core = function(object, method,
+                                 X_tr, Y_tr, X_te,
+                                 quiet = TRUE,
+                                 ...) {
+  
+  # initialize 3D array to be filled
+  w_array = array(data = 0, dim = c(nrow(X_te), nrow(X_tr), length(object)))
+  
+  # loop over all trained models
+  for (i in 1:length(object)) {
+    
+    if (isFALSE(quiet)) print(paste0("Smoother weights: ", method[[i]]$method))
+    
+    # extract smoother weights
+    if (is.null(method[[i]]$x_select)) {
+      temp = do.call(paste0("weights.", names(object)[i]), list(object[[i]], X = X_tr, Y = Y_tr, Xnew = X_te))
+    } else {
+      temp = do.call(paste0("weights.", names(object)[i]), list(object[[i]], X = X_tr[, method[[i]]$x_select], Y = Y_tr, Xnew = X_te[, method[[i]]$x_select]))
+    }
+    
+    w_array[, , i] = temp
+    
+  }
+  
+  return(w_array)
+  
 }

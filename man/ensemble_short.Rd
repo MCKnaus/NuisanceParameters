@@ -42,6 +42,11 @@ from each cross-fitting fold to. Only considered, if \code{storeModels = "Disk"}
 
 \item{quiet}{If FALSE, method that is currently computed is printed into the
 console.}
+
+\item{pb}{A progress bar object to track overall computation progress.}
+
+\item{pb_np}{String indicating the current nuisance parameter being
+estimated/predicted (for progress bar updates).}
 }
 \value{
 List object containing:

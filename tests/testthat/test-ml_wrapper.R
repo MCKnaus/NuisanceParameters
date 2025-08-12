@@ -12,66 +12,66 @@ test_that("smoother weights lead to correct prediction of fitted values", {
 
   X = mvtnorm::rmvnorm(n = n, mean = rep(0, p), sigma = cov_mat)
   Xnew = mvtnorm::rmvnorm(n = n_test, mean = rep(0, p), sigma = cov_mat)
-  y = as.vector(X %*% pi + rnorm(n, 0, 1))
+  Y = as.vector(X %*% pi + rnorm(n, 0, 1))
 
   w_rows = rep(1, n_test)
 
   # mean
-  m = mean_fit(x = X, y = y)
+  m = mean_fit(X = X, Y = Y)
   p = predict(m, xnew = Xnew)
   w = weights(m, xnew = Xnew)
-  p_s = as.vector(w %*% y)
+  p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_true(all(w >= 0 & w <= 1))
   expect_equal(p, p_s, tolerance = 1e-9)
 
   # ols
-  m = ols_fit(x = X, y = y)
+  m = ols_fit(X = X, Y = Y)
   p = predict(m, xnew = Xnew)
-  w = weights(m, x = X, xnew = Xnew)
-  p_s = as.vector(w %*% y)
+  w = weights(m, X = X, xnew = Xnew)
+  p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_equal(p, p_s, tolerance = 1e-9)
 
   # ridge
-  m = ridge_fit(x = X, y = y)
+  m = ridge_fit(X = X, Y = Y)
   p = predict(m, xnew = Xnew)
-  w = weights(m, x = X, y = y, xnew = Xnew)
-  p_s = as.vector(w %*% y)
+  w = weights(m, X = X, Y = Y, xnew = Xnew)
+  p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_equal(p, p_s, tolerance = 0.001)
 
   # plasso
-  m = plasso_fit(x = X, y = y)
+  m = plasso_fit(X = X, Y = Y)
   p = predict(m, xnew = Xnew)
   w = weights(m, xnew = Xnew)
-  p_s = as.vector(w %*% y)
+  p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_equal(p, p_s, tolerance = 1e-9)
 
   # random forest
-  m = forest_grf_fit(x = X, y = y)
+  m = forest_grf_fit(X = X, Y = Y)
   p = predict(m, xnew = Xnew)
   w = weights(m, xnew = Xnew)
-  p_s = as.vector(w %*% y)
+  p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_true(all(w >= 0 & w <= 1))
   expect_equal(p, p_s, tolerance = 1e-9)
 
   # knn
   m = knn_fit(arguments = list("k" = 5))
-  p = predict(m, x = X, y = y, xnew = Xnew)
-  w = weights(m, x = X, xnew = Xnew)
-  p_s = as.vector(w %*% y)
+  p = predict(m, X = X, Y = Y, xnew = Xnew)
+  w = weights(m, X = X, xnew = Xnew)
+  p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_true(all(w >= 0 & w <= 1))
   expect_equal(p, p_s, tolerance = 1e-9)
 
   # distributional random forest
-  m = forest_drf_fit(x = X, y = y)
+  m = forest_drf_fit(X = X, Y = Y)
   p = predict(m, xnew = Xnew)
   w = weights(m, xnew = Xnew)
-  p_s = as.vector(w %*% y)
+  p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_true(all(w >= 0 & w <= 1))
   expect_equal(p, p_s, tolerance = 1e-9)
@@ -90,7 +90,7 @@ test_that("knn mickey mouse check", {
     3, 4, 6,
     4, 7, 9
   ), ncol = 3, byrow = TRUE)
-  y = c(1, 3, 1, 3, 1, 9, 3)
+  Y = c(1, 3, 1, 3, 1, 9, 3)
 
   Xnew = matrix(c(
     1, 3, 2,
@@ -105,11 +105,11 @@ test_that("knn mickey mouse check", {
   ) / k
 
   m = knn_fit(arguments = list("k" = k))
-  w = weights(m, x = X, xnew = Xnew)
+  w = weights(m, X = X, xnew = Xnew)
 
   expect_identical(w_exp, w)
 
-  p = predict(m, x = X, y = y, xnew = Xnew)
+  p = predict(m, X = X, Y = Y, xnew = Xnew)
   expect_identical(p, c(1, 3))
 
 })
@@ -129,14 +129,14 @@ test_that("knn weight matrix plausibility check", {
 
   X = mvtnorm::rmvnorm(n = n, mean = rep(0, p), sigma = cov_mat)
   Xnew = mvtnorm::rmvnorm(n = n_test, mean = rep(0, p), sigma = cov_mat)
-  y = X %*% pi + rnorm(n, 0, 1)
+  Y = X %*% pi + rnorm(n, 0, 1)
 
   k = 9
   m = knn_fit(arguments = list("k" = k))
-  p = predict(m, x = X, y = y, xnew = Xnew)
-  expect_true(all(p >= min(y) & p <= max(y)))
+  p = predict(m, X = X, Y = Y, xnew = Xnew)
+  expect_true(all(p >= min(Y) & p <= max(Y)))
 
-  w = weights(m, x = X, xnew = Xnew)
+  w = weights(m, X = X, xnew = Xnew)
   w_vals = unique(as.vector(as.matrix(w[-1])))
   expect_identical(sort(w_vals), c(0, 1/k))
 
@@ -157,13 +157,13 @@ test_that("(rough) equality of plasso and ols prediction solution for clear cut 
 
   X = mvtnorm::rmvnorm(n = n, mean = rep(0, p), sigma = cov_mat)
   Xnew = mvtnorm::rmvnorm(n = n_test, mean = rep(0, p), sigma = cov_mat)
-  y = X %*% pi + rnorm(n, 0, 0.5)
+  Y = X %*% pi + rnorm(n, 0, 0.5)
 
 
-  m_ols = ols_fit(x = X, y = y)
+  m_ols = ols_fit(X = X, Y = Y)
   p_ols = predict(m_ols, xnew = Xnew)
 
-  m_p = plasso_fit(x = X, y = y)
+  m_p = plasso_fit(X = X, Y = Y)
   p_p = predict(m_p, xnew = Xnew)
 
   expect_equal(p_ols, p_p, tolerance = 0.01)

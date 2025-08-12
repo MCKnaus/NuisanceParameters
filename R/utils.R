@@ -83,7 +83,7 @@ check_cluster_compatibility = function(cl, cf) {
 #' for clusters within the data.
 #' @param d_mat Optional logical matrix of treatment indicators (N x T+1 with T
 #' being the number of treatments).
-#' For example created by \code{\link{prep_w_mat}}.
+#' For example created by \code{\link{prep_indicator_mat}}.
 #' If specified, cross-fitting folds will preserve the treatment ratios from full sample.
 #' However, if cluster vector is provided, d_mat is ignored due to computational
 #' constraints and randomization as well as feasibility issues.
@@ -96,7 +96,7 @@ check_cluster_compatibility = function(cl, cf) {
 #'
 #' @examples
 #' N = 1000
-#' d_mat = prep_w_mat(sample(3, N, replace = TRUE))
+#' d_mat = prep_indicator_mat(sample(3, N, replace = TRUE))
 #' cf_mat = prep_cf_mat(N, cf = 5, d_mat = d_mat)
 #' head(cf_mat)
 #'
@@ -258,20 +258,25 @@ agg_array = function(a, w) {
 #' @param method List of methods built via \code{\link{create_method}} to be used in
 #' ensemble model
 #' @param N Number of observations.
-#' @param learner Vector of characters indicating whether to use S or T learner
-#' or both.
 #'
 #' @return A matrix of NAs with dimensions \code{N} x \code{length(method)}
 #'
 #' @keywords internal
 #'
-make_fit_cv = function(method, N) {
-
-  fit_cv = matrix(NA, N, length(method))
-  colnames(fit_cv) = sprintf("method%s", seq(1:length(method)))
+make_fit_cv = function(method, N, Y) {
   
-  for (i in 1:length(method)) {
-    if (!is.null(names(method))) colnames(fit_cv)[i] = names(method)[i]
+  # Check: is multivalued propensity score being estimated?
+  is_multinomial = !is.null(method[[1]]$multinomial)
+  
+  if (is_multinomial) {
+    # Create a 3D array (N observations × M methods × K classes)
+    fit_cv = array(NA, dim = c(N, length(method), length(unique(Y))))
+    dimnames(fit_cv) = list(NULL, names(method), 0:(length(unique(Y))-1))
+  } else {
+    # Create a matrix (N observations × M methods)
+    fit_cv = matrix(NA, N, length(method))
+    colnames(fit_cv) = sprintf("method%s", seq(1:length(method)))
+    for (i in 1:length(method)) {if (!is.null(names(method))) colnames(fit_cv)[i] = names(method)[i]}
   }
 
   return(fit_cv)
@@ -323,7 +328,7 @@ update_progress <- function(pb, pb_np, pb_cf, pb_cv, task, method) {
   }
   
   pb$tick(tokens = list(
-    nuisance = format_center(pb_np, 12),
+    nuisance = format_center(pb_np, 8),
     pb_cf    = format_center(pb_cf, 2),
     pb_cv    = format_center(pb_cv, 2), 
     task     = format_center(task, 7),
@@ -332,26 +337,54 @@ update_progress <- function(pb, pb_np, pb_cf, pb_cv, task, method) {
 }
 
 
-#' Format ensemble weights list for standard stacking
-#'
-#' @description 
-#' Internal helper function that processes ensemble weights into a standardized 
-#' format for cross-validated stacking (when cv > 1).
+#' Format ensemble weights for both standard and cross-validated stacking
 #'
 #' @param ens_weights List of ensemble weights to be formatted
-#' 
-#' @return A list of data frames with formatted weights, where each element 
-#'         corresponds to a NuPa (Y.hat.z0/Y.hat.z1) and contains fold-specific weights
-#' 
+#' @param cv Integer indicating cross-validation folds
+#' @return A data.frame (cv=1) or list of data.frames (cv>1) with formatted weights
 #' @keywords internal
-format_weights <- function(ens_weights) {
-  weight_list <- list()
-  for (NuPa in names(ens_weights)) {
-    weight_matrix <- do.call(cbind, lapply(ens_weights[[NuPa]], unlist))
-    colnames(weight_matrix) <- paste0("fold", seq_len(ncol(weight_matrix)))
-    weight_list[[NuPa]] <- as.data.frame(weight_matrix)
+format_weights <- function(ens_weights, cv = 1) {
+  if (cv == 1) {
+    # Short stacking: Single matrix with all learners
+    all_methods <- unique(unlist(lapply(ens_weights, names)))
+    ens_weights_mat <- matrix(NA, 
+                              nrow = length(all_methods), 
+                              ncol = length(ens_weights),
+                              dimnames = list(all_methods, names(ens_weights)))
+    
+    for (param in names(ens_weights)) {
+      ens_weights_mat[names(ens_weights[[param]]), param] <- ens_weights[[param]]
+    }
+    
+    out <- as.data.frame(ens_weights_mat)
+    out[is.na(out)] <- 0
+    class(out) <- c("ens_weights_short", "data.frame")
+    
+  } else {
+    # Standard stacking: List of fold-specific weights
+    out <- list()
+    
+    for (NuPa in names(ens_weights)) {
+      all_methods <- names(ens_weights[[NuPa]][[1]])
+      
+      fold_weights <- matrix(0, 
+                             nrow = length(all_methods), 
+                             ncol = length(ens_weights[[NuPa]]),
+                             dimnames = list(all_methods, NULL))
+      
+      # Fill in weights for each fold
+      for (i in seq_along(ens_weights[[NuPa]])) {
+        fold_weights[, i] <- ens_weights[[NuPa]][[i]]
+      }
+      
+      colnames(fold_weights) <- paste0("fold", seq_len(ncol(fold_weights)))
+      out[[NuPa]] <- as.data.frame(fold_weights)
+    }
+    
+    class(out) <- c("ens_weights_stand", "list")
   }
-  return(weight_list)
+  
+  return(out)
 }
 
 
@@ -369,6 +402,8 @@ format_weights <- function(ens_weights) {
 #' @return A ggplot object showing weights by fold and learner
 #'
 #' @export
+#' 
+#' @importFrom grDevices colorRampPalette
 #'
 #' @method plot ens_weights_stand
 plot.ens_weights_stand <- function(x, 
@@ -376,49 +411,44 @@ plot.ens_weights_stand <- function(x,
                                    base_size = 12, 
                                    ...) {
   
-  palette <- c("#FB8072", "#80B1D3",  "#FFED6F", "#BEBADA", 
-               "#8DD3C7", "#FDB462", "#B3DE69", "#BC80BD")
-
-  # Prepare plotting function (returns plot without legend)
-  create_weight_plot <- function(model_name, model_data) {
-    
+  # Dynamic palette generation
+  get_palette <- function(n) {
+    palette <- c("#FB8072", "#80B1D3", "#FFED6F", "#BEBADA", 
+                 "#8DD3C7", "#FDB462", "#B3DE69", "#BC80BD",
+                 "#FCCDE5", "#D9D9D9", "#FFFFB3", "#8DA0CB")
+    if (n > length(palette)) {
+      palette <- grDevices::colorRampPalette(palette)(n)
+    }
+    return(palette[1:n])
+  }
+  
+  prepare_data <- function(model_name, model_data) {
     df <- as.data.frame(t(model_data))
     df$fold <- rownames(df)
     melted <- reshape2::melt(df, id.vars = "fold")
-    
-    ggplot2::ggplot(melted, ggplot2::aes(x = fold, y = value, fill = variable)) +
-      ggplot2::geom_col(position = "stack", width = 0.7) +
-      ggplot2::scale_fill_manual(values = palette) +
-      ggplot2::scale_y_continuous(limits = c(0, 1.01), expand = c(0, 0)) +
-      ggplot2::labs(title = model_name, x = NULL, y = NULL) +
-      ggplot2::theme_minimal(base_size = base_size * 0.75) +
-      ggplot2::theme(
-        axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = base_size * 0.6),
-        plot.margin = ggplot2::unit(c(2, 2, 2, 2), "pt"), legend.position = "none"
-      )
+    melted$model <- model_name
+    return(melted)
   }
   
-  # Generate all plots (without legends)
-  plot_list <- mapply(create_weight_plot, names(x), x, SIMPLIFY = FALSE)
+  plot_data <- do.call(rbind, mapply(prepare_data, names(x), x, SIMPLIFY = FALSE))
   
-  # Extract legend from first plot
-  tmp_plot <- create_weight_plot(names(x)[1], x[[1]]) + 
-    ggplot2::labs(fill = "Method") +
+  all_methods <- unique(plot_data$variable)
+  method_palette <- stats::setNames(get_palette(length(all_methods)), all_methods)
+  
+  p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = fold, y = value, fill = variable)) +
+    ggplot2::geom_col(position = "stack", width = 0.7) +
+    ggplot2::scale_fill_manual(values = method_palette, name = "Method") +
+    ggplot2::scale_y_continuous(limits = c(0, 1.01), expand = c(0, 0)) +
+    ggplot2::facet_wrap(~model, ncol = ncols, scales = "free_x") +
+    ggplot2::labs(x = NULL, y = "Ensemble Weight") +
+    ggplot2::theme_minimal(base_size = base_size) +
     ggplot2::theme(
-      legend.position = "bottom",
-      legend.title = ggplot2::element_text(size = base_size * 0.8),
-      legend.text = ggplot2::element_text(size = base_size * 0.7))
-  
-  n_plots <- length(plot_list)
-  n_rows <- ceiling(n_plots / ncols)
-  
-  # Prevent empty slate printing 
-  pdf(file = nullfile())
-  legend <- gtable::gtable_filter(ggplot2::ggplotGrob(tmp_plot), "guide-box")
-  plots <- gridExtra::arrangeGrob(grobs = plot_list, ncol = ncols, nrow = n_rows, padding = ggplot2::unit(0, "line"))
-  invisible(dev.off())
-  
-  gridExtra::grid.arrange(plots, legend, nrow = 2, heights = c(0.85, 0.15))
+      axis.text.x = ggplot2::element_text(
+      angle = 45, hjust = 0.75, size = base_size * 0.6),
+      axis.text.y = ggplot2::element_text(size = base_size * 0.7),
+      legend.position = "bottom")
+
+  return(p)
 }
 
 
@@ -441,17 +471,333 @@ plot.ens_weights_short <- function(x,
                                    base_size = 12, 
                                    ...) {
 
-  palette <- c("#FB8072", "#80B1D3",  "#FFED6F", "#BEBADA", 
-               "#8DD3C7", "#FDB462", "#B3DE69", "#BC80BD")
+  # Dynamic palette generation
+  get_palette <- function(n) {
+    palette <- c("#FB8072", "#80B1D3", "#FFED6F", "#BEBADA", 
+                 "#8DD3C7", "#FDB462", "#B3DE69", "#BC80BD",
+                 "#FCCDE5", "#D9D9D9", "#FFFFB3", "#8DA0CB")
+    if (n > length(palette)) {
+      palette <- grDevices::colorRampPalette(palette)(n)
+    }
+    return(palette[1:n])
+  }
+  
   
   df <- as.data.frame(x)
   df$method <- rownames(df)
   df_long <- reshape2::melt(df, id.vars = "method")
   
+  all_methods <- unique(df$method)
+  method_palette <- stats::setNames(get_palette(length(all_methods)), all_methods)
+  
   ggplot2::ggplot(df_long, ggplot2::aes(x = variable, y = value, fill = method)) +
     ggplot2::geom_col(position = "stack", width = 0.7) +
-    ggplot2::scale_fill_manual(values = palette) +
+    ggplot2::scale_fill_manual(values = method_palette, name = "Method") +
     ggplot2::labs(x = "Nuisance Parameter", y = "Weight", fill = "Method") +
     ggplot2::theme_minimal(base_size = base_size) +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+}
+
+
+#' Setup a Progress Bar
+#' 
+#' Creates a customized progress bar to track progress.
+#'
+#' @param NuPa Character vector specifying the nuisance parameters to estimate.
+#'             Currently supported options: 
+#'             \code{c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat")}
+#' @param n_d Integer, number of unique treatment values.
+#' @param n_z Integer, number of unique instrument values. 
+#' @param cf_folds Integer, number of cross-fitting folds.
+#' @param cv_folds Integer, number of cross-validation folds.
+#' @param models List of methods to use for \code{\link{ensemble}} estimation.
+#'               Methods can be created using \code{\link{create_method}}.
+#'
+#' @return A progress bar object from the \code{progress} package, configured with:
+#' \itemize{
+#'   \item Custom format showing percentage, counts, nuisance parameter status
+#'   \item Dynamic tokens for cross-fitting (pb_cf) and cross-validation (pb_cv) folds
+#'   \item Task and model information
+#' }
+#'
+#' @seealso \code{\link[progress]{progress_bar}} for the underlying progress bar implementation.
+#' @export
+setup_progress_bar <- function(NuPa, n_d, n_z, cf_folds, cv_folds, models) {
+  
+  count_nested_lists <- function(method, n_d, n_z) {
+    multipliers <- list("Y.hat.d" = n_d, "Y.hat.z" = n_z, "D.hat.z" = n_z)
+    
+    # Calculate weighted counts
+    sum(sapply(names(method), function(key) {
+      base_count <- length(method[[key]])
+      multiplier <- ifelse(key %in% names(multipliers), multipliers[[key]], 1)
+      base_count * multiplier}))
+  }
+  
+  # Final ticks: cf folds × models × fitting/prediction × cv folds
+  total_ticks <- cf_folds * count_nested_lists(method, n_d, n_z) * 2 * if (cv_folds > 1) (cv_folds + 1) else 1 # && length(models) > 1
+  
+  pb <- progress::progress_bar$new(
+    format = "[:bar] :percent | :current/:total | :nuisance | cf =:pb_cf, cv =:pb_cv | :task :model",
+    total = total_ticks, clear = FALSE, width = 80, force = TRUE)
+  return(pb)
+}
+
+
+#' Method creation for ensemble
+#'
+#' @description
+#' Creates the methods to be used in the subsequent \code{\link{ensemble}} model.
+#'
+#' @param method Choose method from \code{c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf")}.
+#' To be continued.
+#' @param x_select Optional logical vector of length equal to the number of
+#' columns of the covariate matrix indicating which variables should be used by
+#' this method. E.g. tree-based methods usually should not be provided with the
+#' interactions that Lasso is using.
+#' @param arguments Optional list containing the additional arguments that should be
+#' passed to the underlying method.
+#' @param multinomial Optional logical variable specifying whether a multiclass propensity score is being estimated.
+#' @param name Optional string naming the method.
+#'
+#' @return List object that can be passed as input to \code{\link{ensemble}}
+#'
+#' @export
+#'
+#' @examples
+#' # create list of method methods for ensemble
+#' method = list(
+#'  "ols" = create_method("ols"),
+#'  "forest_grf" = create_method("forest_grf"),
+#'  "knn" = create_method("knn", arguments = list("k" = 3))
+#' )
+#'
+create_method = function(
+    method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf", "xgboost", "rlasso",
+               "logit", "logit_nnet", "nb_gaussian", "nb_bernoulli", "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop"),
+    x_select = NULL,
+    multinomial = NULL,
+    arguments = list(),
+    name = NULL) {
+  
+  # sanity checks
+  method = match.arg(method)
+  
+  # check if other inputs are valid
+  if (!(is.null(arguments) | is.list(arguments))) stop("Provide either NULL or list for arguments.")
+  if (!(is.null(x_select) | is.logical(x_select))) stop("Provide either NULL or logical for x_select.")
+  if (!((is.character(name) & length(name) == 1) | is.null(name))) stop("Provide single string to name method.")
+  if (!is.null(multinomial)) {multinomial <- match.arg(multinomial, choices = c("one-vs-one", "one-vs-rest", "multiclass"))
+  if (multinomial == "multiclass" && method %in% c("xgboost_prop", "svm")) {stop("These methods do not support multiclass estimation: xgboost_prop, svm. ", "Please set multinomial to either 'one-vs-one' or 'one-vs-rest'.")}}
+  
+  list(method = method, multinomial = multinomial, arguments = arguments, x_select = x_select, name = name)
+}
+
+
+#' Method creation for ensemble (extended version)
+#'
+#' @description
+#' Creates the methods to be used in the subsequent \code{\link{ensemble}} model,
+#' allowing for either a simple method list or nuisance-parameter-specific method lists.
+#'
+#' @param method Either:
+#'              1. A list of methods (like in create_method) that will be used for all nuisance parameters, or
+#'              2. A named list where each name corresponds to a nuisance parameter and contains a list of methods for that parameter
+#' @param NuPa Character vector of nuisance parameters to be estimated
+#' @param K Number of unique treatment statuses (default = 2, binary treatment)
+#'
+#' @return Nested list object organized by nuisance parameter that can be passed as input to \code{\link{ensemble}}
+#'
+#' @keywords internal
+#'
+create_final_method = function(method, NuPa, K) {
+  
+  available_NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat")
+  multiclass_method = c("logit", "logit_nnet", "nb_gaussian", "nb_bernoulli", "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop")
+  base_method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf", "xgboost", "rlasso")
+  
+  # A function to extract method types from a method list
+  get_method_types = function(method_list) {sapply(method_list, function(x) x$method)}
+  
+  # Check if a "one for all" method list
+  is_simple_list <- !any(names(method) %in% available_NuPa)
+  
+  
+  if (is_simple_list) {
+    # Case 1: "One for all" method list - replicate for all NuPa after filtering
+    result <- stats::setNames(vector("list", length(NuPa)), NuPa)
+    
+    # Which NuPa need filtering
+    filter_multiclass <- NuPa[(NuPa %in% c("Y.hat", "Y.hat.d", "Y.hat.z", "Z.hat")) | (NuPa %in% c("D.hat", "D.hat.z") & K == 2)]
+    filter_base <- NuPa[NuPa %in% c("D.hat", "D.hat.z") & K > 2]
+    
+    # If any methods need to be removed
+    method_types <- get_method_types(method)
+    multiclass_in_method <- any(method_types %in% multiclass_method)
+    base_in_method <- any(method_types %in% base_method)
+    
+    if (length(filter_multiclass) > 0 && multiclass_in_method) {
+      message("Multiclass classification methods are incompatible with the NuPa: ", paste(filter_multiclass, collapse = ", "), ", they will be omitted from methods")
+    }
+    if (length(filter_base) > 0 && base_in_method) {
+      message("Base methods are incompatible with the NuPa: ", paste(filter_base, collapse = ", "), ", they will be omitted from methods")
+    }
+    
+    # Apply filters
+    for (nupa in NuPa) {
+      if (nupa %in% filter_multiclass) {
+        result[[nupa]] <- method[!method_types %in% multiclass_method]
+      } else if (nupa %in% filter_base) {
+        result[[nupa]] <- method[!method_types %in% base_method]
+      } else {
+        result[[nupa]] <- method
+      }
+    }
+    
+    
+  } else {
+    # Case 2: NuPa-specific method list
+    result <- stats::setNames(vector("list", length(NuPa)), NuPa)
+    multiclass_nupas = base_nupas = character(0)
+
+    for (nupa in intersect(names(method), NuPa)) {
+      
+      # Get method types for this NuPa
+      method_types <- get_method_types(method[[nupa]])
+      
+      # Multiclass methods to remove
+      if ((nupa %in% c("Y.hat", "Y.hat.d", "Y.hat.z", "Z.hat")) || (nupa %in% c("D.hat", "D.hat.z") && K == 2)) {
+        if (any(method_types %in% multiclass_method)) {multiclass_nupas <- c(multiclass_nupas, nupa)}
+        
+      }
+      # Base methods to remove
+      if (nupa %in% c("D.hat", "D.hat.z") && K > 2) {
+        if (any(method_types %in% base_method)) {base_nupas <- c(base_method, nupa)}
+      }
+    }
+    
+    if (length(multiclass_nupas) > 0) {
+      message("Multiclass classification methods are incompatible with the NuPa: ", paste(unique(multiclass_nupas), collapse = ", "), ", they will be omitted from methods")
+    }
+    if (length(base_nupas) > 0) {
+      message("Base methods are incompatible with the NuPa: ", paste(unique(base_nupas), collapse = ", "), ", they will be omitted from methods")
+    }
+  
+    # Apply filters
+    for (nupa in intersect(names(method), NuPa)) {
+      method_types <- get_method_types(method[[nupa]])
+      
+      if ((nupa %in% c("Y.hat", "Y.hat.d", "Y.hat.z", "Z.hat")) || 
+          (nupa %in% c("D.hat", "D.hat.z") && K == 2)) {
+        result[[nupa]] <- method[[nupa]][!method_types %in% multiclass_method]
+      } else if (nupa %in% c("D.hat", "D.hat.z") && K > 2) {
+        result[[nupa]] <- method[[nupa]][!method_types %in% base_method]
+      } else {
+        result[[nupa]] <- method[[nupa]]
+      }
+    }
+  }
+  
+  empty_nupas <- names(which(lengths(result) == 0))
+  if (length(empty_nupas) > 0) {
+    stop(paste("The following nuisance parameters have empty method lists:", paste(empty_nupas, collapse = ", "),"\nPlease provide at least one valid method for each NuPa"))
+  }
+  
+  return(result)
+}
+
+
+#' Add or Replace Nuisance Parameters in a NuisanceParameters Object
+#'
+#' This function allows you to add or replace nuisance parameters and their corresponding models
+#' from one NuisanceParameters object to another.
+#'
+#' @param np A NuisanceParameters object (the original object to be modified)
+#' @param np_new A NuisanceParameters object (the source of new parameters)
+#' @param NuPa Character vector specifying which nuisance parameters to add/replace.
+#'             If NULL (default), all available parameters from np_new will be used.
+#' @param replace Logical indicating whether to replace existing parameters (TRUE)
+#'                or only fill empty slots (FALSE, default)
+#'
+#' @return A modified NuisanceParameters object with updated nuisance parameters and models
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Add/replace specific parameters
+#' np_updated <- add_nupa(np_old, np_new, NuPa = c("Y.hat", "D.hat"), replace = TRUE)
+#' 
+#' # Add all available parameters without replacing existing ones
+#' np_updated <- add_nupa(np_old, np_new)
+#' }
+add_nupa <- function(np, np_new, NuPa = NULL, replace = FALSE) {
+  # Check if both objects are of class NuisanceParameters
+  if (!inherits(np, "NuisanceParameters") || !inherits(np_new, "NuisanceParameters")) {
+    stop("Both np and np_new must be of class 'NuisanceParameters' (created by nuisance_parameters function)")
+  }
+  
+  # Check if sample size (N) is identical
+  if (np$numbers$N != np_new$numbers$N) {
+    stop("The sample size differs between np (", np$numbers$N, ") and np_new (", np_new$numbers$N, ")")
+  }
+  
+  # If NuPa not specified, use all available parameters from np_new
+  if (is.null(NuPa)) {
+    NuPa <- names(np_new$nuisance_parameters)[sapply(np_new$nuisance_parameters, 
+                                                     function(x) !is.character(x) || 
+                                                       !grepl("not specified", x))]
+  }
+  
+  # Verify specified NuPa exist in np_new
+  invalid_params <- setdiff(NuPa, names(np_new$nuisance_parameters))
+  if (length(invalid_params) > 0) {
+    stop("The following parameters are not present in np_new: ", 
+         paste(invalid_params, collapse = ", "))
+  }
+  
+  ## Core
+  # Process each specified parameter
+  for (param in NuPa) {
+    # Check if parameter is actually estimated in np_new
+    if (is.character(np_new$nuisance_parameters[[param]]) && 
+        grepl("not specified", np_new$nuisance_parameters[[param]])) {
+      warning("Parameter '", param, "' is not specified in np_new and won't be added")
+      next
+    }
+    
+    # Check if we should replace or only fill empty slots
+    if (replace || 
+        (is.character(np$nuisance_parameters[[param]]) && 
+         grepl("not specified", np$nuisance_parameters[[param]]))) {
+      
+      # Add the nuisance parameter
+      np$nuisance_parameters[[param]] <- np_new$nuisance_parameters[[param]]
+      
+      # Add the corresponding model if it exists
+      model_name <- paste0(param, "_m")
+      if (model_name %in% names(np_new$models)) {
+        np$models[[model_name]] <- np_new$models[[model_name]]
+      }
+    }
+  }
+  
+  # Return the modified object
+  return(np)
+}
+
+
+#' One-Hot Encoding (Internal)
+#' 
+#' Convert categorical vector to one-hot encoded matrix.
+#' @param x A factor or character vector.
+#' @return A numeric matrix with one column per unique category.
+#' @keywords internal
+#' @noRd
+one_hot <- function(x) {
+  ux <- unique(x)
+  out <- matrix(0L, nrow = length(x), ncol = length(ux))
+  out[cbind(seq_along(x), match(x, ux))] <- 1L
+  colnames(out) <- ux
+  out
 }

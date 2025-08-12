@@ -42,6 +42,11 @@ models for future processing (default "No").}
 Optionally, weights as well.}
 
 \item{quiet}{If FALSE, progress output is printed into console.}
+
+\item{pb}{A progress bar object to track overall computation progress.}
+
+\item{pb_np}{String indicating the current nuisance parameter being
+estimated/predicted (for progress bar updates).}
 }
 \value{
 Returns a vector of length N containing nuisance parameters.

@@ -1,65 +1,29 @@
-#' Double ML estimators with outcome smoothers
-#'
-#' Existing Double ML implementations are too general to easily extract smoother matrices
-#' required to be compatible with the get_forest_weights() method. This motivates yet 
-#' another Double ML implementation.
+#' Double ML estimators (binary treatments only)
+#' 
+#' @description
+#' For test use only, copied from \code{OutcomeWeights} package
 #'
 #' @param Y Numeric vector containing the outcome variable.
-#' @param W Optional binary treatment variable.
+#' @param D Optional binary treatment variable.
 #' @param X Covariate matrix with N rows and p columns.
 #' @param Z Optional binary instrumental variable.
+#' @param NuPa.hat a list of estimated nuisance parameters from \code{\link{nuisance_parameters}}
 #' @param estimators String (vector) indicating which estimators should be run.
 #' Current menu: c("PLR","PLR_IV","AIPW_ATE","Wald_AIPW")
-#' @param smoother Indicate which smoother to be used for nuisance parameter estimation.
-#' Currently only available option \code{"honest_forest"} from the \pkg{grf} package.
-#' @param n_cf_folds Number of cross-fitting folds. Default is 5.
-#' @param n_reps Number of repetitions of cross-fitting. Default is 1.
-#' @param ... Options to be passed to smoothers.
 #' 
-#' @return A list with three entries:
-#' - \code{results}: a list storing the results, influence functions, and score functions of each estimator
-#' - \code{NuPa.hat}: a list storing the estimated nuisance parameters and the outcome smoother matrices
-#' 
-#' @examples
-#' \donttest{
-#' # Sample from DGP borrowed from grf documentation
-#' n = 200
-#' p = 5
-#' X = matrix(rbinom(n * p, 1, 0.5), n, p)
-#' Z = rbinom(n, 1, 0.5)
-#' Q = rbinom(n, 1, 0.5)
-#' W = Q * Z
-#' tau =  X[, 1] / 2
-#' Y = rowSums(X[, 1:3]) + tau * W + Q + rnorm(n)
-#' 
-#' # Run outcome regression and extract smoother matrix
-#' # Run DML and look at results
-#' dml = dml_with_smoother(Y,W,X,Z)
-#' results_dml = summary(dml)
-#' plot(dml)
-#' 
-#' # Get weights
-#' omega_dml = get_outcome_weights(dml)
-#' 
-#' # Observe that they perfectly replicate the original estimates
-#' all.equal(as.numeric(omega_dml$omega %*% Y), 
-#'           as.numeric(as.numeric(results_dml[,1])))
-#'
-#' # The weights can then be passed to the cobalt package for example.
+#' @return An object of class `dml_with_smoother` containing:
+#' \itemize{
+#'   \item \code{results} - A list of estimated target parameters (PLR, PLR_IV, AIPW_ATE, Wald_AIPW)
+#'   \item \code{NuPa.hat} - A list of input nuisance parameters
+#'   \item \code{data} - Input data (Y, D, Z, X)
+#'   \item \code{numbers} - Sample information (N, n_estimators)
 #' }
-#' 
-#' @references 
-#' Chernozhukov, V., Chetverikov, W., Demirer, M., Duflo, E., Hansen, C., Newey, W., & Robins, J. (2018). 
-#' Double/debiased machine learning for treatment and structural parameters. The Econometrics Journal, 21(1), C1-C68.
-#'     
-#' Knaus, M. C. (2024). Treatment effect estimators as weighted outcomes, \url{https://arxiv.org/abs/2411.11559}.
-#'      
 #' @export
 #' 
 MLeffect = function(Y,D,X,Z=NULL,
                     NuPa.hat,
-                    estimators = c("PLR","PLR_IV","AIPW_ATE","Wald_AIPW"),
-                    ...) {
+                    estimators = c("PLR","PLR_IV","AIPW_ATE","Wald_AIPW")
+                    ) {
   
   ## Sanity checks
   supported_estimators = c("PLR","PLR_IV","AIPW_ATE","Wald_AIPW")
@@ -162,7 +126,6 @@ MLeffect = function(Y,D,X,Z=NULL,
 #' psi.a in the second, and psi.b in the third column
 #'
 #' @keywords internal
-#' @noRd
 #'
 dml_inference = function(psi.a, psi.b) {
   N = length(psi.a)  # Use length() instead of nrow() since inputs are vectors
@@ -178,9 +141,9 @@ dml_inference = function(psi.a, psi.b) {
   theta = -sum(psi.b) / sum(psi.a)
   psi = theta * psi.a + psi.b
   IF[,1] = -psi / mean(psi.a)
-  se = sqrt(var(IF[,1]) / N)
+  se = sqrt(stats::var(IF[,1]) / N)
   t = theta / se
-  p = 2 * pt(abs(t), N, lower.tail = FALSE)
+  p = 2 * stats::pt(abs(t), N, lower.tail = FALSE)
   TaPa[1,] = c(theta, se, t, p)
   score[1,,] = cbind(psi, psi.a, psi.b)
   

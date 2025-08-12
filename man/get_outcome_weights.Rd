@@ -7,7 +7,8 @@
 get_outcome_weights(np_object, NuPa, quiet = TRUE, subset = NULL, ...)
 }
 \arguments{
-\item{np_object}{Stacked ensemble learner from \code{\link{ensemble_short}} or \code{\link{ensemble}}.}
+\item{np_object}{A \code{NuisanceParameters} object created by 
+\code{\link{nuisance_parameters}} function}
 
 \item{NuPa}{String vector specifying which nuisance parameters to extract smoother matrices for.}
 
@@ -17,23 +18,7 @@ console.}
 \item{subset}{Logical vector indicating which observations to use for determining
 ensemble weights. If not provided, all observations are used.}
 
-\item{...}{Ignore unused arguments}
-
-\item{method}{List of models by \code{\link{create_method}} that was used as
-iobjectut for \code{\link{ensemble_short}} or \code{\link{ensemble}}.}
-
-\item{X}{Covariate matrix of training sample.}
-
-\item{Y}{Vector of outcomes of training sample.}
-
-\item{d_mat}{Logical matrix of treatment indicators (N X T+1). For example created by \code{\link{prep_w_mat}}.}
-
-\item{z_mat}{Logical matrix of instrument indicators (N X T+1). For example created by \code{\link{prep_w_mat}}.}
-
-\item{cv}{Number of cross-validation folds when estimating ensemble model.}
-
-\item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
-(for example created by \code{\link{prep_cf_mat}}).}
+\item{...}{Additional arguments}
 }
 \value{
 Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing

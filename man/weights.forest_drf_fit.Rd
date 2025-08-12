@@ -7,12 +7,12 @@
 \method{weights}{forest_drf_fit}(forest_drf_fit, Xnew = NULL, ...)
 }
 \arguments{
+\item{forest_drf_fit}{Output of \code{\link{forest_drf_fit}}}
+
 \item{Xnew}{Covariate matrix of test sample.
 If not provided, prediction is done for the training sample.}
 
 \item{...}{Ignore unused arguments}
-
-\item{ridge_fit}{Output of \code{\link{forest_drf_fit}}}
 }
 \value{
 Matrix of smoother weights.

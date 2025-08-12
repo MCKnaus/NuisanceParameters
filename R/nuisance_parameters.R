@@ -12,7 +12,7 @@
 #' @param Z Numeric vector containing the instrument variable.
 #' @param X Covariate matrix.
 #' @param cf Number of cross-fitting folds (default: 5).
-#' @param cl Optional vector of cluster variables if cross-fitting should account
+#' @param cluster Optional vector of cluster variables if cross-fitting should account
 #'           for clusters within the data.
 #' @param stratify Logical. If \code{TRUE}, cross-fitting folds will preserve the
 #'                 treatment ratios from the full sample. Note: If cluster vector
@@ -37,11 +37,11 @@
 #'
 #' @export
 nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.hat.z","Z.hat"),
-                               X, Y, D, Z,
+                               X, Y = NULL, D = NULL, Z = NULL,
                                method,
                                cluster = NULL,
                                stratify = FALSE,
-                               cf, stacking,
+                               cf, cf_mat = NULL, stacking,
                                storeModels = c("No", "Memory", "Disk"),
                                path = NULL,
                                quiet = TRUE) {
@@ -78,10 +78,12 @@ nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.h
 
   ## Preps
   N = nrow(X)
-  d_mat = prep_indicator_mat(D)
-  z_mat = prep_indicator_mat(Z)
-  cf_mat = prep_cf_mat(N, cf = cf, d_mat = if (stratify) d_mat else NULL, cluster = cluster)
+  K <- length(unique(D))
+  d_mat <- if (!is.null(D)) prep_indicator_mat(D) else NULL
+  z_mat <- if (!is.null(Z)) prep_indicator_mat(Z) else NULL
+  if (is.null(cf_mat)) {cf_mat <- prep_cf_mat(N, cf = cf, d_mat = if (stratify) d_mat else NULL, cluster = cluster) }
 
+  
   if (isFALSE(quiet)) which_stacking(cv)
   ens_weights <- list()
   
@@ -98,129 +100,114 @@ nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.h
   if ("Y.hat.d" %in% NuPa) {Y.hat.d = matrix(NA, nrow(d_mat), ncol(d_mat)); Y.hat.d_m <- vector("list", ncol(d_mat))}
   if ("Y.hat.z" %in% NuPa) {Y.hat.z = matrix(NA, nrow(z_mat), ncol(z_mat)); Y.hat.z_m <- vector("list", ncol(z_mat))}
   if ("D.hat" %in% NuPa) D.hat = matrix(NA, nrow(d_mat), ncol(d_mat)-1)
-  if ("D.hat.z" %in% NuPa) D.hat.z = matrix(NA, nrow(z_mat), ncol(z_mat))
+  if ("D.hat.z" %in% NuPa) {D.hat.z <- if (K > 2) {array(NA, dim = c(nrow(z_mat), K, ncol(z_mat)))} else {matrix(NA, nrow(z_mat), ncol(z_mat), dimnames = dimnames(z_mat))}}
   if ("Z.hat" %in% NuPa) Z.hat = matrix(NA, nrow(z_mat), ncol(z_mat)-1)
   
   if ("Y.hat.d" %in% NuPa) colnames(Y.hat.d) = colnames(d_mat)
   if ("Y.hat.z" %in% NuPa) colnames(Y.hat.z) = colnames(z_mat)
-  if ("D.hat.z" %in% NuPa) colnames(D.hat.z) = colnames(z_mat)
+  if ("D.hat.z" %in% NuPa) {if (K > 2) {dimnames(D.hat.z) <- list(NULL, paste0("D", seq(K)-1), colnames(z_mat))} else {colnames(D.hat.z) <- colnames(z_mat)}}
   
+  ## Process methods 
+  method <- create_final_method(method, NuPa, K = K)
   
   ## Progress bar
-  setup_progress_bar <- function(NuPa, n_d, n_z, cf_folds, cv_folds, models) {
-    
-    # Base ticks for each nuisance parameter
-    base_ticks <- c("Y.hat.d"=n_d,"Y.hat.z"=n_z,"D.hat.z"=n_z,"Y.hat"=1,"D.hat"=1,"Z.hat"= 1)
-    total_ticks <- sum(base_ticks[names(base_ticks) %in% NuPa])
-    
-    # Final ticks: cf folds × models × fitting/prediction × cv folds
-    total_ticks <- total_ticks * cf_folds * length(models) * 2 * if (cv_folds > 1 && length(models) > 1) (cv_folds + 1) else 1
-    
-    pb <- progress::progress_bar$new(
-      format = "[:bar] :percent | :current/:total | :nuisance | cf =:pb_cf, cv =:pb_cv | :task :model",
-      total = total_ticks, clear = TRUE, width = 80, force = TRUE)
-    return(pb)
-    }
-  
-  pb <- if (isFALSE(quiet)) {setup_progress_bar(NuPa, ncol(d_mat), ncol(z_mat), ncol(cf_mat), cv, method)} else {NULL}
+  pb <- if (isFALSE(quiet)) {setup_progress_bar(NuPa=NuPa, n_d=ncol(d_mat), n_z=ncol(z_mat), cf_folds=cf+5, cv_folds=cv, models=method)} else {NULL}
 
 
   ######
   # Outcome NuPa
   if ("Y.hat.d" %in% NuPa) {
+    nupa <- "Y.hat.d"
     
     for (i in seq_len(ncol(d_mat))) {
-      pb_np <- paste0("Y.hat.d, d=", i-1)
+      pb_np <- paste0(nupa, i-1)
       
       temp <- nuisance_cf(
-        method = method, Y = Y, X = X, cf_mat = cf_mat, cv = cv, subset = d_mat[, i],
+        method = method[[nupa]], Y = Y, X = X, cf_mat = cf_mat, cv = cv, subset = d_mat[, i],
         storeModels = "Memory", path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
       
       Y.hat.d[, i] <- temp$np
       Y.hat.d_m[[i]] <- temp$models
-      ens_weights[[paste0("Y.hat.d", i-1)]] <- temp$ens_weights
+      ens_weights[[pb_np]] <- temp$ens_weights
     }
   }
 
   if ("Y.hat.z" %in% NuPa) {
+    nupa <- "Y.hat.z"
     
     for (i in seq_len(ncol(z_mat))) {
-      pb_np <- paste0("Y.hat.z, z=", i-1)
+      pb_np <- paste0(nupa, i-1)
       
       temp <- nuisance_cf(
-        method = method, Y = Y, X = X, cf_mat = cf_mat, cv = cv, subset = z_mat[, i],
+        method = method[[nupa]], Y = Y, X = X, cf_mat = cf_mat, cv = cv, subset = z_mat[, i],
         storeModels = "Memory", path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
       
       Y.hat.z[, i] <- temp$np
       Y.hat.z_m[[i]] <- temp$models
-      ens_weights[[paste0("Y.hat.z", i-1)]] <- temp$ens_weights
+      ens_weights[[pb_np]] <- temp$ens_weights
     }
   }
   
   if ("Y.hat" %in% NuPa) {
-    pb_np <- "Y.hat"
+    nupa = pb_np <- "Y.hat"
     
     temp <- nuisance_cf(
-      method = method, Y = Y, X = X, cf_mat = cf_mat, cv = cv, subset = NULL,
+      method = method[[nupa]], Y = Y, X = X, cf_mat = cf_mat, cv = cv, subset = NULL,
       storeModels = "Memory", path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
     
     Y.hat <- temp$np
     Y.hat_m <- temp$models
-    ens_weights[["Y.hat"]] <- temp$ens_weights
+    ens_weights[[pb_np]] <- temp$ens_weights
   }
   
   
   ######
   # Treatment NuPa
   if ("D.hat.z" %in% NuPa) {
+    nupa <- "D.hat.z"
     
     for (i in seq_len(ncol(z_mat))) {
-      pb_np <- paste0("D.hat.z, z=", i-1)
+      pb_np <- paste0(nupa, i-1)
       
       temp <- nuisance_cf(
-        method = method, Y = D, X = X, cf_mat = cf_mat, cv = cv, subset = z_mat[, i],
+        method = method[[nupa]], Y = D, X = X, cf_mat = cf_mat, cv = cv, subset = z_mat[, i],
         storeModels = "No", path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
       
-      D.hat.z[, i] <- temp$np
-      ens_weights[[paste0("D.hat.z", i-1)]] <- temp$ens_weights
+      if (K > 2) {D.hat.z[,,i] <- temp$np} else {D.hat.z[,i] <- temp$np}
+      ens_weights[[pb_np]] <- temp$ens_weights
     }
   }
   
   if ("D.hat" %in% NuPa) {
-    pb_np <- "D.hat"
+    nupa = pb_np <- "D.hat"
     
     temp <- nuisance_cf(
-      method = method, Y = D, X = X, cf_mat = cf_mat, cv = cv, subset = NULL, 
+      method = method[[nupa]], Y = D, X = X, cf_mat = cf_mat, cv = cv, subset = NULL, 
       storeModels = "No", path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
     
     D.hat <- temp$np
-    ens_weights[["D.hat"]] <- temp$ens_weights
+    ens_weights[[pb_np]] <- temp$ens_weights
   }
   
 
   ######
   # Instrument NuPa
   if ("Z.hat" %in% NuPa) {
-    pb_np <- "Z.hat"
+    nupa = pb_np <- "Z.hat"
     
     temp <- nuisance_cf(
-      method = method, Y = Z, X = X, cf_mat = cf_mat, cv = cv, subset = NULL, 
+      method = method[[nupa]], Y = Z, X = X, cf_mat = cf_mat, cv = cv, subset = NULL, 
       storeModels = "No", path = NULL, quiet = quiet, pb = pb, pb_np = pb_np)
     
     Z.hat <- temp$np
-    ens_weights[["Z.hat"]] <- temp$ens_weights
+    ens_weights[[pb_np]] <- temp$ens_weights
   }
   
-  # Combine collected ens_weights into a matrix
-  if (cv == 1) {
-    ens_weights_mat <- as.data.frame(lapply(ens_weights, `length<-`, max(lengths(ens_weights))))
-    ens_weights_mat[is.na(ens_weights_mat)] <- 0
-    class(ens_weights_mat) <- c("ens_weights_short", "data.frame")
-  } else {
-    ens_weights_mat <- format_weights(ens_weights)
-    class(ens_weights_mat) = c("ens_weights_stand", "data.frame")
-  }
+  
+  # Combine collected ens_weights
+  ens_weights_mat <- format_weights(ens_weights, cv = cv)
 
+  ## Structure the output
   np_list = list("Y.hat"=Y.hat,"Y.hat.d"=Y.hat.d,"Y.hat.z"=Y.hat.z, 
                  "D.hat"=D.hat,"D.hat.z"=D.hat.z,"Z.hat"=Z.hat)
   
@@ -236,11 +223,14 @@ nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.h
     if (!quiet) message("Models saved to: ", models_path)
   }
   
-  return(list(
+  output = list(
     nuisance_parameters = np_list,
     models = if (storeModels == "Memory") models_list else NULL,
     numbers = nums_list
-  ))
+  )
+  
+  class(output) = c("NuisanceParameters")
+  return(output)
   
 }
 
@@ -266,6 +256,9 @@ nuisance_parameters = function(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat","D.h
 #' @param path Path to save fit_cv matrix and non-negative least square weights to.
 #' Optionally, weights as well.
 #' @param quiet If FALSE, progress output is printed into console.
+#' @param pb A progress bar object to track overall computation progress.
+#' @param pb_np String indicating the current nuisance parameter being
+#'   estimated/predicted (for progress bar updates).
 #'
 #' @return Returns a vector of length N containing nuisance parameters.
 #'
@@ -288,34 +281,43 @@ nuisance_cf = function(method, Y, X, cf_mat,
   }
   
   if (is.null(subset)) subset = rep(TRUE, length(Y))
-
-  np = rep(NA, length(Y))
   models <- NULL
-  
-  
-  ### Hyperparameter tuning
-  if (!is.null(method$forest_grf) && identical(method$forest_grf$arguments, list("tune_full"))) {
-    tuning <- grf::regression_forest(X = X, Y = Y, tune.parameters = "all")
-    method$forest_grf$arguments <- as.list(tuning$tuning.output$params)
-  }
-  
+
+  # Is multiclass propensity score being estimated?
+  is_multinomial = !is.null(method[[1]]$multinomial)
+  if (is_multinomial) {np <- matrix(NA, nrow = length(Y), ncol = length(unique(Y)))} else {np <- rep(NA, length(Y))}
+
 
   ### Short-Stacking ###
 
   if (cv == 1) {
+    
+    ens <- ensemble_short(
+      method = method, X = X, Y = Y, subset = subset, cf_mat = cf_mat,
+      storeModels = storeModels, path = path, quiet = quiet, pb = pb, pb_np = pb_np
+    )
+
+    if (is_multinomial) {
+      # stack_result <- stack_propensity_scores(preds = ens$fit_cv, treatment = Y)
+      # nnls_w <- stack_result$weights
+      # np <- stack_result$ensemble
       
-      ens <- ensemble_short(
-        method = method, X = X, Y = Y, subset = subset, cf_mat = cf_mat,
-        storeModels = storeModels, path = path, quiet = quiet, pb = pb, pb_np = pb_np)
+      Y_stack <- as.vector(one_hot(Y)) # stack outcomes into a K*N vector
+      X_stack <- sapply(dimnames(ens$fit_cv)[[2]], function(m) as.vector(ens$fit_cv[, m, ]))
       
-      nnls_w <- if (length(method) == 1) 1 else nnls_weights(ens$fit_cv[subset, ], Y[subset])
+      nnls_w <- nnls_weights(X = X_stack, Y = Y_stack)
+      np <- apply(ens$fit_cv, c(1, 3), function(x) sum(x * nnls_w))
+      
+    } else {
+      nnls_w <- if (length(method) == 1) {stats::setNames(1, names(method))} else {nnls_weights(ens$fit_cv[subset, ], Y[subset])}
       np <- predict(ens, w = nnls_w)
-      
-      fit_sub <- list("ens_object" = ens, "nnls_w" = nnls_w)
-      class(fit_sub) <- "ens.learner"
-      
-      ens_weights <- nnls_w
-      models <- fit_sub
+    }
+    
+    fit_sub <- list("ens_object" = ens, "nnls_w" = nnls_w)
+    class(fit_sub) <- "ens.learner"
+    
+    ens_weights <- nnls_w
+    models <- fit_sub
   
 
   ### Standard-Stacking ###
@@ -330,22 +332,23 @@ nuisance_cf = function(method, Y, X, cf_mat,
       X_tr = X[!fold & subset, ]
       Y_tr = Y[!fold & subset]
       X_te = X[fold, ]
-      method_fold = method
-      
-      ### Hyperparameter tuning
-      if (!is.null(method_fold$forest_grf) && identical(method_fold$forest_grf$arguments, list("tune_fold"))) {
-        tuning <- grf::regression_forest(X = X_tr, Y = Y_tr, tune.parameters = "all")
-        method_fold$forest_grf$arguments <- as.list(tuning$tuning.output$params)
-      }
 
-      ens = ensemble(method = method_fold, X = X_tr, Y = Y_tr, nfolds = cv, 
+      ens = ensemble(method = method, X = X_tr, Y = Y_tr, nfolds = cv, 
                      quiet = quiet, pb = pb, pb_np = pb_np, pb_cf = i
                      )
       
-      ens_pred = predict(ens, method_fold, X = X_tr, Y = Y_tr, Xnew = X_te, quiet = quiet, pb = pb, pb_np = pb_np, pb_cf = i)
-      np[fold] = ens_pred$np
+      
+      if (is_multinomial) {
+        preds = predict.ensemble_core(object = ens$method_fit, method = method, X_tr = X_tr, Y_tr = Y_tr, X_te = X_te, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
+        ensemble <- apply(preds, c(1, 2), function(x) sum(x * ens$nnls_weights))
+        np[fold] = ensemble
+        
+      } else {
+        ens_pred = predict(ens, method, X = X_tr, Y = Y_tr, Xnew = X_te, quiet = quiet, pb = pb, pb_np = pb_np, pb_cf = i)
+        np[fold] = ens_pred$np
+      }
 
-      fit_sub[[i]] = list("fit_cv" = ens_pred$fit_cv, "nnls_w" = ens$nnls_weights, "ens_object" = ens)
+      fit_sub[[i]] = list("fit_cv" = preds, "nnls_w" = ens$nnls_weights, "ens_object" = ens)
       ens_weights[[i]] <- ens$nnls_weights
     }
 

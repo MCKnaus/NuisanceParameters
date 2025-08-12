@@ -4,16 +4,13 @@
 \alias{make_fit_cv}
 \title{Prepare fit_cv matrix}
 \usage{
-make_fit_cv(method, N)
+make_fit_cv(method, N, Y)
 }
 \arguments{
 \item{method}{List of methods built via \code{\link{create_method}} to be used in
 ensemble model}
 
 \item{N}{Number of observations.}
-
-\item{learner}{Vector of characters indicating whether to use S or T learner
-or both.}
 }
 \value{
 A matrix of NAs with dimensions \code{N} x \code{length(method)}
