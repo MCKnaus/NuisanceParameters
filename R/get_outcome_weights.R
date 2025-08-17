@@ -162,7 +162,7 @@ get_outcome_weights = function(np_object,
 #' @param quiet If FALSE, method that is currently computed is printed into the
 #' console.
 #'
-#' @return Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing
+#' @return Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing 
 #' ensemble smoother weights.
 #'
 #' @export
