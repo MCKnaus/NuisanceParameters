@@ -19,5 +19,8 @@ An object with S3 class \code{\link[xgboost]{xgboost}}
 \description{
 \code{\link{xgboost_fit}} fits an XGBoost using the
 \code{\link{xgboost}} package.
+
+If arguments$tune.parameters == "all", performs grid search tuning of hyperparameters,
+otherwise uses default settings.
 }
 \keyword{internal}

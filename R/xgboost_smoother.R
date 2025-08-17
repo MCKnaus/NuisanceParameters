@@ -23,8 +23,6 @@ create_S_from_single_boosted_tree = function(current_tree_indices_train,current_
   
   S  = create_S_from_tree(current_tree_indices_train,current_tree_indices_test,lambda)
   
-  
-  
   if (is.null(S_gb_prev)){
     
     # first tree: just normal tree

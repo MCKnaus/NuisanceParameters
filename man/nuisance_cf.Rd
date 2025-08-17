@@ -10,6 +10,7 @@ nuisance_cf(
   X,
   cf_mat,
   cv = 5,
+  cv_mat = cv_mat,
   subset = NULL,
   storeModels = c("No", "Memory", "Disk"),
   path,
@@ -32,6 +33,9 @@ Methods can be created by \code{\link{create_method}}.}
 \item{cv}{Number of cross-validation folds when estimating ensemble model.
 Default value is 1 which then evaluates to a short-stacking procedure which
 is computationally less demanding than standard stacking.}
+
+\item{cv_mat}{Optional list of logical matrices of indicators representing the different folds,
+possibly from already estimated \code{NuisanceParameters} object.}
 
 \item{subset}{Optional logical vector if only subset of data should be used for prediction.}
 

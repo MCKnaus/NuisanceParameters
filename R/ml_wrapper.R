@@ -16,7 +16,7 @@ mean_fit = function(X, Y, ...) {
   mean_value = mean(Y)
   output = list(
     "mean" = mean_value,
-    "n" = nrow(X)
+    "N" = nrow(X)
   )
   class(output) = "mean_fit"
   return(output)
@@ -42,7 +42,7 @@ mean_fit = function(X, Y, ...) {
 predict.mean_fit = function(mean_fit, Xnew = NULL, ...) {
 
   if (is.null(Xnew)) {
-    fit = rep(mean_fit$mean, mean_fit$n)
+    fit = rep(mean_fit$mean, mean_fit$N)
   } else {
     fit = rep(mean_fit$mean, nrow(Xnew))
   }
@@ -114,10 +114,11 @@ predict.ols_fit = function(ols_fit, Xnew = NULL, ...) {
 #' @return An object with S3 class \code{\link[glmnet]{glmnet}}
 #'
 #' @keywords internal
+#' 
 #'
 ridge_fit = function(X, Y, arguments = list()) {
-  x_means = matrixStats::colMeans2(X)
-  x_sds = matrixStats::colSds(X)
+  x_means <- colMeans(X, na.rm = TRUE)
+  x_sds <- apply(X, 2, stats::sd, na.rm = TRUE)
   x_std = scale(X, x_means, x_sds)
   ridge = do.call(glmnet::cv.glmnet, c(list(x = x_std, y = Y, alpha = 0, standardize = FALSE, intercept = TRUE), arguments))
   ridge[["x_means"]] = x_means
@@ -202,10 +203,11 @@ predict.plasso_fit = function(plasso_fit, Xnew = NULL, ...) {
 }
 
 
-#' Fits Lasso regression using hdm::rlasso
+#' Fits post-Lasso regression using hdm::rlasso
 #'
 #' @description
-#' \code{\link{rlasso_fit}} estimates Lasso regression using the hdm package.
+#' \code{\link{rlasso_fit}} estimates post-Lasso regression under homoscedastic and 
+#' heteroscedastic non-Gaussian disturbances using the \code{hdm} package.
 #'
 #' @param X Matrix of covariates (number of observations times number of covariates matrix)
 #' @param Y vector of outcomes
@@ -303,6 +305,9 @@ predict.forest_grf_fit = function(forest_grf_fit, Xnew = NULL, ...) {
 #' @description
 #' \code{\link{xgboost_fit}} fits an XGBoost using the
 #' \code{\link{xgboost}} package.
+#' 
+#' If arguments$tune.parameters == "all", performs grid search tuning of hyperparameters,
+#' otherwise uses default settings.
 #'
 #' @param X Matrix of covariates
 #' @param Y vector of outcomes
@@ -317,6 +322,10 @@ xgboost_fit = function(X, Y, arguments = list()) {
   # Convert to DMatrix object
   dtrain = xgboost::xgb.DMatrix(data = as.matrix(X), label = Y)
   
+  # If tuning requested, use tuning function
+  # if (!is.null(arguments$tune.parameters) && arguments$tune.parameters == "all") { arguments <- tune_xgboost(X, Y, n_evals = 15) }
+    
+  
   # Ali's settings:
   params = list(
     booster = "gbtree",
@@ -330,9 +339,9 @@ xgboost_fit = function(X, Y, arguments = list()) {
     base_score = 0.0
   )
   
-  # Fit the model:
   xgb = do.call(xgboost::xgb.train, c(list(data = dtrain, nrounds = 100, params = params)))
-  # class(xgb) = "xgboost_fit"
+  #class(xgb) = c("xgboost_fit", class(xgb))
+  
   
   return(xgb)
 }
@@ -356,9 +365,10 @@ xgboost_fit = function(X, Y, arguments = list()) {
 #' @keywords internal
 #'
 predict.xgboost_fit = function(xgboost_fit, Xnew = NULL, ...) {
-
+  
   dtest = xgboost::xgb.DMatrix(data = as.matrix(Xnew))
   fit <- predict(xgboost_fit, newdata = dtest)
+  # fit <- xgboost:::predict.xgb.Booster(xgboost_fit, newdata = dtest)
   
   return(fit)
 }
@@ -406,7 +416,7 @@ predict.lasso_fit = function(lasso_fit, Xnew = NULL, ...) {
   class(lasso_fit) = "cv.glmnet"
   if (is.null(Xnew)) Xnew = lasso_fit$X
 
-  fit = predict(lasso_fit, newx = Xnew, type = "response")
+  fit = predict(lasso_fit, newx = Xnew, type = "response", s = "lambda.min")
 
   return(fit)
 }

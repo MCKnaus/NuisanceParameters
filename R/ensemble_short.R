@@ -60,12 +60,12 @@ ensemble_short = function(method,
     X_tr = X[!fold & subset, ] # learn in a subset D=d (or Z=z)
     Y_tr = Y[!fold & subset]
     X_te = X[fold, ]           # predict into test data
-
+    
     ## Core functionality
     method_fit = ensemble_core(method, X_tr, Y_tr, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
     preds = predict.ensemble_core(method_fit, method, X_tr, Y_tr, X_te, quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np)
     
-    if (length(dim(fit_cv)) == 3) { fit_cv[fold, , ] = aperm(preds, c(1, 3, 2)) } else { fit_cv[fold, ] = preds }
+    if (length(dim(fit_cv)) == 3) { fit_cv[fold, , ] = preds } else { fit_cv[fold, ] = preds }
     if(saveModels) s[[i]] = method_fit
 
   }

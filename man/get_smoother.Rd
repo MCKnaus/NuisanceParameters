@@ -4,18 +4,7 @@
 \alias{get_smoother}
 \title{Extraction of smoother weights for ensemble learner}
 \usage{
-get_smoother(
-  object,
-  method,
-  X,
-  Y,
-  subset = NULL,
-  nnls_w = NULL,
-  cv = cv,
-  cf_mat,
-  quiet = TRUE,
-  ...
-)
+get_smoother(object, method, X, Y, subset = NULL, cf_mat, cv, quiet = TRUE)
 }
 \arguments{
 \item{object}{Stacked ensemble learner from \code{\link{ensemble_short}} or \code{\link{ensemble}}.}
@@ -30,18 +19,13 @@ input for \code{\link{ensemble_short}} or \code{\link{ensemble}}.}
 \item{subset}{Logical vector indicating which observations to use for determining
 ensemble weights. If not provided, all observations are used.}
 
-\item{nnls_w}{Ensemble weights to aggregate predictions from different learners (optional).
-Needs to be a vector of length \code{ncol(object$fit_cv)}.}
-
-\item{cv}{Number of cross-validation folds when estimating ensemble model.}
-
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
 (for example created by \code{\link{prep_cf_mat}}).}
 
+\item{cv}{Number of cross-validation folds when estimating ensemble model.}
+
 \item{quiet}{If FALSE, method that is currently computed is printed into the
 console.}
-
-\item{...}{Ignore unused arguments}
 }
 \value{
 Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing

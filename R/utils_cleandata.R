@@ -13,7 +13,6 @@
 #'
 #' @return Matrix including the main variables and the newly generated ones.
 #'
-#' @importFrom matrixStats colMins
 #' @importFrom stats model.matrix as.formula
 #'
 #' @export
@@ -34,7 +33,9 @@ design_matrix = function(data, int = NULL, int_d = 2, poly = NULL, poly_d = 2, l
   # logs
   if (!is.null(log)) {
     # check whether some variables cannot be logged because not positive
-    ind_neg = matrixStats::colMins(data[, log]) <= 0
+    # ind_neg = matrixStats::colMins(data[, log]) <= 0
+    ind_neg <- apply(data[, log, drop = FALSE], 2, function(x) min(x, na.rm = TRUE)) <= 0
+    
     if (sum(ind_neg) > 0) {
       cat("\n Following variables not modified to be logged because of non-positive values:", paste(colnames(data[, log])[ind_neg]), "\n")
       log = log[!ind_neg]
@@ -76,7 +77,6 @@ design_matrix = function(data, int = NULL, int_d = 2, poly = NULL, poly_d = 2, l
 #'
 #' @return Screened matrix.
 #'
-#' @importFrom matrixStats colSds
 #' @importFrom Matrix colMeans colSums
 #' @importFrom stats cor
 #'
@@ -88,7 +88,9 @@ data_screen = function(data, treat = NULL, bin_cut = 0.01, corr_cut = 0.99, quie
   ### eliminate variables with no variation ###
 
   # identify the names
-  nm_del = colnames(data)[matrixStats::colSds(data) == 0]
+  # nm_del = colnames(data)[matrixStats::colSds(data) == 0]
+  nm_del <- colnames(data)[apply(data, 2, function(x) stats::sd(x, na.rm = TRUE)) == 0]
+  
   if (isFALSE(quiet)) {
     cat("\n\n Variables with no variation:", nm_del, "\n\n")
   }

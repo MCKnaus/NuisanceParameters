@@ -15,6 +15,7 @@ nuisance_parameters(
   stratify = FALSE,
   cf,
   cf_mat = NULL,
+  cv_mat = NULL,
   stacking,
   storeModels = c("No", "Memory", "Disk"),
   path = NULL,
@@ -46,6 +47,12 @@ is provided, stratification is ignored due to computational
 constraints and randomization feasibility issues.}
 
 \item{cf}{Number of cross-fitting folds (default: 5).}
+
+\item{cf_mat}{Optional logical matrix of indicators representing the different folds,
+possibly from already estimated \code{NuisanceParameters} object.}
+
+\item{cv_mat}{Optional list of logical matrices of indicators representing the different folds,
+possibly from already estimated \code{NuisanceParameters} object.}
 
 \item{stacking}{Stacking option: Either "short" for short stacking or an integer >1
 indicating the number of cross-validation folds within each

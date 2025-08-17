@@ -9,6 +9,8 @@
 #' @param Y Vector of outcomes of training sample
 #' @param nfolds Number of folds used in cross-validation of ensemble weights
 #' (default \code{nfolds = 5})
+#' @param cv_mat Optional list of logical matrices of indicators representing the different folds,
+#'              possibly from already estimated \code{NuisanceParameters} object.
 #' @param quiet If FALSE, method that is currently computed is printed into the
 #' console
 #' @param pb A progress bar object to track overall computation progress.
@@ -32,7 +34,7 @@
 #'
 ensemble = function(method,
                     X, Y,
-                    nfolds = 5,
+                    nfolds = 5, cv_mat = NULL,
                     quiet = TRUE, 
                     pb = NULL, pb_np = NULL, pb_cf = NULL, pb_cv = NULL
                     ) {
@@ -41,23 +43,23 @@ ensemble = function(method,
   fit_cv = make_fit_cv(method = method, N = nrow(X), Y = Y)
 
   # cross-validation matrix
-  cf_mat = prep_cf_mat(length(Y), nfolds)
+  if (is.null(cv_mat)) {cv_mat = prep_cf_mat(length(Y), nfolds)}
 
 
   # -> multiple methods specified - cross-validation of ensemble weights
 
   if (length(method) > 1) {
     # loop over different folds for cross-validation of weights
-    for (i in 1:ncol(cf_mat)) {
+    for (i in 1:ncol(cv_mat)) {
 
-      fold = cf_mat[, i]
+      fold = cv_mat[, i]
       X_tr = X[!fold, ]
       Y_tr = Y[!fold]
       X_te = X[fold, ]
 
       method_fit = ensemble_core(method, X_tr, Y_tr, quiet = TRUE, pb = pb, pb_cf = pb_cf, pb_cv = i, pb_np = pb_np)
       preds = predict.ensemble_core(method_fit, method, X_tr, Y_tr, X_te, quiet = TRUE, pb = pb, pb_cf = pb_cf, pb_cv = i, pb_np = pb_np)
-      if (length(dim(fit_cv)) == 3) { fit_cv[fold, , ] = aperm(preds, c(1, 3, 2)) } else { fit_cv[fold, ] = preds }
+      if (length(dim(fit_cv)) == 3) { fit_cv[fold, , ] = preds } else { fit_cv[fold, ] = preds }
 
     }
     
@@ -70,7 +72,8 @@ ensemble = function(method,
       # nnls_w <- stack_result$weights
       
       Y_stack <- as.vector(one_hot(Y)) # stack outcomes into a K*N vector
-      X_stack <- sapply(1:dim(fit_cv)[3], function(m) { as.vector(fit_cv[, , m]) }) # flatten predictions (K*N × M matrix)
+      X_stack <- sapply(dimnames(fit_cv)[[3]], function(m) as.vector(fit_cv[, , m])) # flatten predictions (K*N × M matrix)
+      
       nnls_w = nnls_weights(X = X_stack, Y = Y_stack)
       
     } else {
@@ -92,6 +95,7 @@ ensemble = function(method,
 
   output = list(
     "fit_cv" = fit_cv,
+    "cv_mat" = cv_mat,
     "nnls_weights" = nnls_w,
     "method_fit"= method_fit_full
   )

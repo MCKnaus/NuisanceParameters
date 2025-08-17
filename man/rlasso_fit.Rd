@@ -2,7 +2,7 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{rlasso_fit}
 \alias{rlasso_fit}
-\title{Fits Lasso regression using hdm::rlasso}
+\title{Fits post-Lasso regression using hdm::rlasso}
 \usage{
 rlasso_fit(X, Y, arguments = list())
 }
@@ -17,6 +17,7 @@ rlasso_fit(X, Y, arguments = list())
 An object with S3 class "rlasso"
 }
 \description{
-\code{\link{rlasso_fit}} estimates Lasso regression using the hdm package.
+\code{\link{rlasso_fit}} estimates post-Lasso regression under homoscedastic and 
+heteroscedastic non-Gaussian disturbances using the \code{hdm} package.
 }
 \keyword{internal}

@@ -9,6 +9,7 @@ ensemble(
   X,
   Y,
   nfolds = 5,
+  cv_mat = NULL,
   quiet = TRUE,
   pb = NULL,
   pb_np = NULL,
@@ -26,6 +27,9 @@ ensemble model}
 
 \item{nfolds}{Number of folds used in cross-validation of ensemble weights
 (default \code{nfolds = 5})}
+
+\item{cv_mat}{Optional list of logical matrices of indicators representing the different folds,
+possibly from already estimated \code{NuisanceParameters} object.}
 
 \item{quiet}{If FALSE, method that is currently computed is printed into the
 console}

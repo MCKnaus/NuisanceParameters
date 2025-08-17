@@ -18,64 +18,81 @@ test_that("smoother weights lead to correct prediction of fitted values", {
 
   # mean
   m = mean_fit(X = X, Y = Y)
-  p = predict(m, xnew = Xnew)
-  w = weights(m, xnew = Xnew)
+  p = NuisanceParameters:::predict.mean_fit(m, Xnew = Xnew)
+  w = NuisanceParameters:::weights.mean_fit(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_true(all(w >= 0 & w <= 1))
   expect_equal(p, p_s, tolerance = 1e-9)
-
+  
   # ols
   m = ols_fit(X = X, Y = Y)
-  p = predict(m, xnew = Xnew)
-  w = weights(m, X = X, xnew = Xnew)
+  p = NuisanceParameters:::predict.ols_fit(m, Xnew = Xnew)
+  w = NuisanceParameters:::weights.ols_fit(m, X = X, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_equal(p, p_s, tolerance = 1e-9)
-
+  
   # ridge
   m = ridge_fit(X = X, Y = Y)
-  p = predict(m, xnew = Xnew)
-  w = weights(m, X = X, Y = Y, xnew = Xnew)
+  p = NuisanceParameters:::predict.ridge_fit(m, Xnew = Xnew)
+  w = NuisanceParameters:::weights.ridge_fit(m, X = X, Y = Y, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_equal(p, p_s, tolerance = 0.001)
-
+  
   # plasso
   m = plasso_fit(X = X, Y = Y)
-  p = predict(m, xnew = Xnew)
-  w = weights(m, xnew = Xnew)
+  p = NuisanceParameters:::predict.plasso_fit(m, Xnew = Xnew)
+  w = NuisanceParameters:::weights.plasso_fit(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_equal(p, p_s, tolerance = 1e-9)
-
+  
+  # rlasso
+  m = rlasso_fit(X = X, Y = Y)
+  p = NuisanceParameters:::predict.rlasso_fit(m, Xnew = Xnew)
+  w = NuisanceParameters:::weights.rlasso_fit(m, Xnew = Xnew)
+  p_s = as.vector(w %*% Y)
+  expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
+  expect_equal(p, p_s, tolerance = 1e-9)
+  
   # random forest
   m = forest_grf_fit(X = X, Y = Y)
-  p = predict(m, xnew = Xnew)
-  w = weights(m, xnew = Xnew)
+  p = NuisanceParameters:::predict.forest_grf_fit(m, Xnew = Xnew)
+  w = NuisanceParameters:::weights.forest_grf_fit(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_true(all(w >= 0 & w <= 1))
   expect_equal(p, p_s, tolerance = 1e-9)
-
+  
   # knn
   m = knn_fit(arguments = list("k" = 5))
-  p = predict(m, X = X, Y = Y, xnew = Xnew)
-  w = weights(m, X = X, xnew = Xnew)
+  p = NuisanceParameters:::predict.knn_fit(m, X = X, Y = Y, Xnew = Xnew)
+  w = NuisanceParameters:::weights.knn_fit(m, X = X, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_true(all(w >= 0 & w <= 1))
   expect_equal(p, p_s, tolerance = 1e-9)
-
+  
   # distributional random forest
   m = forest_drf_fit(X = X, Y = Y)
-  p = predict(m, xnew = Xnew)
-  w = weights(m, xnew = Xnew)
+  p = NuisanceParameters:::predict.forest_drf_fit(m, Xnew = Xnew)
+  w = NuisanceParameters:::weights.forest_drf_fit(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_true(all(w >= 0 & w <= 1))
   expect_equal(p, p_s, tolerance = 1e-9)
-
+  
+  ## XGBoost: does not achieve perfect equalty
+  # # xgboost
+  # m = xgboost_fit(X = X, Y = Y)
+  # p = NuisanceParameters:::predict.xgboost_fit(m, Xnew = Xnew)
+  # w = NuisanceParameters:::weights.xgboost_fit(m, X = X, Xnew = Xnew)
+  # p_s = as.vector(w %*% Y)
+  # expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-7)
+  # expect_true(all(w >= 0 & w <= 1))
+  # expect_equal(p, p_s, tolerance = 1e-7)
 })
 
 
@@ -105,11 +122,11 @@ test_that("knn mickey mouse check", {
   ) / k
 
   m = knn_fit(arguments = list("k" = k))
-  w = weights(m, X = X, xnew = Xnew)
+  w = NuisanceParameters:::weights.knn_fit(m, X = X, Xnew = Xnew)
 
   expect_identical(w_exp, w)
 
-  p = predict(m, X = X, Y = Y, xnew = Xnew)
+  p = NuisanceParameters:::predict.knn_fit(m, X = X, Y = Y, Xnew = Xnew)
   expect_identical(p, c(1, 3))
 
 })
@@ -133,10 +150,10 @@ test_that("knn weight matrix plausibility check", {
 
   k = 9
   m = knn_fit(arguments = list("k" = k))
-  p = predict(m, X = X, Y = Y, xnew = Xnew)
+  p = NuisanceParameters:::predict.knn_fit(m, X = X, Y = Y, Xnew = Xnew)
   expect_true(all(p >= min(Y) & p <= max(Y)))
 
-  w = weights(m, X = X, xnew = Xnew)
+  w = NuisanceParameters:::weights.knn_fit(m, X = X, Xnew = Xnew)
   w_vals = unique(as.vector(as.matrix(w[-1])))
   expect_identical(sort(w_vals), c(0, 1/k))
 
@@ -161,10 +178,10 @@ test_that("(rough) equality of plasso and ols prediction solution for clear cut 
 
 
   m_ols = ols_fit(X = X, Y = Y)
-  p_ols = predict(m_ols, xnew = Xnew)
+  p_ols = NuisanceParameters:::predict.ols_fit(m_ols, Xnew = Xnew)
 
   m_p = plasso_fit(X = X, Y = Y)
-  p_p = predict(m_p, xnew = Xnew)
+  p_p = NuisanceParameters:::predict.plasso_fit(m_p, Xnew = Xnew)
 
   expect_equal(p_ols, p_p, tolerance = 0.01)
 

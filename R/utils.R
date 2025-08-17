@@ -269,9 +269,9 @@ make_fit_cv = function(method, N, Y) {
   is_multinomial = !is.null(method[[1]]$multinomial)
   
   if (is_multinomial) {
-    # Create a 3D array (N observations × M methods × K classes)
-    fit_cv = array(NA, dim = c(N, length(method), length(unique(Y))))
-    dimnames(fit_cv) = list(NULL, names(method), 0:(length(unique(Y))-1))
+    # Create a 3D array (N observations × K classes × M methods)
+    fit_cv = array(NA, dim = c(N, length(unique(Y)), length(method)))
+    dimnames(fit_cv) = list(NULL, 0:(length(unique(Y))-1), names(method))
   } else {
     # Create a matrix (N observations × M methods)
     fit_cv = matrix(NA, N, length(method))
@@ -422,10 +422,26 @@ plot.ens_weights_stand <- function(x,
     return(palette[1:n])
   }
   
+  # prepare_data <- function(model_name, model_data) {
+  #   df <- as.data.frame(t(model_data))
+  #   df$fold <- rownames(df)
+  #   melted <- reshape2::melt(df, id.vars = "fold")
+  #   melted$model <- model_name
+  #   return(melted)
+  # }
+  
   prepare_data <- function(model_name, model_data) {
     df <- as.data.frame(t(model_data))
     df$fold <- rownames(df)
-    melted <- reshape2::melt(df, id.vars = "fold")
+    
+    # (Base R alternative to reshape2::melt)
+    melted <- data.frame(
+      fold = rep(df$fold, times = ncol(df) - 1),
+      variable = rep(names(df)[-ncol(df)], each = nrow(df)),
+      value = unlist(df[-ncol(df)]),
+      stringsAsFactors = FALSE
+    )
+    
     melted$model <- model_name
     return(melted)
   }
@@ -443,10 +459,11 @@ plot.ens_weights_stand <- function(x,
     ggplot2::labs(x = NULL, y = "Ensemble Weight") +
     ggplot2::theme_minimal(base_size = base_size) +
     ggplot2::theme(
-      axis.text.x = ggplot2::element_text(
-      angle = 45, hjust = 0.75, size = base_size * 0.6),
+      axis.text.x = ggplot2::element_text(angle = 45, hjust = 0.75, size = base_size * 0.6),
       axis.text.y = ggplot2::element_text(size = base_size * 0.7),
-      legend.position = "bottom")
+      legend.position = "bottom",
+      legend.text = ggplot2::element_text(size = base_size * 0.6),
+      legend.title = ggplot2::element_text(size = base_size * 0.7))
 
   return(p)
 }
@@ -485,7 +502,15 @@ plot.ens_weights_short <- function(x,
   
   df <- as.data.frame(x)
   df$method <- rownames(df)
-  df_long <- reshape2::melt(df, id.vars = "method")
+  # df_long <- reshape2::melt(df, id.vars = "method")
+  
+  # (Base R alternative to reshape2::melt)
+  df_long <- data.frame(
+    method = rep(df$method, times = ncol(df) - 1),
+    variable = rep(names(df)[-ncol(df)], each = nrow(df)),
+    value = unlist(df[-ncol(df)]),
+    stringsAsFactors = FALSE
+  )
   
   all_methods <- unique(df$method)
   method_palette <- stats::setNames(get_palette(length(all_methods)), all_methods)
@@ -801,4 +826,65 @@ one_hot <- function(x) {
   out[cbind(seq_along(x), match(x, ux))] <- 1L
   colnames(out) <- ux
   out
+}
+
+
+#' Hyperparameter Tuning for XGBoost via Grid Search with Cross-Validation
+#'
+#' The function defines a default grid for eta, max_depth, min_child_weight, colsample_bytree, and lambda.
+#' It does not tune "subsample" and "alpha". Returns a list of hyperparameters.
+#'
+#' @param X A numeric matrix of features.
+#' @param Y A numeric vector of regression targets.
+#' @param nfold Number of cross-validation folds. Default is 5.
+#' @param n_evals Number of parameter combinations to evaluate from the grid. Default is 15.
+#' @param nrounds Number of boosting rounds. Default is 100.
+#' @param metrics Evaluation metric, e.g. "rmse" or "mae". Default is "rmse".
+#' @param seed Random seed for reproducibility. Default is 123.
+#' @return Named list of best hyperparameter values.
+#' 
+#' @export
+tune_xgboost <- function(X, Y, n_evals = 15, nfold = 5, nrounds = 100, metrics = "rmse", seed = 123) {
+  
+  set.seed(seed)
+  
+  # Define the parameter grid (excluding 'subsample' and 'alpha')
+  param_grid <- expand.grid(
+    eta = c(0.05, 0.1, 0.2),
+    max_depth = c(2, 4, 6),
+    min_child_weight = c(1, 5, 10),
+    colsample_bytree = c(0.6, 0.8, 1),
+    lambda = c(0, 1, 5),
+    KEEP.OUT.ATTRS = FALSE,
+    stringsAsFactors = FALSE
+  )
+  
+  best_score <- Inf
+  best_params <- NULL
+  
+  n_grid <- nrow(param_grid)
+  idx <- sample(seq_len(n_grid), min(n_evals, n_grid), replace = FALSE)
+
+  for (i in idx) {
+    params <- as.list(param_grid[i, ])
+    cv <- xgboost::xgb.cv(
+      data = as.matrix(X),
+      label = Y,
+      params = params,
+      nfold = nfold,
+      nrounds = nrounds,
+      metrics = metrics,
+      verbose = FALSE,
+      early_stopping_rounds = 10
+    )
+    
+    eval_log <- cv$evaluation_log[[paste0("test_", metrics, "_mean")]]
+    score <- min(eval_log)
+    
+    if (score < best_score) {
+      best_score <- score
+      best_params <- params
+    }
+  }
+  return(best_params)
 }

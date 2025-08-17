@@ -4,7 +4,17 @@
 \alias{weights.ensemble_short}
 \title{Extraction of smoother weights for short-stacked ensemble learner}
 \usage{
-\method{weights}{ensemble_short}(object, method, X, Y, subset, w = NULL, cf_mat, quiet = TRUE, ...)
+\method{weights}{ensemble_short}(
+  object,
+  method,
+  X,
+  Y,
+  subset = NULL,
+  w = NULL,
+  cf_mat,
+  quiet = TRUE,
+  ...
+)
 }
 \arguments{
 \item{object}{Short-stacked ensemble learner from \code{\link{ensemble_short}}.}
