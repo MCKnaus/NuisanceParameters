@@ -2,9 +2,10 @@
 % Please edit documentation in R/ml_wrapper_prop.R
 \name{ovo_fit}
 \alias{ovo_fit}
-\title{Fits One-Vs-One (OvO) binary classifiers for multi-class classification}
+\title{Fits One-Vs-One (OvO) binary classifiers for multi-class classification
+with optional parallelization if foreach/doParallel are available}
 \usage{
-ovo_fit(X, Y, method = "logit")
+ovo_fit(X, Y, method = "logit", parallel = FALSE, verbose = TRUE)
 }
 \arguments{
 \item{X}{Covariate matrix of training sample}
@@ -12,10 +13,15 @@ ovo_fit(X, Y, method = "logit")
 \item{Y}{Vector of outcomes of training sample}
 
 \item{method}{Method to use for fitting binary classifiers (e.g., "logit" or "xgboost")}
+
+\item{parallel}{Logical. Try to run in parallel if packages are available. Defaults to TRUE.}
+
+\item{verbose}{Logical. If TRUE, messages about parallel/sequential choice are printed.}
 }
 \value{
 List of fitted OvO binary classifiers
 }
 \description{
 Fits One-Vs-One (OvO) binary classifiers for multi-class classification
+with optional parallelization if foreach/doParallel are available
 }

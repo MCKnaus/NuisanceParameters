@@ -18,6 +18,10 @@
 #' @export
 #'
 design_matrix = function(data, int = NULL, int_d = 2, poly = NULL, poly_d = 2, log = NULL) {
+  
+  # start with main effects
+  main_effects <- paste(colnames(data), collapse = " + ")
+  fmla_base <- paste("~ 0 +", main_effects)
 
   # interactions
   if (!is.null(int)) {
@@ -36,15 +40,18 @@ design_matrix = function(data, int = NULL, int_d = 2, poly = NULL, poly_d = 2, l
     # ind_neg = matrixStats::colMins(data[, log]) <= 0
     ind_neg <- apply(data[, log, drop = FALSE], 2, function(x) min(x, na.rm = TRUE)) <= 0
     
-    if (sum(ind_neg) > 0) {
-      cat("\n Following variables not modified to be logged because of non-positive values:", paste(colnames(data[, log])[ind_neg]), "\n")
-      log = log[!ind_neg]
+    if (any(ind_neg)) {
+      cat("\n Following variables not modified to be logged because of non-positive values:", 
+          paste(names(ind_neg)[ind_neg]), "\n")
+      log = log[!ind_neg[log]]
     }
-    log = paste0(" + log(", paste0(log, collapse = ") + log("), ")")
+    
+    log = if(length(log) > 0) paste0(" + log(", paste0(log, collapse = ") + log("), ")") else ""
   }
 
-  # combine the three parts
-  fmla = stats::as.formula(paste(" ~ 0", int, poly, log))
+  # combine the four parts
+  fmla = stats::as.formula(paste(fmla_base, int, poly, log))
+  
 
   # generate matrix
   data = stats::model.matrix(fmla, data = as.data.frame(data))
@@ -84,19 +91,22 @@ design_matrix = function(data, int = NULL, int_d = 2, poly = NULL, poly_d = 2, l
 #'
 data_screen = function(data, treat = NULL, bin_cut = 0.01, corr_cut = 0.99, quiet = TRUE) {
 
-
-  ### eliminate variables with no variation ###
-
-  # identify the names
-  # nm_del = colnames(data)[matrixStats::colSds(data) == 0]
-  nm_del <- colnames(data)[apply(data, 2, function(x) stats::sd(x, na.rm = TRUE)) == 0]
+  # Convert to matrix if not already
+  if (!is.matrix(data)) data <- as.matrix(data)
   
-  if (isFALSE(quiet)) {
-    cat("\n\n Variables with no variation:", nm_del, "\n\n")
+  ### eliminate variables with no variation ###
+  
+  sds <- apply(data, 2, function(x) stats::sd(x, na.rm = TRUE))
+  nm_del <- colnames(data)[sds == 0 | is.na(sds)]
+  
+  if (!quiet && length(nm_del) > 0) {
+    cat("\nVariables with no variation:", paste(nm_del, collapse = ", "), "\n")
   }
-  # remove identified variables
-  if (identical(nm_del, character(0)) == FALSE) data = data[, !colnames(data) %in% nm_del]
+  if (length(nm_del) > 0) {
+    data <- data[, !colnames(data) %in% nm_del, drop = FALSE]
+  }
 
+  if (ncol(data) <= 1) return(data)
 
   ### remove dummy variables lower than threshold in one of the two treatment groups ###
 

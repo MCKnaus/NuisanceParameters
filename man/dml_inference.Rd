@@ -7,9 +7,9 @@
 dml_inference(psi.a, psi.b)
 }
 \arguments{
-\item{psi.a}{psi.a component of linear Neyman orthogonal score}
+\item{psi.a}{a component of linear Neyman orthogonal score}
 
-\item{psi.b}{psi.a component of linear Neyman orthogonal score}
+\item{psi.b}{a component of linear Neyman orthogonal score}
 }
 \value{
 List of three components:

@@ -28,7 +28,7 @@ ensemble weights. If not provided, all observations are used.}
 console.}
 }
 \value{
-Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing
+Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing 
 ensemble smoother weights.
 }
 \description{

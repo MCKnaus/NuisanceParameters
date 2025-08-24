@@ -42,6 +42,10 @@ MLeffect = function(Y,D,X,Z=NULL,
     stop("Error: Z cannot be NULL when using either 'PLR_IV' or 'Wald_AIPW' as an estimator.")
   }
   
+  if (length(unique(D)) != 2) {
+    stop("Treatment variable 'D' must be binary")
+  }
+  
   # Extract useful information
   N = length(Y)
   n_estimators = length(estimators)
@@ -116,8 +120,8 @@ MLeffect = function(Y,D,X,Z=NULL,
 
 #' Results and influence functions for linear double ML estimators.
 #'
-#' @param psi.a psi.a component of linear Neyman orthogonal score
-#' @param psi.b psi.a component of linear Neyman orthogonal score
+#' @param psi.a a component of linear Neyman orthogonal score
+#' @param psi.b a component of linear Neyman orthogonal score
 #'
 #' @return List of three components:
 #' - \code{TaPa} Matrix storing estimate, standard error, t-value and p-value of target parameter of each repetition in the rows

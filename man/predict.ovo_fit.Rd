@@ -2,9 +2,19 @@
 % Please edit documentation in R/ml_wrapper_prop.R
 \name{predict.ovo_fit}
 \alias{predict.ovo_fit}
-\title{Predicts class probabilities using One-Vs-One (OvO) fitted classifiers}
+\title{Predicts class probabilities using One-Vs-One (OvO) fitted classifiers 
+with optional parallelization (auto-registers a backend if available)}
 \usage{
-\method{predict}{ovo_fit}(ovo_fit, X, Y, Xnew = NULL, weights = FALSE, method = "logit")
+\method{predict}{ovo_fit}(
+  ovo_fit,
+  X,
+  Y,
+  Xnew = NULL,
+  weights = FALSE,
+  method = "logit",
+  parallel = FALSE,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{ovo_fit}{Output list of \code{\link{ovo_fit}}}
@@ -18,13 +28,16 @@
 \item{weights}{Flag indicating whether weights are used (unsupported for propensity score estimation)}
 
 \item{method}{Method used for fitting the binary classifiers (e.g., "logit" or "xgboost")}
+
+\item{parallel}{Logical. Try to run in parallel if packages are available. Defaults to TRUE.}
+
+\item{verbose}{Logical. If TRUE, messages about parallel/sequential choice are printed.}
 }
 \value{
-Returns list containing:
-\item{prediction}{matrix of predictions for Xnew}
-\item{weights}{Not supported for propensity score estimation}
+Matrix of class probability predictions for \code{Xnew}
 }
 \description{
-Predicts class probabilities using One-Vs-One (OvO) fitted classifiers
+Predicts class probabilities using One-Vs-One (OvO) fitted classifiers 
+with optional parallelization (auto-registers a backend if available)
 }
 \keyword{internal}
