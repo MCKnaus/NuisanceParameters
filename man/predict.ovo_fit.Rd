@@ -2,7 +2,7 @@
 % Please edit documentation in R/ml_wrapper_prop.R
 \name{predict.ovo_fit}
 \alias{predict.ovo_fit}
-\title{Predicts class probabilities using One-Vs-One (OvO) fitted classifiers 
+\title{Predicts class probabilities using One-Vs-One (OvO) fitted classifiers
 with optional parallelization (auto-registers a backend if available)}
 \usage{
 \method{predict}{ovo_fit}(
@@ -37,7 +37,7 @@ with optional parallelization (auto-registers a backend if available)}
 Matrix of class probability predictions for \code{Xnew}
 }
 \description{
-Predicts class probabilities using One-Vs-One (OvO) fitted classifiers 
+Predicts class probabilities using One-Vs-One (OvO) fitted classifiers
 with optional parallelization (auto-registers a backend if available)
 }
 \keyword{internal}

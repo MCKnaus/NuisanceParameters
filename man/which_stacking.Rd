@@ -13,7 +13,6 @@ which_stacking(cv = 1)
 Message in console. No object is returned.
 }
 \description{
-This function prints a message into the console whether short- or standard-
-stacking is used.
+Prints a message into the console whether short- or standard-stacking is used.
 }
 \keyword{internal}

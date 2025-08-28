@@ -12,13 +12,13 @@
 #'
 #' @keywords internal
 #'
-mean_fit = function(X, Y, ...) {
-  mean_value = mean(Y)
-  output = list(
+mean_fit <- function(X, Y, ...) {
+  mean_value <- mean(Y)
+  output <- list(
     "mean" = mean_value,
     "N" = nrow(X)
   )
-  class(output) = "mean_fit"
+  class(output) <- "mean_fit"
   return(output)
 }
 
@@ -39,16 +39,14 @@ mean_fit = function(X, Y, ...) {
 #'
 #' @keywords internal
 #'
-predict.mean_fit = function(mean_fit, Xnew = NULL, ...) {
-
+predict.mean_fit <- function(mean_fit, Xnew = NULL, ...) {
   if (is.null(Xnew)) {
-    fit = rep(mean_fit$mean, mean_fit$N)
+    fit <- rep(mean_fit$mean, mean_fit$N)
   } else {
-    fit = rep(mean_fit$mean, nrow(Xnew))
+    fit <- rep(mean_fit$mean, nrow(Xnew))
   }
 
   return(fit)
-
 }
 
 
@@ -65,10 +63,10 @@ predict.mean_fit = function(mean_fit, Xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-ols_fit = function(X, Y, ...) {
-  X = add_intercept(X)
-  ols_coef = stats::lm.fit(X, Y)$coefficients
-  class(ols_coef) = "ols_fit"
+ols_fit <- function(X, Y, ...) {
+  X <- add_intercept(X)
+  ols_coef <- stats::lm.fit(X, Y)$coefficients
+  class(ols_coef) <- "ols_fit"
   return(ols_coef)
 }
 
@@ -89,15 +87,13 @@ ols_fit = function(X, Y, ...) {
 #'
 #' @keywords internal
 #'
-predict.ols_fit = function(ols_fit, Xnew = NULL, ...) {
+predict.ols_fit <- function(ols_fit, Xnew = NULL, ...) {
+  Xnew <- add_intercept(Xnew)
+  Xnew <- Xnew[, !is.na(ols_fit)]
 
-  Xnew = add_intercept(Xnew)
-  Xnew = Xnew[, !is.na(ols_fit)]
-
-  fit = as.vector(Xnew %*% matrix(ols_fit, ncol = 1))
+  fit <- as.vector(Xnew %*% matrix(ols_fit, ncol = 1))
 
   return(fit)
-
 }
 
 
@@ -114,16 +110,16 @@ predict.ols_fit = function(ols_fit, Xnew = NULL, ...) {
 #' @return An object with S3 class \code{\link[glmnet]{glmnet}}
 #'
 #' @keywords internal
-#' 
 #'
-ridge_fit = function(X, Y, arguments = list()) {
+#'
+ridge_fit <- function(X, Y, arguments = list()) {
   x_means <- colMeans(X, na.rm = TRUE)
   x_sds <- apply(X, 2, stats::sd, na.rm = TRUE)
-  x_std = scale(X, x_means, x_sds)
-  ridge = do.call(glmnet::cv.glmnet, c(list(x = x_std, y = Y, alpha = 0, standardize = FALSE, intercept = TRUE), arguments))
-  ridge[["x_means"]] = x_means
-  ridge[["x_sds"]] = x_sds
-  class(ridge) = "ridge_fit"
+  x_std <- scale(X, x_means, x_sds)
+  ridge <- do.call(glmnet::cv.glmnet, c(list(x = x_std, y = Y, alpha = 0, standardize = FALSE, intercept = TRUE), arguments))
+  ridge[["x_means"]] <- x_means
+  ridge[["x_sds"]] <- x_sds
+  class(ridge) <- "ridge_fit"
   return(ridge)
 }
 
@@ -143,13 +139,12 @@ ridge_fit = function(X, Y, arguments = list()) {
 #'
 #' @keywords internal
 #'
-predict.ridge_fit = function(ridge_fit, Xnew, ...) {
+predict.ridge_fit <- function(ridge_fit, Xnew, ...) {
+  Xnew <- scale(Xnew, ridge_fit$x_means, ridge_fit$x_sds)
 
-  Xnew = scale(Xnew, ridge_fit$x_means, ridge_fit$x_sds)
+  class(ridge_fit) <- "cv.glmnet"
 
-  class(ridge_fit) = "cv.glmnet"
-
-  fit = as.vector(predict(ridge_fit, newx = Xnew, s = "lambda.min"))
+  fit <- as.vector(predict(ridge_fit, newx = Xnew, s = "lambda.min"))
 
   return(fit)
 }
@@ -168,9 +163,17 @@ predict.ridge_fit = function(ridge_fit, Xnew, ...) {
 #'
 #' @keywords internal
 #'
-plasso_fit = function(X, Y, arguments = list()) {
-  plasso = do.call(plasso::cv.plasso, c(list(x = X, y = Y), arguments))
-  class(plasso) = "plasso_fit"
+plasso_fit <- function(X, Y, arguments = list()) {
+  if (!requireNamespace("plasso", quietly = TRUE)) {
+    stop(
+      "The 'plasso' package is not installed. This learner is optional (in Suggests).\n",
+      "Install it with: install.packages('plasso')",
+      call. = FALSE
+    )
+  }
+
+  plasso <- do.call(plasso::cv.plasso, c(list(x = X, y = Y), arguments))
+  class(plasso) <- "plasso_fit"
   return(plasso)
 }
 
@@ -192,12 +195,11 @@ plasso_fit = function(X, Y, arguments = list()) {
 #'
 #' @keywords internal
 #'
-predict.plasso_fit = function(plasso_fit, Xnew = NULL, ...) {
+predict.plasso_fit <- function(plasso_fit, Xnew = NULL, ...) {
+  class(plasso_fit) <- "cv.plasso"
+  if (is.null(Xnew)) Xnew <- plasso_fit$X
 
-  class(plasso_fit) = "cv.plasso"
-  if (is.null(Xnew)) Xnew = plasso_fit$X
-
-  fit = as.vector(predict(plasso_fit, newx = Xnew, type = "response", s = "optimal", se_rule = 0)$plasso)
+  fit <- as.vector(predict(plasso_fit, newx = Xnew, type = "response", s = "optimal", se_rule = 0)$plasso)
 
   return(fit)
 }
@@ -206,7 +208,7 @@ predict.plasso_fit = function(plasso_fit, Xnew = NULL, ...) {
 #' Fits post-Lasso regression using hdm::rlasso
 #'
 #' @description
-#' \code{\link{rlasso_fit}} estimates post-Lasso regression under homoscedastic and 
+#' \code{\link{rlasso_fit}} estimates post-Lasso regression under homoscedastic and
 #' heteroscedastic non-Gaussian disturbances using the \code{hdm} package.
 #'
 #' @param X Matrix of covariates (number of observations times number of covariates matrix)
@@ -217,11 +219,18 @@ predict.plasso_fit = function(plasso_fit, Xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-rlasso_fit = function(X, Y, arguments = list()) {
-  
+rlasso_fit <- function(X, Y, arguments = list()) {
+  if (!requireNamespace("hdm", quietly = TRUE)) {
+    stop(
+      "The 'hdm' package is not installed. 'rlasso' learner is optional (in Suggests).\n",
+      "Install it with: install.packages('hdm')",
+      call. = FALSE
+    )
+  }
+
   rlasso <- do.call(hdm::rlasso, c(list(x = X, y = Y), arguments))
   class(rlasso) <- c(class(rlasso), "rlasso_fit")
-  
+
   return(rlasso)
 }
 
@@ -243,10 +252,9 @@ rlasso_fit = function(X, Y, arguments = list()) {
 #'
 #' @keywords internal
 #'
-predict.rlasso_fit = function(rlasso_fit, Xnew = NULL, ...) {
-  
+predict.rlasso_fit <- function(rlasso_fit, Xnew = NULL, ...) {
   fit <- as.vector(predict(rlasso_fit, newdata = Xnew))
-  
+
   return(fit)
 }
 
@@ -265,9 +273,17 @@ predict.rlasso_fit = function(rlasso_fit, Xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-forest_grf_fit = function(X, Y, arguments = list()) {
-  rf = do.call(grf::regression_forest, c(list(X = X, Y = Y), arguments))
-  class(rf) = "forest_grf_fit"
+forest_grf_fit <- function(X, Y, arguments = list()) {
+  if (!requireNamespace("grf", quietly = TRUE)) {
+    stop(
+      "The 'grf' package is not installed. 'regression_forest' learner is optional (in Suggests).\n",
+      "Install it with: install.packages('grf')",
+      call. = FALSE
+    )
+  }
+
+  rf <- do.call(grf::regression_forest, c(list(X = X, Y = Y), arguments))
+  class(rf) <- "forest_grf_fit"
   return(rf)
 }
 
@@ -289,12 +305,11 @@ forest_grf_fit = function(X, Y, arguments = list()) {
 #'
 #' @keywords internal
 #'
-predict.forest_grf_fit = function(forest_grf_fit, Xnew = NULL, ...) {
+predict.forest_grf_fit <- function(forest_grf_fit, Xnew = NULL, ...) {
+  if (is.null(Xnew)) Xnew <- forest_grf_fit$X.orig
 
-  if(is.null(Xnew)) Xnew = forest_grf_fit$X.orig
-
-  class(forest_grf_fit) = "regression_forest"
-  fit = predict(forest_grf_fit, newdata = Xnew)$prediction
+  class(forest_grf_fit) <- "regression_forest"
+  fit <- predict(forest_grf_fit, newdata = Xnew)$prediction
 
   return(fit)
 }
@@ -305,7 +320,7 @@ predict.forest_grf_fit = function(forest_grf_fit, Xnew = NULL, ...) {
 #' @description
 #' \code{\link{xgboost_fit}} fits an XGBoost using the
 #' \code{\link{xgboost}} package.
-#' 
+#'
 #' If arguments$tune.parameters == "all", performs grid search tuning of hyperparameters,
 #' otherwise uses default settings.
 #'
@@ -317,32 +332,34 @@ predict.forest_grf_fit = function(forest_grf_fit, Xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-xgboost_fit = function(X, Y, arguments = list()) {
-  
+xgboost_fit <- function(X, Y, arguments = list()) {
+  if (!requireNamespace("xgboost", quietly = TRUE)) {
+    stop(
+      "The 'xgboost' package is not installed. This learner is optional (in Suggests).\n",
+      "Install it with: install.packages('xgboost')",
+      call. = FALSE
+    )
+  }
+
   # Convert to DMatrix object
-  dtrain = xgboost::xgb.DMatrix(data = as.matrix(X), label = Y)
-  
-  # If tuning requested, use tuning function
-  # if (!is.null(arguments$tune.parameters) && arguments$tune.parameters == "all") { arguments <- tune_xgboost(X, Y, n_evals = 15) }
-    
-  
+  dtrain <- xgboost::xgb.DMatrix(data = as.matrix(X), label = Y)
+
   # Ali's settings:
-  params = list(
-    booster = "gbtree",
-    objective = "reg:squarederror",
-    eta = 0.1,
-    max_depth = 1,
-    min_child_weight = 80,
-    subsample = 1,
-    colsample_bytree = 1,
-    lambda = 10,
-    base_score = 0.0
-  )
-  
-  xgb = do.call(xgboost::xgb.train, c(list(data = dtrain, nrounds = 100, params = params)))
-  #class(xgb) = c("xgboost_fit", class(xgb))
-  
-  
+  # arguments = list(
+  #   booster = "gbtree",
+  #   objective = "reg:squarederror",
+  #   eta = 0.1,
+  #   max_depth = 1,
+  #   min_child_weight = 80,
+  #   subsample = 1,
+  #   colsample_bytree = 1,
+  #   lambda = 10,
+  #   base_score = 0.0
+  # )
+
+  xgb <- do.call(xgboost::xgb.train, c(list(data = dtrain, nrounds = 100, params = arguments)))
+  # class(xgb) = c("xgboost_fit", class(xgb))
+
   return(xgb)
 }
 
@@ -364,12 +381,11 @@ xgboost_fit = function(X, Y, arguments = list()) {
 #'
 #' @keywords internal
 #'
-predict.xgboost_fit = function(xgboost_fit, Xnew = NULL, ...) {
-  
-  dtest = xgboost::xgb.DMatrix(data = as.matrix(Xnew))
+predict.xgboost_fit <- function(xgboost_fit, Xnew = NULL, ...) {
+  dtest <- xgboost::xgb.DMatrix(data = as.matrix(Xnew))
   fit <- predict(xgboost_fit, newdata = dtest)
   # fit <- xgboost:::predict.xgb.Booster(xgboost_fit, newdata = dtest)
-  
+
   return(fit)
 }
 
@@ -388,9 +404,9 @@ predict.xgboost_fit = function(xgboost_fit, Xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-lasso_fit = function(X, Y, arguments = list()) {
-  lasso = do.call(glmnet::cv.glmnet, c(list(x = X, y = Y), arguments))
-  class(lasso) = "lasso_fit"
+lasso_fit <- function(X, Y, arguments = list()) {
+  lasso <- do.call(glmnet::cv.glmnet, c(list(x = X, y = Y), arguments))
+  class(lasso) <- "lasso_fit"
   return(lasso)
 }
 
@@ -411,12 +427,11 @@ lasso_fit = function(X, Y, arguments = list()) {
 #'
 #' @keywords internal
 #'
-predict.lasso_fit = function(lasso_fit, Xnew = NULL, ...) {
+predict.lasso_fit <- function(lasso_fit, Xnew = NULL, ...) {
+  class(lasso_fit) <- "cv.glmnet"
+  if (is.null(Xnew)) Xnew <- lasso_fit$X
 
-  class(lasso_fit) = "cv.glmnet"
-  if (is.null(Xnew)) Xnew = lasso_fit$X
-
-  fit = predict(lasso_fit, newx = Xnew, type = "response", s = "lambda.min")
+  fit <- predict(lasso_fit, newx = Xnew, type = "response", s = "lambda.min")
 
   return(fit)
 }
@@ -436,8 +451,8 @@ predict.lasso_fit = function(lasso_fit, Xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-knn_fit = function(arguments = list(), ...) {
-  class(arguments) = "knn_fit"
+knn_fit <- function(arguments = list(), ...) {
+  class(arguments) <- "knn_fit"
   return(arguments)
 }
 
@@ -461,12 +476,11 @@ knn_fit = function(arguments = list(), ...) {
 #'
 #' @keywords internal
 #'
-predict.knn_fit = function(arguments, X, Y, Xnew = NULL, ...) {
-
+predict.knn_fit <- function(arguments, X, Y, Xnew = NULL, ...) {
   # get smoother weights
-  w = weights.knn_fit(arguments, X = X, Xnew = Xnew)
+  w <- weights.knn_fit(arguments, X = X, Xnew = Xnew)
   # multiply with training outcome vector
-  fit = as.vector(w %*% Y)
+  fit <- as.vector(w %*% Y)
 
   return(fit)
 }
@@ -486,9 +500,17 @@ predict.knn_fit = function(arguments, X, Y, Xnew = NULL, ...) {
 #'
 #' @keywords internal
 #'
-forest_drf_fit = function(X, Y, arguments = list()) {
-  rf = do.call(drf::drf, c(list(X = X, Y = Y, splitting.rule = "FourierMMD"), arguments))
-  class(rf) = "forest_drf_fit"
+forest_drf_fit <- function(X, Y, arguments = list()) {
+  if (!requireNamespace("drf", quietly = TRUE)) {
+    stop(
+      "The 'drf' package is not installed. This learner is optional (in Suggests).\n",
+      "Install it with: install.packages('drf')",
+      call. = FALSE
+    )
+  }
+
+  rf <- do.call(drf::drf, c(list(X = X, Y = Y, splitting.rule = "FourierMMD"), arguments))
+  class(rf) <- "forest_drf_fit"
   return(rf)
 }
 
@@ -510,14 +532,12 @@ forest_drf_fit = function(X, Y, arguments = list()) {
 #'
 #' @keywords internal
 #'
-predict.forest_drf_fit = function(forest_drf_fit, Xnew = NULL, functional = "mean", ...) {
+predict.forest_drf_fit <- function(forest_drf_fit, Xnew = NULL, functional = "mean", ...) {
+  if (is.null(Xnew)) Xnew <- forest_drf_fit$X.orig
 
-  if(is.null(Xnew)) Xnew = forest_drf_fit$X.orig
-
-  class(forest_drf_fit) = "drf"
-  pred = predict(forest_drf_fit, newdata = Xnew, functional = functional)
-  fit = as.vector(pred[[functional]])
+  class(forest_drf_fit) <- "drf"
+  pred <- predict(forest_drf_fit, newdata = Xnew, functional = functional)
+  fit <- as.vector(pred[[functional]])
 
   return(fit)
 }
-

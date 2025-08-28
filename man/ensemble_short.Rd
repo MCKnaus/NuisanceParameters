@@ -10,8 +10,7 @@ ensemble_short(
   Y,
   cf_mat,
   subset = NULL,
-  storeModels = c("No", "Memory", "Disk"),
-  path = NULL,
+  storeModels = c("No", "Memory"),
   quiet = TRUE,
   pb = NULL,
   pb_np = NULL
@@ -25,23 +24,15 @@ ensemble model.}
 
 \item{Y}{Vector of outcomes of training sample.}
 
-\item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
-(for example created by \code{\link{prep_cf_mat}}).}
+\item{cf_mat}{Logical matrix with k columns of indicators representing the different folds.}
 
 \item{subset}{Logical vector indicating which observations to use for determining
 ensemble weights. If not provided, all observations are used.}
 
-\item{storeModels}{Specifies whether and where to store the models.
-If smoother weights should be computed in a second step (using the weights method),
-the models need to be stored somewhere (either in memory or on disk).
-Value has to be an item from \code{c("No", "Memory", "Disk")} with "No" being
-the default value.}
+\item{storeModels}{Specifies whether to store the models. Value has to be an item
+from \code{c("No", "Memory")} with "No" being the default value.}
 
-\item{path}{Optional path to save the list containing the ensemble models
-from each cross-fitting fold to. Only considered, if \code{storeModels = "Disk"}.}
-
-\item{quiet}{If FALSE, method that is currently computed is printed into the
-console.}
+\item{quiet}{If FALSE, progress output is printed into console.}
 
 \item{pb}{A progress bar object to track overall computation progress.}
 
@@ -53,9 +44,10 @@ List object containing:
 \item{fit_cv}{matrix of dimension \code{nrow(X)} X \code{length(method)} containing
 the cross-fitted predictions of the machine learning methods from the ensemble}
 \item{method}{list of fitted machine learning models from all cross-fitting folds
-(if storeModels is not set to "No")}
+(if \code{storeModels} is not set to "No")}
 }
 \description{
 \code{\link{ensemble_short}} trains an ensemble learner on the given training data
 in the spirit of a short-stacking procedure.
 }
+\keyword{internal}

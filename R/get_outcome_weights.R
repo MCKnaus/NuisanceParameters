@@ -135,10 +135,10 @@ get_outcome_weights = function(np_object,
       }
     }
     
-    results[[NuPa]] <- model_results
+    results[[method_name]] <- model_results
   }
-  
-  names(results) <- NuPa
+
+  # names(results) <- NuPa
   return(results)
 }
 

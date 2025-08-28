@@ -2,20 +2,23 @@
 % Please edit documentation in R/utils.R
 \name{make_fit_cv}
 \alias{make_fit_cv}
-\title{Prepare fit_cv matrix}
+\title{Prepare fit_cv matrix for cross-fitted ensemble predictions}
 \usage{
 make_fit_cv(method, N, Y)
 }
 \arguments{
-\item{method}{List of methods built via \code{\link{create_method}} to be used in
-ensemble model}
+\item{method}{List of methods built via \code{\link{create_method}} to be used in ensemble}
 
-\item{N}{Number of observations.}
+\item{N}{Number of observations}
+
+\item{Y}{Outcome vector (used to determine number of classes for multinomial outcomes)}
 }
 \value{
-A matrix of NAs with dimensions \code{N} x \code{length(method)}
+A matrix of NAs with dimensions \code{N} x \code{length(method)} for binary outcomes,
+        or a 3D array with dimensions \code{N} x \code{K} x \code{length(method)} for multinomial
+        outcomes (where K is number of unique classes in Y)
 }
 \description{
-This function creates a matrix to store cross-fitted ensemble predictions.
+Creates a matrix or array to store cross-fitted ensemble predictions.
 }
 \keyword{internal}

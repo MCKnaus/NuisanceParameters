@@ -7,7 +7,7 @@
 update_progress(pb, pb_np, pb_cf, pb_cv, task, method)
 }
 \arguments{
-\item{pb}{Progress bar object from `progress` package}
+\item{pb}{Progress bar object from \code{progress} package}
 
 \item{pb_np}{Current nuisance parameter (character)}
 
@@ -20,6 +20,6 @@ update_progress(pb, pb_np, pb_cf, pb_cv, task, method)
 \item{method}{Method name (character)}
 }
 \description{
-This function updates progress bar with standardized formatting
+Updates progress bar with standardized formatting.
 }
 \keyword{internal}

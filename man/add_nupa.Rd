@@ -2,34 +2,59 @@
 % Please edit documentation in R/utils.R
 \name{add_nupa}
 \alias{add_nupa}
-\title{Add or Replace Nuisance Parameters in a NuisanceParameters Object}
+\title{Add or Replace Nuisance Parameters in a `NuisanceParameters` Object}
 \usage{
 add_nupa(np, np_new, NuPa = NULL, replace = FALSE)
 }
 \arguments{
-\item{np}{A NuisanceParameters object (the original object to be modified)}
+\item{np}{A `NuisanceParameters` object (the original object to be modified)}
 
-\item{np_new}{A NuisanceParameters object (the source of new parameters)}
+\item{np_new}{A `NuisanceParameters` object (the donor object)}
 
 \item{NuPa}{Character vector specifying which nuisance parameters to add/replace.
-If NULL (default), all available parameters from np_new will be used.}
+If NULL (default), all available parameters from `np_new` will be used.}
 
 \item{replace}{Logical indicating whether to replace existing parameters (TRUE)
 or only fill empty slots (FALSE, default)}
 }
 \value{
-A modified NuisanceParameters object with updated nuisance parameters and models
+A modified `NuisanceParameters` object with updated nuisance parameters and models
 }
 \description{
-This function allows you to add or replace nuisance parameters and their corresponding models
-from one NuisanceParameters object to another.
+This function allows to add or replace nuisance parameters and their corresponding models
+from one `NuisanceParameters` object to another.
 }
 \examples{
 \dontrun{
-# Add/replace specific parameters
-np_updated <- add_nupa(np_old, np_new, NuPa = c("Y.hat", "D.hat"), replace = TRUE)
+set.seed(123)
 
-# Add all available parameters without replacing existing ones
-np_updated <- add_nupa(np_old, np_new)
+N <- 100
+Y <- rnorm(N)
+X <- matrix(rnorm(N * 10), ncol = 10)
+D <- Z <- rbinom(N, 1, 0.5)
+
+method1 <- list(
+  "ols" = create_method("ols"),
+  "plasso" = create_method("plasso")
+)
+
+method2 <- list(
+  "forest_grf" = create_method("forest_grf"),
+  "xgboost" = create_method("xgboost")
+)
+
+np1 <- nuisance_parameters(
+  NuPa = c("Y.hat", "D.hat"), X = X, Y = Y, D = D,
+  method = method1, cf = 5, stacking = "short", storeModels = "Memory"
+)
+
+np2 <- nuisance_parameters(
+  NuPa = c("D.hat", "Z.hat"), X = X, D = D, Z = Z, 
+  cf_mat = np1$numbers$cf_mat, method = method2, cf = 5, 
+  stacking = "short", storeModels = "Memory"
+)
+
+np3 <- add_nupa(np = np1, np_new = np2, NuPa = c("D.hat", "Z.hat"), replace = TRUE)
 }
+
 }

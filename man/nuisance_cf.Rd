@@ -10,40 +10,27 @@ nuisance_cf(
   X,
   cf_mat,
   cv = 5,
-  cv_mat = cv_mat,
   subset = NULL,
   storeModels = c("No", "Memory", "Disk"),
-  path,
   quiet = TRUE,
   pb = NULL,
   pb_np = NULL
 )
 }
 \arguments{
-\item{method}{List of methods to be used in \code{\link{ensemble}} estimation.
-Methods can be created by \code{\link{create_method}}.}
+\item{method}{List of methods to be used in \code{\link{ensemble}} estimation.}
 
 \item{Y}{Vector of variable to be predicted.}
 
 \item{X}{Matrix of covariates.}
 
-\item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
-(for example created by \code{\link{prep_cf_mat}}).}
+\item{cf_mat}{Logical matrix with k columns of indicators representing the different folds.}
 
-\item{cv}{Number of cross-validation folds when estimating ensemble model.
-Default value is 1 which then evaluates to a short-stacking procedure which
-is computationally less demanding than standard stacking.}
-
-\item{cv_mat}{Optional list of logical matrices of indicators representing the different folds,
-possibly from already estimated \code{NuisanceParameters} object.}
+\item{cv}{Number of cross-validation folds when estimating ensemble model (default: 1).}
 
 \item{subset}{Optional logical vector if only subset of data should be used for prediction.}
 
-\item{storeModels}{Vector of characters indicating where to save individual 
-models for future processing (default "No").}
-
-\item{path}{Path to save fit_cv matrix and non-negative least square weights to.
-Optionally, weights as well.}
+\item{storeModels}{Vector of characters indicating where to save individual models for future processing.}
 
 \item{quiet}{If FALSE, progress output is printed into console.}
 
@@ -53,7 +40,13 @@ Optionally, weights as well.}
 estimated/predicted (for progress bar updates).}
 }
 \value{
-Returns a vector of length N containing nuisance parameters.
+A list containing:
+\itemize{
+  \item \code{np}: A vector (or matrix for multinomial outcomes) of length N 
+                   containing nuisance parameter estimates
+  \item \code{models}: An object of class \code{ens.learner} containing fitted ensemble models
+  \item \code{ens_weights}: A list of stacking weights
+ }
 }
 \description{
 \code{\link{nuisance_cf}} makes a cross-fitted ensemble prediction using

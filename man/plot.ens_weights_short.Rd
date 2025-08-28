@@ -7,16 +7,28 @@
 \method{plot}{ens_weights_short}(x, base_size = 12, ...)
 }
 \arguments{
-\item{x}{Object containing final ensemble weights}
+\item{x}{An object of class \code{ens_weights_short} containing ensemble weights}
 
 \item{base_size}{Base font size for plot elements (default: 12)}
 
 \item{...}{Additional arguments passed to ggplot}
 }
 \value{
-A ggplot object showing final learner weights
+A ggplot object showing learner weights as a stacked bar plot
 }
 \description{
-Plots single set of ensemble weights for short stacking (no cross-validation),
-showing the final weight assigned to each learner.
+Plots single set of ensemble weights for short stacking,
+showing the weight assigned to each learner.
+}
+\examples{
+\dontrun{
+weights <- data.frame(
+  "Y.hat" = c(0.48, 0.10, 0.42),
+  "D.hat" = c(0.59, 0.10, 0.31),
+  row.names = c("ols", "forest_grf", "xgboost")
+)
+class(weights) <- c("ens_weights_short", "data.frame")
+plot(weights)
+}
+
 }

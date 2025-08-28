@@ -13,7 +13,22 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.2
 Suggests:
-    testthat (>= 3.0.0), knitr, rmarkdown, xfun, mvtnorm, foreach, doParallel
+    testthat (>= 3.0.0), 
+    mvtnorm, 
+    knitr, 
+    rmarkdown, 
+    xfun, 
+    foreach, 
+    doParallel, 
+    drf, 
+    grf, 
+    xgboost, 
+    plasso, 
+    nnet, 
+    naivebayes, 
+    e1071, 
+    kknn, 
+    ranger
 Imports:
     stats,
     Matrix,
@@ -21,17 +36,7 @@ Imports:
     progress,
     ggplot2,
     glmnet,
-    grf,
-    xgboost,
-    plasso,
-    FastKNN,
-    drf,
-    hdm, 
-    nnet,
-    naivebayes, 
-    e1071,
-    kknn, 
-    ranger
+    FastKNN
 Config/testthat/edition: 3
 Depends: 
     R (>= 2.10)

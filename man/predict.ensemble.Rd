@@ -18,18 +18,17 @@
 )
 }
 \arguments{
-\item{object}{Trained ensemble object from \code{\link{ensemble}}}
+\item{object}{Trained ensemble object from \code{\link{ensemble}}.}
 
-\item{method}{List of raw methods built via \code{\link{create_method}}}
+\item{method}{List of raw methods built via \code{\link{create_method}}.}
 
-\item{X}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of training sample.}
 
-\item{Y}{Vector of outcomes of training sample}
+\item{Y}{Vector of outcomes of training sample.}
 
-\item{Xnew}{Covariate matrix of test sample}
+\item{Xnew}{Covariate matrix of test sample.}
 
-\item{quiet}{If FALSE, method that is currently computed is printed into the
-console.}
+\item{quiet}{If FALSE, progress output is printed into console.}
 
 \item{pb}{A progress bar object to track overall computation progress.}
 
@@ -48,3 +47,4 @@ Vector containing ensemble predictions.
 \code{\link{predict.ensemble}} makes prediction of fitted values for a cross-
 validated ensemble learner.
 }
+\keyword{internal}

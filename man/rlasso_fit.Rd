@@ -17,7 +17,7 @@ rlasso_fit(X, Y, arguments = list())
 An object with S3 class "rlasso"
 }
 \description{
-\code{\link{rlasso_fit}} estimates post-Lasso regression under homoscedastic and 
+\code{\link{rlasso_fit}} estimates post-Lasso regression under homoscedastic and
 heteroscedastic non-Gaussian disturbances using the \code{hdm} package.
 }
 \keyword{internal}

@@ -9,7 +9,6 @@ ensemble(
   X,
   Y,
   nfolds = 5,
-  cv_mat = NULL,
   quiet = TRUE,
   pb = NULL,
   pb_np = NULL,
@@ -18,21 +17,15 @@ ensemble(
 )
 }
 \arguments{
-\item{method}{List of methods built via \code{\link{create_method}} to be used in
-ensemble model}
+\item{method}{List of methods built via \code{\link{create_method}} to be used in ensemble model}
 
-\item{X}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of training sample.}
 
-\item{Y}{Vector of outcomes of training sample}
+\item{Y}{Vector of outcomes of training sample.}
 
-\item{nfolds}{Number of folds used in cross-validation of ensemble weights
-(default \code{nfolds = 5})}
+\item{nfolds}{Number of folds used in cross-validation of ensemble weights (default: 5)}
 
-\item{cv_mat}{Optional list of logical matrices of indicators representing the different folds,
-possibly from already estimated \code{NuisanceParameters} object.}
-
-\item{quiet}{If FALSE, method that is currently computed is printed into the
-console}
+\item{quiet}{If FALSE, progress output is printed into console.}
 
 \item{pb}{A progress bar object to track overall computation progress.}
 
@@ -57,3 +50,4 @@ the ensemble}
 \description{
 \code{\link{ensemble}} trains an ensemble learner on the given training data.
 }
+\keyword{internal}

@@ -7,18 +7,38 @@
 \method{plot}{ens_weights_stand}(x, ncols = 3, base_size = 12, ...)
 }
 \arguments{
-\item{x}{Object containing cross-validated ensemble weights}
+\item{x}{An object of class `ens_weights_stand` containing cross-validated 
+ensemble weights from standard stacking}
 
-\item{ncols}{Number of columns for facet grid (default: 3)}
+\item{ncols}{Number of columns for the facet grid (default: 3)}
 
 \item{base_size}{Base font size for plot elements (default: 12)}
 
-\item{...}{Additional arguments passed to plotting functions}
+\item{...}{Additional arguments passed to ggplot2 functions}
 }
 \value{
-A ggplot object showing weights by fold and learner
+A ggplot object showing ensemble weights by fold and learner.
 }
 \description{
-Plots cross-validated ensemble weights for standard stacking (multiple folds),
-showing weight distributions across learners for each fold.
+Creates a stacked bar plot showing the distribution of ensemble weights across
+different learners and cross-validation folds for standard stacking.
+}
+\examples{
+\dontrun{
+weights <- list(
+  "Y.hat" = data.frame(
+    fold1 = c(0.65, 0.10, 0.20, 0.05),
+    fold2 = c(0.72, 0.08, 0.15, 0.05),
+    row.names = c("ols", "forest_grf", "xgboost", "rlasso")
+  ),
+  "D.hat" = data.frame(
+    fold1 = c(0.38, 0.10, 0.42, 0.10),
+    fold2 = c(0.61, 0.10, 0.19, 0.10),
+    row.names = c("ols", "forest_grf", "xgboost", "rlasso")
+  )
+)
+class(weights) <- c("ens_weights_stand", "list")
+plot(weights, ncols = 2)
+}
+
 }

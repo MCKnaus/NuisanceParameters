@@ -15,18 +15,19 @@ create_method(
 )
 }
 \arguments{
-\item{method}{Choose method from \code{c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf")}.
-To be continued.}
+\item{method}{Choose method from available options. See details for supported methods.}
 
 \item{x_select}{Optional logical vector of length equal to the number of
 columns of the covariate matrix indicating which variables should be used by
-this method. E.g. tree-based methods usually should not be provided with the
+this method. E.g., tree-based methods usually should not be provided with
 interactions that Lasso is using.}
 
-\item{multinomial}{Optional logical variable specifying whether a multiclass propensity score is being estimated.}
+\item{multinomial}{Optional character specifying multiclass handling approach.
+One of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.}
 
-\item{arguments}{Optional list containing the additional arguments that should be
-passed to the underlying method.}
+\item{arguments}{Optional list containing additional arguments that should be
+passed to the underlying method, or a character string specifying tuning
+mode. See details.}
 
 \item{name}{Optional string naming the method.}
 }
@@ -36,12 +37,24 @@ List object that can be passed as input to \code{\link{ensemble}}
 \description{
 Creates the methods to be used in the subsequent \code{\link{ensemble}} model.
 }
+\details{
+Supported methods: \code{"mean"}, \code{"ols"}, \code{"ridge"}, \code{"plasso"},
+\code{"forest_grf"}, \code{"lasso"}, \code{"knn"}, \code{"forest_drf"},
+\code{"xgboost"}, \code{"rlasso"}, \code{"logit"}, \code{"logit_nnet"},
+\code{"nb_gaussian"}, \code{"nb_bernoulli"}, \code{"xgboost_prop"}, \code{"svm"},
+\code{"prob_forest"}, \code{"ranger"}, \code{"knn_prop"}.
+
+For the \code{arguments} parameter, if a character string is provided, it must
+be one of \code{c("tune_on_fold", "tune_full_sample")} to specify tuning mode.
+}
 \examples{
-# create list of method methods for ensemble
-method = list(
- "ols" = create_method("ols"),
- "forest_grf" = create_method("forest_grf"),
- "knn" = create_method("knn", arguments = list("k" = 3))
+# Create list of methods for ensemble
+method <- list(
+  "ols" = create_method("ols"),
+  "knn" = create_method("knn", arguments = list("k" = 3)),
+  "forest_grf" = create_method("forest_grf", arguments = c("tune_full_sample")),
+  "logit_ovo" = create_method("logit", multinomial = "one-vs-rest"),
+  "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
 )
 
 }

@@ -2,24 +2,26 @@
 % Please edit documentation in R/utils.R
 \name{create_final_method}
 \alias{create_final_method}
-\title{Method creation for ensemble (extended version)}
+\title{Method creation for ensemble (internal version)}
 \usage{
 create_final_method(method, NuPa, K)
 }
 \arguments{
 \item{method}{Either:
-1. A list of methods (like in create_method) that will be used for all nuisance parameters, or
-2. A named list where each name corresponds to a nuisance parameter and contains a list of methods for that parameter}
+\enumerate{
+  \item{A list of methods (like in \code{create_method}) that will be used for all nuisance parameters, or}
+  \item{A named list where each name corresponds to a nuisance parameter and contains a list of methods for that parameter}
+}}
 
 \item{NuPa}{Character vector of nuisance parameters to be estimated}
 
-\item{K}{Number of unique treatment statuses (default = 2, binary treatment)}
+\item{K}{Number of unique treatment statuses (default is 2, binary treatment)}
 }
 \value{
-Nested list object organized by nuisance parameter that can be passed as input to \code{\link{ensemble}}
+Nested list object organized by nuisance parameter that will be passed as input to \code{\link{ensemble}}
 }
 \description{
-Creates the methods to be used in the subsequent \code{\link{ensemble}} model,
+Creates the methods to be actually used in the subsequent \code{\link{ensemble}} model,
 allowing for either a simple method list or nuisance-parameter-specific method lists.
 }
 \keyword{internal}

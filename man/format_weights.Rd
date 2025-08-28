@@ -2,19 +2,19 @@
 % Please edit documentation in R/utils.R
 \name{format_weights}
 \alias{format_weights}
-\title{Format ensemble weights for both standard and cross-validated stacking}
+\title{Format ensemble weights for short- or standard-stacking}
 \usage{
-format_weights(ens_weights, cv = 1)
+format_weights(ens_weights, cv)
 }
 \arguments{
 \item{ens_weights}{List of ensemble weights to be formatted}
 
-\item{cv}{Integer indicating cross-validation folds}
+\item{cv}{Integer indicating number of cross-validation folds}
 }
 \value{
-A data.frame (cv=1) or list of data.frames (cv>1) with formatted weights
+A data.frame (\code{cv = 1}) or list of data.frames (\code{cv > 1}) with formatted weights
 }
 \description{
-Format ensemble weights for both standard and cross-validated stacking
+Format ensemble weights for short- or standard-stacking
 }
 \keyword{internal}

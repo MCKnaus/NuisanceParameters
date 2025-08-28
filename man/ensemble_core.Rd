@@ -17,14 +17,13 @@ ensemble_core(
 }
 \arguments{
 \item{method}{List of methods built via \code{\link{create_method}} to be used in
-ensemble model}
+ensemble model.}
 
-\item{X_tr}{Covariate matrix of training sample}
+\item{X_tr}{Covariate matrix of training sample.}
 
-\item{Y_tr}{Vector of outcomes of training sample}
+\item{Y_tr}{Vector of outcomes of training sample.}
 
-\item{quiet}{If FALSE, method that is currently computed is printed into the
-console}
+\item{quiet}{If FALSE, progress output is printed into console.}
 
 \item{pb}{A progress bar object to track overall computation progress.}
 
@@ -45,3 +44,4 @@ Core function of \code{\link{ensemble}} used for fitting (i.e. training) the
 inputted (machine learning) methods for the ensemble model for one given set
 of covariates and targets.
 }
+\keyword{internal}

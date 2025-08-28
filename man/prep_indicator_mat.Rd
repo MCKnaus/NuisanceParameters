@@ -2,27 +2,28 @@
 % Please edit documentation in R/utils.R
 \name{prep_indicator_mat}
 \alias{prep_indicator_mat}
-\title{One-hot encoding of categorical variables}
+\title{One-hot encoding of treatment/instrument vector}
 \usage{
 prep_indicator_mat(x)
 }
 \arguments{
-\item{x}{Categorical vector (treatment, instrument, etc.). 
-Provide as factor to control category ordering, otherwise arranged in 
-ascending order or alphabetically.}
+\item{x}{Treatment (instrument) vector.
+Provide as factor to control category ordering, otherwise arranged 
+in ascending order or alphabetically.}
 }
 \value{
 Logical matrix (N x C) where C is the number of unique categories in `x`.
-  Each column is a binary indicator for one category.
+        Each column is a binary indicator for one category.
 }
 \description{
-Creates a logical matrix of binary indicators (N x C) where each column 
-represents a unique category from the input vector. Useful for encoding 
-treatments, instruments, or other categorical variables.
+\code{\link{prep_indicator_mat}} creates a logical matrix of binary indicators 
+(N x C) where each column represents a unique category from the input vector. 
+Useful for encoding treatments/instruments.
 }
 \examples{
-D = factor(c("A", "B", "A", "C", "B", "C"))
-d_mat = prep_indicator_mat(D)
+D <- factor(c("A", "B", "A", "C", "B", "C"))
+d_mat <- prep_indicator_mat(D)
 head(d_mat)
 
 }
+\keyword{internal}

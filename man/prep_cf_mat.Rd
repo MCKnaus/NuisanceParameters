@@ -15,10 +15,9 @@ prep_cf_mat(N, cf, cluster = NULL, d_mat = NULL)
 for clusters within the data.}
 
 \item{d_mat}{Optional logical matrix of treatment indicators (N x T+1 with T
-being the number of treatments).
-For example created by \code{\link{prep_indicator_mat}}.
+being the number of treatments). For example created by \code{\link{prep_indicator_mat}}.
 If specified, cross-fitting folds will preserve the treatment ratios from full sample.
-However, if cluster vector is provided, d_mat is ignored due to computational
+However, if cluster vector is provided, \code{d_mat} is ignored due to computational
 constraints and randomization as well as feasibility issues.}
 }
 \value{
@@ -29,9 +28,10 @@ Logical matrix of cross-fitting folds (N x # folds).
 indicators (N x # cross-folds)
 }
 \examples{
-N = 1000
-d_mat = prep_indicator_mat(sample(3, N, replace = TRUE))
-cf_mat = prep_cf_mat(N, cf = 5, d_mat = d_mat)
+N <- 1000
+d_mat <- prep_indicator_mat(sample(3, N, replace = TRUE))
+cf_mat <- prep_cf_mat(N, cf = 5, d_mat = d_mat)
 head(cf_mat)
 
 }
+\keyword{internal}

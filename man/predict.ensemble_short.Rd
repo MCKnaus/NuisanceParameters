@@ -12,7 +12,7 @@
 \item{w}{Ensemble weights to aggregate predictions from different learners (optional).
 Needs to be a vector of length \code{ncol(object$fit_cv)}.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Additional arguments.}
 }
 \value{
 Vector containing ensemble predictions.
@@ -21,3 +21,4 @@ Vector containing ensemble predictions.
 Returns prediction of fitted values for a fitted and short-stacked ensemble
 learner created by \code{\link{ensemble_short}}.
 }
+\keyword{internal}

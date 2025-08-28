@@ -21,8 +21,11 @@ on the basis of the non-negative least squares algorithm that puts a positive
 constraint on the regression coefficients.
 }
 \examples{
-X = matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2)
-Y = c(0.25, 0.45, 0.65)
-\donttest{nnls_w = nnls_weights(X, Y)}
+X <- matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2)
+Y <- c(0.25, 0.45, 0.65)
+\donttest{
+nnls_w <- nnls_weights(X, Y)
+}
 
 }
+\keyword{internal}

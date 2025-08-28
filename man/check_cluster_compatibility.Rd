@@ -4,17 +4,18 @@
 \alias{check_cluster_compatibility}
 \title{Compatibility check of cluster vector}
 \usage{
-check_cluster_compatibility(cl, cf)
+check_cluster_compatibility(cluster, cf)
 }
 \arguments{
-\item{cl}{A vector representing the cluster assignments}
+\item{cluster}{A vector representing the cluster assignments}
 
-\item{cf}{The desired number of folds for cross-validation}
+\item{cf}{The desired number of folds for cross-fitting}
 }
 \value{
-Does not return anything, only throws an error if checks fail.
+Does not return anything; throws an error if checks fail.
 }
 \description{
-\code{\link{check_cluster_compatibility}} checks if the cross-fitting procedure is feasible
-given the cluster vector and desired number of cross-fitting folds.
+\code{\link{check_cluster_compatibility}} checks if the cross-fitting procedure 
+is feasible given the cluster vector and desired number of cross-fitting folds.
 }
+\keyword{internal}

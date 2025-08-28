@@ -19,18 +19,17 @@
 )
 }
 \arguments{
-\item{object}{List of fitted methods (from \code{\link{ensemble_core}}}
+\item{object}{List of fitted methods (from \code{\link{ensemble_core}}.}
 
-\item{method}{List of raw methods built via \code{\link{create_method}}}
+\item{method}{List of raw methods built via \code{\link{create_method}}.}
 
-\item{X_tr}{Covariate matrix of training sample}
+\item{X_tr}{Covariate matrix of training sample.}
 
-\item{Y_tr}{Vector of outcomes of training sample}
+\item{Y_tr}{Vector of outcomes of training sample.}
 
-\item{X_te}{Covariate matrix of test sample}
+\item{X_te}{Covariate matrix of test sample.}
 
-\item{quiet}{If FALSE, method that is currently computed is printed into the
-console}
+\item{quiet}{If FALSE, progress output is printed into console.}
 
 \item{pb}{A progress bar object to track overall computation progress.}
 
@@ -53,3 +52,4 @@ that contains the predictions of fitted values for each method in the ensemble.
 Predicts fitted values for some (new) covariate matrix based on the fully
 trained models of the ensemble model from \code{\link{ensemble_core}}.
 }
+\keyword{internal}

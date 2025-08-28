@@ -11,12 +11,11 @@ nuisance_parameters(
   D = NULL,
   Z = NULL,
   method,
+  stacking,
   cluster = NULL,
   stratify = FALSE,
   cf,
   cf_mat = NULL,
-  cv_mat = NULL,
-  stacking,
   storeModels = c("No", "Memory", "Disk"),
   path = NULL,
   quiet = TRUE
@@ -24,7 +23,7 @@ nuisance_parameters(
 }
 \arguments{
 \item{NuPa}{Character vector specifying the nuisance parameters to estimate.
-Currently supported options: 
+Currently supported options:
 \code{c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat")}}
 
 \item{X}{Covariate matrix.}
@@ -38,8 +37,12 @@ Currently supported options:
 \item{method}{List of methods to use for \code{\link{ensemble}} estimation.
 Methods can be created using \code{\link{create_method}}.}
 
-\item{cluster}{Optional vector of cluster variables if cross-fitting should account
-for clusters within the data.}
+\item{stacking}{Stacking option: Either "short" for short stacking or an integer >1
+indicating the number of cross-validation folds within each
+cross-fitting fold.}
+
+\item{cluster}{Optional vector of cluster variables if cross-fitting should
+account for clusters within the data.}
 
 \item{stratify}{Logical. If \code{TRUE}, cross-fitting folds will preserve the
 treatment ratios from the full sample. Note: If cluster vector
@@ -48,18 +51,12 @@ constraints and randomization feasibility issues.}
 
 \item{cf}{Number of cross-fitting folds (default: 5).}
 
-\item{cf_mat}{Optional logical matrix of indicators representing the different folds,
-possibly from already estimated \code{NuisanceParameters} object.}
-
-\item{cv_mat}{Optional list of logical matrices of indicators representing the different folds,
-possibly from already estimated \code{NuisanceParameters} object.}
-
-\item{stacking}{Stacking option: Either "short" for short stacking or an integer >1
-indicating the number of cross-validation folds within each
-cross-fitting fold.}
+\item{cf_mat}{Optional logical matrix of indicators representing the different
+cross-fitting folds, possibly from already estimated \code{NuisanceParameters} object.}
 
 \item{storeModels}{Character vector indicating whether to save individual
-models for future processing (default: "No").}
+models for future processing (default: "No").
+Supported options: \code{c("No", "Memory", "Disk")}}
 
 \item{path}{Optional path to save the \code{\link{ensemble}} objects for
 later processing (saved as a list of models).}
@@ -71,8 +68,8 @@ A list containing:
 \itemize{
   \item \code{nuisance_parameters}: Requested nuisance parameter estimates
   \item \code{models} (optional): \code{\link{ensemble}} objects (individual models)
-   \item \code{numbers}: Additional objects used for downstream processing in
-                         smoother matrices and outcome weights extraction
+  \item \code{numbers}: Additional objects used for downstream processing in
+                        smoother matrices and outcome weights extraction
 }
 }
 \description{
