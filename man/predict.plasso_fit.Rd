@@ -2,23 +2,23 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.plasso_fit}
 \alias{predict.plasso_fit}
-\title{Predictions based on Post-Lasso regression}
+\title{Predict method for post-lasso regression models}
 \usage{
 \method{predict}{plasso_fit}(plasso_fit, Xnew = NULL, ...)
 }
 \arguments{
-\item{plasso_fit}{Output of \code{\link{plasso_fit}}}
+\item{plasso_fit}{An object of class \code{plasso_fit} from \code{\link{plasso_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample.
-If not provided, prediction is done for the training sample.}
+\item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},
+predictions are generated for the training data.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Vector of fitted values.
+Numeric vector of predicted values.
 }
 \description{
-Prediction of fitted values (for a potentially new set of covaraites Xnew)
-based on a trained Post-Lasso model.
+Generates predictions from a fitted post-lasso regression model.
+Returns predictions for either new data or the training sample.
 }
 \keyword{internal}

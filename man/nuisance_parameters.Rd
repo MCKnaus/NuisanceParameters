@@ -75,3 +75,32 @@ A list containing:
 \description{
 Estimates nuisance parameters using ensemble methods.
 }
+\examples{
+\donttest{
+  if (requireNamespace("hdm", quietly = TRUE)) {
+    data(pension, package = "hdm")
+    
+    set.seed(123)
+    D <- pension$p401
+    Y <- pension$net_tfa
+    X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc + male + 
+                      marr + pira + twoearn, data = pension)
+    
+    method = list(
+      "ols" = create_method("ols"),
+      "forest_grf" = create_method("forest_grf"),
+      "xgboost" = create_method("xgboost")
+    )
+    
+    np <- nuisance_parameters(
+      NuPa = c("Y.hat", "D.hat"),
+      X = X, Y = Y, D = D,
+      method = method, cf = 2, stacking = "short"
+    )
+    
+    print(head(np$nuisance_parameters[["Y.hat"]]))
+    plot(np_short$numbers$ens_weights)
+  }
+}
+
+}

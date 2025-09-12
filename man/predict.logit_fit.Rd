@@ -19,7 +19,7 @@
 }
 \value{
 Returns list containing:
-\item{prediction}{vector of predictions for Xnew}
+\item{prediction}{vector of predictions for \code{Xnew}}
 \item{weights}{Not supported for propensity score estimation}
 }
 \description{

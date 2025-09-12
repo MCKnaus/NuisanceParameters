@@ -2,22 +2,23 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{forest_drf_fit}
 \alias{forest_drf_fit}
-\title{Fits Distributional Random Forest}
+\title{Fit distributional random forest model}
 \usage{
 forest_drf_fit(X, Y, arguments = list())
 }
 \arguments{
-\item{X}{Matrix of covariates}
+\item{X}{Numeric matrix of covariates for training sample.}
 
-\item{Y}{vector of outcomes}
+\item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{arguments}{List of arguments passed to \code{\link[drf]{drf}}}
+\item{arguments}{List of arguments passed to \code{\link[drf]{drf}}.}
 }
 \value{
-An object with S3 class \code{\link[drf]{drf}}
+An object of class \code{forest_drf_fit} containing the fitted
+  \code{\link[drf]{drf}} model.
 }
 \description{
-\code{\link{forest_drf_fit}} fits a distributional random forest using the
-\code{\link{drf}} package.
+Fits a distributional random forest using the \code{drf} package with
+Fourier MMD splitting rule.
 }
 \keyword{internal}

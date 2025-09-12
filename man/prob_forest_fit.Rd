@@ -4,7 +4,7 @@
 \alias{prob_forest_fit}
 \title{Calculates Probability Forest fit using the \code{\link{grf}} package}
 \usage{
-prob_forest_fit(X, Y, arguments = list(num.trees = 1000))
+prob_forest_fit(X, Y, arguments = list())
 }
 \arguments{
 \item{X}{Matrix of covariates}

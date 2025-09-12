@@ -3,11 +3,18 @@
 #' @param X Covariate matrix of training sample
 #' @param Y Vector of outcomes of training sample
 #' @param arguments List of arguments passed to  \code{\link{glmnet}}
-#' @import glmnet
 #'
 #' @return An object with S3 class "glmnet"
 #'
 logit_fit <- function(X, Y, arguments = list()) {
+  if (!requireNamespace("glmnet", quietly = TRUE)) {
+    stop(
+      "The 'glmnet' package is not installed. 'Ridge' learner is optional (in Suggests).\n",
+      "Install it with: install.packages('glmnet')",
+      call. = FALSE
+    )
+  }
+  
   if (length(unique(Y)) == 2) {
     logit <- do.call(glmnet::glmnet, c(list(x = X, y = Y, family = "binomial", type.measure = "class"), arguments))
   } else {
@@ -25,11 +32,11 @@ logit_fit <- function(X, Y, arguments = list()) {
 #' @param weights Always FALSE as
 #'
 #' @return Returns list containing:
-#' \item{prediction}{vector of predictions for Xnew}
+#' \item{prediction}{vector of predictions for \code{Xnew}}
 #' \item{weights}{Not supported for propensity score estimation}
 #'
 #' @keywords internal
-#'
+#' 
 predict.logit_fit <- function(logit_fit, X, Y, Xnew = NULL, weights = FALSE) {
   if (is.null(Xnew)) Xnew <- X
 
@@ -90,19 +97,20 @@ logit_nnet_fit <- function(X, Y, arguments = list()) {
 #'
 predict.logit_nnet_fit <- function(multinom_fit, X, Y, Xnew = NULL, weights = FALSE) {
   if (is.null(Xnew)) Xnew <- X
+  
   if (weights == TRUE) {
     warning("Weights are not supported for propensity score estimation.")
   }
 
   data <- as.data.frame(Xnew)
   data$Y <- as.factor(0)
-
   fit <- as.data.frame(predict(multinom_fit, newdata = Xnew, type = "probs"))
 
   if (length(unique(Y)) == 2) {
     fit[, 2] <- 1 - fit[, 1]
     colnames(fit) <- rev(sort(unique(Y)))
   }
+  
   return(fit)
 }
 
@@ -206,7 +214,7 @@ predict.nb_bernoulli_fit <- function(nb_bernoulli_fit, X, Y, Xnew = NULL, weight
 #'
 #' @return An object with S3 method for class 'xgb.Booster'
 #'
-xgboost_prop_fit <- function(X, Y, arguments = list(nrounds = 40, eta = 0.01)) {
+xgboost_prop_fit <- function(X, Y, arguments = list(nrounds = 40, eta = 0.01)) { # Maren's settings
   if (!requireNamespace("xgboost", quietly = TRUE)) {
     stop(
       "The 'xgboost' package is not installed. This learner is optional (in Suggests).\n",
@@ -233,7 +241,7 @@ xgboost_prop_fit <- function(X, Y, arguments = list(nrounds = 40, eta = 0.01)) {
 }
 
 
-#' Prediction based on xgboost model.
+#' Prediction based on \code{xgboost} model.
 #' @param xgboost_fit Output of \code{\link{xgboost}} or \code{\link{xgboost_fit}}
 #' @param X Covariate matrix of training sample
 #' @param Y Vector of outcomes of training sample
@@ -326,7 +334,7 @@ predict.svm_fit <- function(svm_fit, X, Y, Xnew = NULL, weights = FALSE) {
 #'
 #' @keywords internal
 #'
-prob_forest_fit <- function(X, Y, arguments = list(num.trees = 1000)) {
+prob_forest_fit <- function(X, Y, arguments = list()) {
   if (!requireNamespace("grf", quietly = TRUE)) {
     stop(
       "The 'grf' package is not installed. Probability Forest is optional (in Suggests).\n",
@@ -424,11 +432,7 @@ predict.knn_prop_fit <- function(knn_fit, X, Y, Xnew = NULL, weights = FALSE) {
 #'
 #' @keywords internal
 #'
-ranger_fit <- function(X, Y, arguments = list(
-                         num.trees = 1000,
-                         min.node.size = 0.1 * nrow(X),
-                         mtry = ceiling(sqrt(ncol(X)))
-                       )) { # arguments=list()
+ranger_fit <- function(X, Y, arguments = list()) { 
   if (!requireNamespace("ranger", quietly = TRUE)) {
     stop(
       "The 'ranger' package is not installed. Probability Forest is optional (in Suggests).\n",
@@ -438,9 +442,9 @@ ranger_fit <- function(X, Y, arguments = list(
   }
 
   data <- data.frame(Y = as.factor(Y), X)
-
   model <- do.call(ranger::ranger, c(list(data = data, formula = Y ~ ., probability = TRUE), arguments))
-  model
+  
+  return(model)
 }
 
 
@@ -462,7 +466,7 @@ predict.ranger_fit <- function(ranger_fit, X, Y, Xnew = NULL, weights = FALSE) {
   if (weights == TRUE) {
     warning("Weights are not supported for propensity score estimation.")
   }
-
+  
   data <- as.data.frame(Xnew)
   data$Y <- as.factor(0)
 
@@ -546,7 +550,7 @@ ovo_fit <- function(X, Y, method = "logit", parallel = FALSE, verbose = TRUE) {
         subset_x <- X[Y %in% c(class_i, class_j), ]
         subset_y <- Y[Y %in% c(class_i, class_j)]
 
-        if (method == "xgboost") {
+        if (method == "xgboost_prop") {
           subset_y <- ifelse(subset_y == i, 1, 0)
         }
 

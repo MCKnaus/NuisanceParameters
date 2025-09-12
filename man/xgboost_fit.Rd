@@ -2,25 +2,37 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{xgboost_fit}
 \alias{xgboost_fit}
-\title{Fits XGBoost}
+\title{Fit XGBoost model}
 \usage{
 xgboost_fit(X, Y, arguments = list())
 }
 \arguments{
-\item{X}{Matrix of covariates}
+\item{X}{Numeric matrix of covariates for training sample.}
 
-\item{Y}{vector of outcomes}
+\item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{arguments}{List of arguments passed to \code{\link[xgboost]{xgboost}}}
+\item{arguments}{List of arguments passed to \code{\link[xgboost]{xgb.train}}.}
 }
 \value{
-An object with S3 class \code{\link[xgboost]{xgboost}}
+An object of class \code{xgboost_fit} containing the fitted
+  \code{\link[xgboost]{xgb.Booster}} model.
 }
 \description{
-\code{\link{xgboost_fit}} fits an XGBoost using the
-\code{\link{xgboost}} package.
-
-If arguments$tune.parameters == "all", performs grid search tuning of hyperparameters,
-otherwise uses default settings.
+Fits an XGBoost model using the \code{xgboost} package.
+}
+\details{
+Parameter restrictions for the smoother matrix multiplied by the outcome 
+vector to be (roughly) equivalent to the outcome nuisance vector 
+\itemize{
+  \item \strong{Restricted}: \code{reg_alpha = 0}, \code{subsample = 1}, 
+        \code{max_delta_step = 0}, \code{base_score = 0}, 
+        \code{objective = "reg:squarederror"}, \code{booster = "gbtree"}
+  \item \strong{Free}: \code{nrounds}, \code{eta}, \code{gamma}, \code{max_depth},
+        \code{min_child_weight}, \code{sampling_method}, \code{colsample_bytree},
+        \code{colsample_bylevel}, \code{colsample_bynode}, \code{lambda},
+        \code{tree_method}, \code{refresh_leaf}, \code{grow_policy},
+        \code{max_leaves}, \code{max_bin}
+  \item \strong{Grey zone}: All other parameters (equivalence not guaranteed)
+}
 }
 \keyword{internal}

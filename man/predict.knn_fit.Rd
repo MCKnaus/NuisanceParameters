@@ -2,27 +2,30 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.knn_fit}
 \alias{predict.knn_fit}
-\title{Prediction of fitted values based on the k-Nearest-Neighbor algorithm}
+\title{Predict method for k-Nearest Neighbors}
 \usage{
 \method{predict}{knn_fit}(arguments, X, Y, Xnew = NULL, ...)
 }
 \arguments{
-\item{arguments}{Output of \code{\link{knn_fit}}}
+\item{arguments}{Output of \code{\link{knn_fit}} of class \code{knn_fit}. 
+List of arguments to be used in k-NN prediction. Typically includes \code{k} 
+(number of neighbors). If no \code{k} is specified, defaults to \code{k = 10}.}
 
-\item{X}{Covariate matrix of training sample}
+\item{X}{Numeric matrix of covariates for training sample.}
 
-\item{Y}{Vector of outcomes of training sample}
+\item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{Xnew}{Covariate matrix of test sample}
+\item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},
+predictions are generated for the training data.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Vector of fitted values.
+Numeric vector of predicted values.
 }
 \description{
-Predictions by k-Nearest-Neighbor algorithm.
-Note that if no \code{k} is explicitly specified, this evaluates to
-\code{k = 10} as default value.
+Generates predictions using the k-Nearest Neighbors algorithm with internal
+Euclidean distance calculation, following the same approach as the
+\code{Distance_for_KNN_test()} function of the \code{FastKNN} package.
 }
 \keyword{internal}

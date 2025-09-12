@@ -2,22 +2,23 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{rlasso_fit}
 \alias{rlasso_fit}
-\title{Fits post-Lasso regression using hdm::rlasso}
+\title{Fit post-lasso regression using hdm package}
 \usage{
 rlasso_fit(X, Y, arguments = list())
 }
 \arguments{
-\item{X}{Matrix of covariates (number of observations times number of covariates matrix)}
+\item{X}{Numeric matrix of covariates for training sample.}
 
-\item{Y}{vector of outcomes}
+\item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{arguments}{List of arguments passed to \code{\link[hdm]{rlasso}}}
+\item{arguments}{List of arguments passed to \code{\link[hdm]{rlasso}}.}
 }
 \value{
-An object with S3 class "rlasso"
+An object of class \code{rlasso_fit} containing the fitted
+  \code{\link[hdm]{rlasso}} model.
 }
 \description{
-\code{\link{rlasso_fit}} estimates post-Lasso regression under homoscedastic and
-heteroscedastic non-Gaussian disturbances using the \code{hdm} package.
+Estimates post-lasso regression under homoscedastic and heteroscedastic
+non-Gaussian disturbances using the \code{hdm} package.
 }
 \keyword{internal}

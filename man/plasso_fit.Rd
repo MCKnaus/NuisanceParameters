@@ -2,21 +2,23 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{plasso_fit}
 \alias{plasso_fit}
-\title{Fits Post-Lasso regression}
+\title{Fit post-lasso regression model}
 \usage{
 plasso_fit(X, Y, arguments = list())
 }
 \arguments{
-\item{X}{Matrix of covariates (number of observations times number of covariates matrix)}
+\item{X}{Numeric matrix of covariates for training sample.}
 
-\item{Y}{vector of outcomes}
+\item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{arguments}{List of arguments passed to \code{\link[plasso]{cv.plasso}}}
+\item{arguments}{List of arguments passed to \code{\link[plasso]{cv.plasso}}.}
 }
 \value{
-An object with S3 class \code{\link[plasso]{cv.plasso}}
+An object of class \code{plasso_fit} containing the fitted
+  \code{\link[plasso]{cv.plasso}} model.
 }
 \description{
-\code{\link{plasso_fit}} estimates cross-validated Post-Lasso regression.
+Estimates cross-validated post-lasso regression using the \code{plasso} package.
+Performs lasso selection followed by OLS on selected variables.
 }
 \keyword{internal}

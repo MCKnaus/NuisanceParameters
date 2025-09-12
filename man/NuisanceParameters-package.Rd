@@ -14,6 +14,7 @@ Estimation of nuisance parameters using different prediction algorithms.
 Other contributors:
 \itemize{
   \item Glaisner Stefan \email{stefanglaisner@gmail.com} [contributor]
+  \item Rakov Roman \email{roman.rakov.me@gmail.com} [contributor]
 }
 
 }

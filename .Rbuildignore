@@ -5,3 +5,5 @@
 ^README.md
 ^README.Rmd
 ^assets
+^doc$
+^Meta$

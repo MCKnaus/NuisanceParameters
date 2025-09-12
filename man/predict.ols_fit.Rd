@@ -2,22 +2,22 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.ols_fit}
 \alias{predict.ols_fit}
-\title{Predictions based on OLS}
+\title{Predict method for OLS models}
 \usage{
 \method{predict}{ols_fit}(ols_fit, Xnew = NULL, ...)
 }
 \arguments{
-\item{ols_fit}{Output of \code{\link{ols_fit}}}
+\item{ols_fit}{An object of class \code{ols_fit} from \code{\link{ols_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample.}
+\item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},
+predictions are generated for training data.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Vector of fitted values.
+Numeric vector of predicted values.
 }
 \description{
-Prediction based on fitted ordinary least squares models. The method also
-provides prediction weights if required.
+Generates predictions from a fitted ordinary least squares model.
 }
 \keyword{internal}

@@ -7,24 +7,44 @@
 data_screen(data, treat = NULL, bin_cut = 0.01, corr_cut = 0.99, quiet = TRUE)
 }
 \arguments{
-\item{data}{Matrix the variables to be screened}
+\item{data}{A matrix or data frame of numeric variables to be screened.}
 
-\item{treat}{Optional binary treatment vector if screening should be done within treatment groups}
+\item{treat}{An optional treatment binary vector. If provided, binary variable 
+screening is performed separately within each treatment group.}
 
-\item{bin_cut}{Cut-off fraction under which nearly empty binary variables should be removed. Default 0.01.}
+\item{bin_cut}{Numeric cut-off fraction (0 to 0.5) under which a category of a binary variable
+is considered "nearly empty". Default is 0.01.}
 
-\item{corr_cut}{Cut-off above which highly correlated variables should be removed. Default 0.99.}
+\item{corr_cut}{Numeric cut-off (0 to 1) above which the absolute correlation between two
+variables is considered too high. Default is 0.99.}
 
-\item{quiet}{If False, details about the removed variables are shown at each step}
+\item{quiet}{Logical. If `FALSE`, details about the removed variables are printed at each step.
+Default is `TRUE`.}
 }
 \value{
-Screened matrix.
+A screened matrix with low-variance, near-constant binary, and redundant variables removed.
 }
 \description{
-\code{\link{data_screen}} takes a matrix of data and cleans it for the sake
-of an improved input for subsequent prediction algorithms. \cr
-It removes \cr
-1. Variables without variation \cr
-2. Dummy variables where one group is nearly empty (optionally in one of both treatment groups) \cr
-3. Redundant (i.e. highly correlated) variables \cr
+Takes a matrix or data frame of numeric data and cleans it to improve its suitability for subsequent prediction algorithms.
+}
+\details{
+This function performs the following steps in order:
+\enumerate{
+  \item Removes variables with zero or near-zero variance (standard deviation = 0 or NA).
+  \item Removes dummy (binary) variables where the prevalence of one category is below a threshold
+        in the overall sample or, if a treatment vector is provided, within any treatment group.
+  \item Removes redundant variables that are highly correlated with others (keeping the first one encountered).
+}
+}
+\examples{
+set.seed(123)
+n <- 100
+data <- data.frame(
+  constant = rep(1, n),
+  good_predictor = rnorm(n),
+  rare_dummy = sample(0:1, n, replace = TRUE, prob = c(0.99, 0.01)),
+  correlated_var = good_predictor * 1.01 + rnorm(n, sd = 0.001)
+)
+screened_data <- data_screen(data, quiet = FALSE)
+
 }

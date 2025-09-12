@@ -2,22 +2,22 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.mean_fit}
 \alias{predict.mean_fit}
-\title{Predict after arithmetic mean fitting}
+\title{Predict method for arithmetic mean model}
 \usage{
 \method{predict}{mean_fit}(mean_fit, Xnew = NULL, ...)
 }
 \arguments{
-\item{mean_fit}{Output of \code{\link{mean_fit}}}
+\item{mean_fit}{An object of class `mean_fit` from \code{\link{mean_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample. If no test sample provided,
-prediction is done for training sample.}
+\item{Xnew}{Covariate matrix for predictions. Only `nrow(Xnew)` is used.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Vector of fitted values.
+A numeric vector of predictions, all equal to the trained mean.
 }
 \description{
-Predicts arithmetic mean.
+Returns a constant prediction for all observations, equal to the mean of the training sample.
+Covariates `Xnew` are ignored.
 }
 \keyword{internal}

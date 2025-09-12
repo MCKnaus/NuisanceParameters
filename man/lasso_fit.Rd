@@ -2,22 +2,23 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{lasso_fit}
 \alias{lasso_fit}
-\title{Fits Lasso regression}
+\title{Fit lasso regression model}
 \usage{
 lasso_fit(X, Y, arguments = list())
 }
 \arguments{
-\item{X}{Matrix of covariates (number of observations times number of covariates matrix)}
+\item{X}{Numeric matrix of covariates for training sample.}
 
-\item{Y}{vector of outcomes}
+\item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{arguments}{List of arguments passed to \code{\link[glmnet]{cv.glmnet}}}
+\item{arguments}{List of arguments passed to \code{\link[glmnet]{cv.glmnet}}.}
 }
 \value{
-An object with S3 class \code{\link[glmnet]{cv.glmnet}}
+An object of class \code{lasso_fit} containing the fitted
+  \code{\link[glmnet]{cv.glmnet}} model.
 }
 \description{
-\code{\link{lasso_fit}} estimates cross-validated Lasso regression based on
-the \code{\link{glmnet}} package.
+Estimates lasso regression using the \code{glmnet} package.
+Selects optimal lambda penalty parameter via cross-validation.
 }
 \keyword{internal}

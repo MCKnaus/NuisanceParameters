@@ -2,7 +2,7 @@
 % Please edit documentation in R/ml_wrapper_prop.R
 \name{predict.xgboost_prop_fit}
 \alias{predict.xgboost_prop_fit}
-\title{Prediction based on xgboost model.}
+\title{Prediction based on \code{xgboost} model.}
 \usage{
 \method{predict}{xgboost_prop_fit}(xgboost_fit, X, Y, Xnew = NULL, weights = FALSE)
 }
@@ -23,6 +23,6 @@ Returns list containing:
 \item{weights}{Not supported for propensity score estimation}
 }
 \description{
-Prediction based on xgboost model.
+Prediction based on \code{xgboost} model.
 }
 \keyword{internal}

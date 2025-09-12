@@ -2,21 +2,22 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{ols_fit}
 \alias{ols_fit}
-\title{Fits OLS}
+\title{Fit ordinary least squares model}
 \usage{
 ols_fit(X, Y, ...)
 }
 \arguments{
-\item{X}{Covariate matrix of training sample}
+\item{X}{Numeric matrix of covariates for training sample.}
 
-\item{Y}{Vector of outcomes of training sample}
+\item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Returns OLS coefficients
+Numeric vector of OLS coefficients with class \code{ols_fit}.
 }
 \description{
-\code{\link{ols_fit}} fits ordinary least squares (OLS) to the given data.
+Fits an ordinary least squares (OLS) regression to the given data using
+\code{stats::lm.fit()}.
 }
 \keyword{internal}

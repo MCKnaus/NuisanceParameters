@@ -180,7 +180,8 @@ prep_cf_mat <- function(N,
 #' }
 #'
 nnls_weights <- function(X, Y) {
-  nnls_result <- nnls::nnls(X, Y)
+  
+  nnls_result <- nnls::nnls(as.matrix(X), Y)
   nnls_w <- nnls_result$x
 
   # In case of perfectly agreeing predictions, nnls provides only zeros.
@@ -219,6 +220,25 @@ add_intercept <- function(mat) {
     mat <- cbind(rep(1, nrow(mat)), mat)
     return(mat)
   }
+}
+
+
+#' Aggregate 3D array
+#'
+#' @description
+#' This function computes the weighted sum along the third dimension of a
+#' three dimensional array.
+#'
+#' @param a A 3D array
+#' @param w A numeric vector.
+#' The length of w should match the third dimension of a.
+#'
+#' @return A matrix of the same dimension as the first two dimensions of a.
+#'
+#' @keywords internal
+#'
+agg_array <- function(a, w) {
+  return(apply(a, c(1, 2), function(x) sum(x * w)))
 }
 
 
@@ -307,7 +327,7 @@ update_progress <- function(pb, pb_np, pb_cf, pb_cv, task, method) {
     nuisance = format_center(pb_np, 8),
     pb_cf    = format_center(pb_cf, 2),
     pb_cv    = format_center(pb_cv, 2),
-    task     = format_center(task, 7),
+    task     = format_center(task, 4),
     model    = format_center(method, 10)
   ))
 }
@@ -580,7 +600,7 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, models) {
 
   pb <- progress::progress_bar$new(
     format = "[:bar] :percent | :current/:total | :nuisance | cf =:pb_cf, cv =:pb_cv | :task :model",
-    total = total_ticks, clear = FALSE, width = 80, force = TRUE
+    total = total_ticks, clear = TRUE, width = 80, force = FALSE
   )
   
   return(pb)
@@ -895,8 +915,54 @@ add_nupa <- function(np, np_new, NuPa = NULL, replace = FALSE) {
     if (replace ||
       (is.character(np$nuisance_parameters[[param]]) &&
         grepl("not specified", np$nuisance_parameters[[param]]))) {
-      # Add the nuisance parameter
+      # Add the nuisance parameter and the method
       np$nuisance_parameters[[param]] <- np_new$nuisance_parameters[[param]]
+      np$numbers$method[[param]] <- np_new$numbers$method[[param]]
+      
+      if (np$numbers$cv == 1) {
+        # Combine the ensemble weights
+        w_ens <- as.matrix(np[["numbers"]][["ens_weights"]])
+        w_new_ens <- as.matrix(np_new[["numbers"]][["ens_weights"]])
+        
+        all_methods <- union(rownames(w_ens), rownames(w_new_ens))
+        all_nupas <- union(colnames(w_ens), colnames(w_new_ens))
+        
+        ens_weights <- matrix(0, nrow = length(all_methods), ncol = length(all_nupas),
+                              dimnames = list(all_methods, all_nupas))
+        
+        ens_weights[rownames(w_ens), colnames(w_ens)] <- w_ens
+        ens_weights[, NuPa] <- 0
+        ens_weights[rownames(w_new_ens), NuPa] <- w_new_ens[, NuPa, drop = FALSE]
+        
+        ens_weights <- as.data.frame(ens_weights)
+        class(ens_weights) <- c("ens_weights_short", "data.frame")
+        np[["numbers"]][["ens_weights"]] <- ens_weights
+      } 
+      else {
+        
+        w_ens <- np[["numbers"]][["ens_weights"]]
+        w_new_ens <- np_new[["numbers"]][["ens_weights"]]
+        ens_weights <- w_ens
+        
+        # Completely replace the NuPa elements with those from np_new
+        for (nupa in NuPa) {
+          if (nupa %in% names(w_new_ens)) {
+            ens_weights[[nupa]] <- w_new_ens[[nupa]]
+          }
+        }
+        
+        # Add any new NuPa elements from np_new that weren't in the original
+        new_nupas <- setdiff(names(w_new_ens), names(w_ens))
+        new_nupas_to_add <- intersect(new_nupas, NuPa)
+        
+        for (nupa in new_nupas_to_add) {
+          ens_weights[[nupa]] <- w_new_ens[[nupa]]
+        }
+        
+        class(ens_weights) <- c("ens_weights_stand", "list")
+        np[["numbers"]][["ens_weights"]] <- ens_weights
+        
+      }
 
       # Add the corresponding model if it exists
       model_name <- paste0(param, "_m")
@@ -906,7 +972,6 @@ add_nupa <- function(np, np_new, NuPa = NULL, replace = FALSE) {
     }
   }
 
-  # Return the modified object
   return(np)
 }
 
@@ -978,9 +1043,13 @@ tune_xgb_hyperband <- function(X, Y, max_rounds = 100, n_configs = 50,
       min_child_weight = sample(c(1, 2, 5, 10), 1),
       colsample_bytree = runif(1, 0.5, 1),
       colsample_bylevel = runif(1, 0.5, 1),
-      tree_method = "hist",
+      # tree_method = "hist",
       lambda = 10^runif(1, log10(1e-3), log10(10)),
-      subsample = 1
+      subsample = 1,
+      alpha = 0, 
+      max_delta_step = 0, 
+      base_score = 0,
+      objective = "reg:squarederror"
     )
   }
 
@@ -1058,13 +1127,20 @@ tune_learners <- function(type = c("tune_full_sample", "tune_on_fold"),
     current_method <- method[[i]]
 
     if (!is.null(current_method$arguments) && identical(current_method$arguments, type)) {
-      # GRF forest tuning (minimal trees for speed)
+      
+      if (is.null(current_method$x_select)) {
+        X_sub <- X
+      } else {
+        X_sub <- X[, current_method$x_select, drop = FALSE]
+      }
+      
+      # GRF forest tuning
       if (identical(current_method$method, "forest_grf")) {
         tuned_forest <- grf::regression_forest(
-          X = X,
+          X = X_sub,
           Y = Y,
           tune.parameters = "all",
-          num.trees = 10
+          num.trees = 100
         )
 
         method[[i]][["arguments"]] <- tuned_forest[["tuning.output"]][["params"]]
@@ -1072,7 +1148,7 @@ tune_learners <- function(type = c("tune_full_sample", "tune_on_fold"),
 
       # XGBoost tuning using hyperband
       else if (identical(current_method$method, "xgboost")) {
-        tuned_xgb <- tune_xgb_hyperband(X = X, Y = Y)
+        tuned_xgb <- tune_xgb_hyperband(X = X_sub, Y = Y)
 
         method[[i]][["arguments"]] <- tuned_xgb[["params"]]
       }

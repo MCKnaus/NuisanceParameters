@@ -4,6 +4,7 @@ Title: Nuisance Parameters Estimation
 Version: 0.1.0
 Authors@R: c(
     person("Glaisner", "Stefan", email = "stefanglaisner@gmail.com", role = "ctb"),
+    person("Rakov", "Roman", email = "roman.rakov.me@gmail.com", role = "ctb"),
     person("Knaus", "Michael C.", email = "michael.knaus@uni-tuebingen.de", role = c("aut","cre"), comment = c(ORCID = "0000-0002-7328-1363"))
     )
 Description: Estimation of nuisance parameters using different prediction algorithms.
@@ -28,15 +29,13 @@ Suggests:
     naivebayes, 
     e1071, 
     kknn, 
-    ranger
+    ranger, 
+    hdm,
+    glmnet
 Imports:
     stats,
     Matrix,
     nnls,
     progress,
-    ggplot2,
-    glmnet,
-    FastKNN
+    ggplot2
 Config/testthat/edition: 3
-Depends: 
-    R (>= 2.10)

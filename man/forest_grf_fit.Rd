@@ -2,22 +2,22 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{forest_grf_fit}
 \alias{forest_grf_fit}
-\title{Fits Random Forest}
+\title{Fit random forest using grf package}
 \usage{
 forest_grf_fit(X, Y, arguments = list())
 }
 \arguments{
-\item{X}{Matrix of covariates}
+\item{X}{Numeric matrix of covariates for training sample.}
 
-\item{Y}{vector of outcomes}
+\item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{arguments}{List of arguments passed to \code{\link[grf]{regression_forest}}}
+\item{arguments}{List of arguments passed to \code{\link[grf]{regression_forest}}.}
 }
 \value{
-An object with S3 class \code{\link[grf]{regression_forest}}
+An object of class \code{forest_grf_fit} containing the fitted
+  \code{\link[grf]{regression_forest}} model.
 }
 \description{
-\code{\link{forest_grf_fit}} fits a random forest using the
-\code{\link{grf}} package.
+Fits a random forest for regression using the \code{grf} package.
 }
 \keyword{internal}

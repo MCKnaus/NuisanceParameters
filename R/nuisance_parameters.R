@@ -37,6 +37,34 @@
 #'   \item \code{numbers}: Additional objects used for downstream processing in
 #'                         smoother matrices and outcome weights extraction
 #' }
+#' 
+#' @examples
+#' \donttest{
+#'   if (requireNamespace("hdm", quietly = TRUE)) {
+#'     data(pension, package = "hdm")
+#'     
+#'     set.seed(123)
+#'     D <- pension$p401
+#'     Y <- pension$net_tfa
+#'     X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc + male + 
+#'                       marr + pira + twoearn, data = pension)
+#'     
+#'     method = list(
+#'       "ols" = create_method("ols"),
+#'       "forest_grf" = create_method("forest_grf"),
+#'       "xgboost" = create_method("xgboost")
+#'     )
+#'     
+#'     np <- nuisance_parameters(
+#'       NuPa = c("Y.hat", "D.hat"),
+#'       X = X, Y = Y, D = D,
+#'       method = method, cf = 2, stacking = "short"
+#'     )
+#'     
+#'     print(head(np$nuisance_parameters[["Y.hat"]]))
+#'     plot(np_short$numbers$ens_weights)
+#'   }
+#' }
 #'
 #' @export
 nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat"),
@@ -97,7 +125,7 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
   Y.hat <- Y.hat.d <- Y.hat.z <- D.hat <- D.hat.z <- Z.hat <-
     "This nuisance parameter was not specified and is therefore empty."
 
-  Y.hat_m <- Y.hat.d_m <- Y.hat.z_m <-
+  Y.hat_m <- Y.hat.d_m <- Y.hat.z_m <- D.hat_m <- D.hat.z_m <- Z.hat_m <-
     "This model was not specified and is therefore empty."
 
   if ("Y.hat" %in% NuPa) { 
@@ -112,15 +140,19 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
     Y.hat.z <- matrix(NA, nrow(z_mat), ncol(z_mat))
     Y.hat.z_m <- vector("list", ncol(z_mat))
   }
-  if ("D.hat" %in% NuPa) 
+  if ("D.hat" %in% NuPa) {
     D.hat <- matrix(NA, nrow(d_mat), ncol(d_mat) - 1)
-  
+    D.hat_m <- list()
+  }
   if ("D.hat.z" %in% NuPa) {
     D.hat.z <- if (K > 2) { array(NA, dim = c(nrow(z_mat), K, ncol(z_mat)))
     } else { matrix(NA, nrow(z_mat), ncol(z_mat), dimnames = dimnames(z_mat)) }
+    D.hat.z_m <- vector("list", ncol(z_mat))
   }
-  if ("Z.hat" %in% NuPa) 
+  if ("Z.hat" %in% NuPa) {
     Z.hat <- matrix(NA, nrow(z_mat), ncol(z_mat) - 1)
+    Z.hat_m <- list()
+  }
 
   if ("Y.hat.d" %in% NuPa) colnames(Y.hat.d) <- colnames(d_mat)
   if ("Y.hat.z" %in% NuPa) colnames(Y.hat.z) <- colnames(z_mat)
@@ -152,7 +184,7 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
 
       Y.hat.d[, i] <- np_cf$np
       Y.hat.d_m[[i]] <- np_cf$models_nupa
-      ens_weights[[pb_np]] <- np_cf$ens_weights
+      ens_weights[[pb_np]] <- np_cf$models_nupa$nnls_w
     }
   }
 
@@ -169,7 +201,7 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
 
       Y.hat.z[, i] <- np_cf$np
       Y.hat.z_m[[i]] <- np_cf$models_nupa
-      ens_weights[[pb_np]] <- np_cf$ens_weights
+      ens_weights[[pb_np]] <- np_cf$models_nupa$nnls_w
     }
   }
 
@@ -183,7 +215,7 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
 
     Y.hat <- np_cf$np
     Y.hat_m <- np_cf$models_nupa
-    ens_weights[[pb_np]] <- np_cf$ens_weights
+    ens_weights[[pb_np]] <- np_cf$models_nupa$nnls_w
   }
 
 
@@ -196,11 +228,12 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
 
       np_cf <- nuisance_cf(
         method = method[[nupa]], Y = D, X = X, cf_mat = cf_mat, cv = cv, subset = z_mat[, i],
-        storeModels = "No", quiet = quiet, pb = pb, pb_np = pb_np
+        storeModels = "Memory", quiet = quiet, pb = pb, pb_np = pb_np
       )
 
       if (K > 2) { D.hat.z[, , i] <- np_cf$np } else { D.hat.z[, i] <- np_cf$np }
-      ens_weights[[pb_np]] <- np_cf$ens_weights
+      D.hat.z_m[[i]] <- np_cf$models_nupa
+      ens_weights[[pb_np]] <- np_cf$models_nupa$nnls_w
     }
   }
 
@@ -209,11 +242,12 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
 
     np_cf <- nuisance_cf(
       method = method[[nupa]], Y = D, X = X, cf_mat = cf_mat, cv = cv, subset = NULL, 
-      storeModels = "No", quiet = quiet, pb = pb, pb_np = pb_np
+      storeModels = "Memory", quiet = quiet, pb = pb, pb_np = pb_np
     )
 
     D.hat <- np_cf$np
-    ens_weights[[pb_np]] <- np_cf$ens_weights
+    D.hat_m <- np_cf$models_nupa
+    ens_weights[[pb_np]] <- np_cf$models_nupa$nnls_w
   }
 
 
@@ -223,16 +257,16 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
 
     np_cf <- nuisance_cf(
       method = method[[nupa]], Y = Z, X = X, cf_mat = cf_mat, cv = cv, subset = NULL,
-      storeModels = "No", quiet = quiet, pb = pb, pb_np = pb_np
+      storeModels = "Memory", quiet = quiet, pb = pb, pb_np = pb_np
     )
 
     Z.hat <- np_cf$np
-    ens_weights[[pb_np]] <- np_cf$ens_weights
+    Z.hat_m <- np_cf$models_nupa
+    ens_weights[[pb_np]] <- np_cf$models_nupa$nnls_w
   }
 
   
   ## Structure the output
-  # Combine ens_weights
   ens_weights_mat <- format_weights(ens_weights, cv = cv)
 
   np_list <- list(
@@ -240,7 +274,9 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
     "D.hat" = D.hat, "D.hat.z" = D.hat.z, "Z.hat" = Z.hat
   )
 
-  models_list <- list("Y.hat_m" = Y.hat_m, "Y.hat.d_m" = Y.hat.d_m, "Y.hat.z_m" = Y.hat.z_m)
+  models_list <- list(
+    "Y.hat_m" = Y.hat_m, "Y.hat.d_m" = Y.hat.d_m, "Y.hat.z_m" = Y.hat.z_m,
+    "D.hat.z_m" = D.hat.z_m, "D.hat_m" = D.hat_m, "Z.hat_m" = Z.hat_m)
 
   nums_list <- list(
     "N" = N, "cv" = cv, "cf_mat" = cf_mat, "d_mat" = d_mat, "z_mat" = z_mat,
@@ -309,7 +345,7 @@ nuisance_cf <- function(method,
   } else { np <- rep(NA, length(Y)) }
 
   # Full-sample hyperparameter tuning
-  method <- tune_learners(type = "tune_full_sample", method = method, X = X, Y = Y)
+  method <- tune_learners(type = "tune_full_sample", method = method, X = X[subset, ], Y = Y[subset])
 
 
   ### Short-Stacking ###
@@ -366,7 +402,6 @@ nuisance_cf <- function(method,
       }
 
       models_nupa[[i]] <- list("nnls_w" = ens$nnls_weights, "ens_object" = ens) # "fit_cv" = raw_pred,  (not sure why we need it)
-      ens_weights[[i]] <- ens$nnls_weights
     }
     
     class(models_nupa) <- "ens.learner"
@@ -374,8 +409,7 @@ nuisance_cf <- function(method,
 
   output <- list(
     "np" = np,
-    "models_nupa" = models_nupa,
-    "ens_weights" = ens_weights
+    "models_nupa" = models_nupa
   )
 
   return(output)

@@ -456,27 +456,22 @@ weights.xgboost_fit = function(xgboost_fit, X, Xnew = NULL, ...) {
 #' @keywords internal
 #'
 weights.knn_fit = function(arguments, X, Xnew = NULL, ...) {
-  
   if (is.null(Xnew)) Xnew = X
-  if (is.null(arguments$k)) {
-    k = 10
-  } else if ( all.equal(arguments$k, as.integer(arguments$k))) {
-    k = arguments$k
-  } else {
-    k = 10
-  }
+  k <- if (is.null(arguments$k)) 10 else arguments$k
   
-  distance = as.matrix(FastKNN::Distance_for_KNN_test(Xnew, X))
+  # distance = as.matrix(FastKNN::Distance_for_KNN_test(Xnew, X))
+  euclidean_dist <- t(apply(Xnew, 1, function(x_i) {
+    sqrt(rowSums(sweep(X, 2, x_i)^2))
+  }))
   
-  get_binary_vector = function(row) {
+  get_binary_vec = function(row) {
     min_indices = order(row)[1:k]
-    binary_vector = rep(0, length(row))
-    binary_vector[min_indices] = 1
-    
-    return(binary_vector)
+    binary_vec = rep(0, length(row))
+    binary_vec[min_indices] = 1
+    return(binary_vec)
   }
   
-  w = apply(distance, 1, get_binary_vector)
+  w = apply(euclidean_dist, 1, get_binary_vec)
   w = t(w) / k
   
   return(w)

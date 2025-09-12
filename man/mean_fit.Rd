@@ -2,22 +2,23 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{mean_fit}
 \alias{mean_fit}
-\title{Arithmetic mean}
+\title{Fit arithmetic mean model}
 \usage{
 mean_fit(X, Y, ...)
 }
 \arguments{
-\item{X}{Covariate matrix of training sample}
+\item{X}{Covariate matrix (ignored, for compatibility).}
 
-\item{Y}{Vector of outcomes of training sample}
+\item{Y}{Numeric vector of training outcomes.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Returns list containing mean and number of observations.
+An object of class `mean_fit` containing:
+  \item{mean}{The arithmetic mean of `Y`}
+  \item{N}{Number of observations}
 }
 \description{
-\code{\link{mean_fit}} acts as prediction function by calculating the
-arithmetic mean of the training outcomes.
+Calculates the arithmetic mean of the training outcomes for use as a constant prediction model.
 }
 \keyword{internal}

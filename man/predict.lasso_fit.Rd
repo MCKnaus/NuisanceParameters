@@ -2,22 +2,23 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.lasso_fit}
 \alias{predict.lasso_fit}
-\title{Lasso prediction}
+\title{Predict method for lasso regression models}
 \usage{
 \method{predict}{lasso_fit}(lasso_fit, Xnew = NULL, ...)
 }
 \arguments{
-\item{lasso_fit}{Output of \code{\link{lasso_fit}}}
+\item{lasso_fit}{An object of class \code{lasso_fit} from \code{\link{lasso_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample.
-If not provided, prediction is done for the training sample.}
+\item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},
+predictions are generated for the training data.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Vector of fitted values.
+Numeric vector of predicted values.
 }
 \description{
-Prediction of fitted values based on fine-tuned Lasso regression model.
+Generates predictions from a fitted lasso regression model
+using the optimal lambda selected during cross-validation.
 }
 \keyword{internal}

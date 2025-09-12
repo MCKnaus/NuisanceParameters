@@ -4,12 +4,7 @@
 \alias{ranger_fit}
 \title{Calculates Probability Forest fit using the \code{\link{ranger}} package}
 \usage{
-ranger_fit(
-  X,
-  Y,
-  arguments = list(num.trees = 1000, min.node.size = 0.1 * nrow(X), mtry =
-    ceiling(sqrt(ncol(X))))
-)
+ranger_fit(X, Y, arguments = list())
 }
 \arguments{
 \item{X}{Matrix of covariates}

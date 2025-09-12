@@ -1,0 +1,187 @@
+---
+title: "Estimation"
+subtitle: ""
+author:
+  - Michael Knaus
+  - Stefan Glaisner
+  - Roman Rakov
+date: "09/25"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{Estimation}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+*The package is work in progress (suggestions welcome).*
+
+This Notebook provides additional details on different estimation mechanisms carries by the `NuisanceParameters` package.
+
+## Supported Methods / Base Learners
+
+### Outcome, instrument, binary treatment
+
+-   **Mean difference.**
+
+-   **OLS.**
+
+-   **Ridge** ([glmnet](https://glmnet.stanford.edu/index.html)). Uses glmnet’s default 10-fold cross-validation to select the regularization strength λ (by default over 100 log-spaced values). You may also supply a custom λ sequence, choose the CV loss, and set the number of folds.
+
+-   **Post-Lasso (plasso)** ([glmnet](https://glmnet.stanford.edu/index.html)). Post-Lasso estimator; tuning follows the same settings as Ridge.
+
+-   **Lasso** ([glmnet](https://glmnet.stanford.edu/index.html)). Standard Lasso; tuning follows the same settings as Ridge.
+
+-   **rlasso** ([hdm](https://github.com/MartinSpindler/hdm)). Lasso with a theory-driven, data-dependent penalty robust to heteroskedastic and non-Gaussian errors. By default, `rlasso()` includes an unpenalized intercept and sets the penalty via theoretical choices (`c = 1.1`, `gamma = 0.1/log(n)`), assuming heteroskedasticity.
+
+-   **Regression forest** ([grf](https://grf-labs.github.io/grf/)). Uses the default regression forest with `num.trees = 2000`, `min.node.size = 5`, `sample.fraction = 0.5`, and `honesty = TRUE`. Optional hyperparameter tuning follows the theoretical guidance of [Bach et al. (2024)](https://arxiv.org/abs/2402.04674).
+
+    -   If `create_method()` is called with `arguments = "tune_full_sample"`, the forest runs grf’s built-in tuning on the full sample $(X,Y)$ over `sample.fraction`, `mtry`, `min.node.size`, `honesty.fraction`, `honesty.prune.leaves`, `alpha`, and `imbalance.penalty`, setting `num.trees = 10` for speed.
+
+    -   With `arguments = "tune_on_fold"`, the same tuning occurs on the estimation part of the cross-fitting split (K–1 folds), which requires roughly K times more computation than the former.
+
+-   **XGBoost** ([xgboost](https://xgboost.readthedocs.io/en/stable/)). Fixes the number of boosting rounds to 100 and keeps certain hyperparameters at defaults to enable correct smoother-matrix extraction (specifically, `subsample = 1` and `alpha = 0`). It supports the same tuning logic as for the regression forest. The Hyperband-like routine draws 50 random configurations (`n_configs = 50`), evaluates them via 5-fold CV (`nfold = 5`) across increasing budgets of 10, 30, and 100 boosting rounds, retains the best one-third after each stage (`eta_downfactor = 3`), and uses early stopping with 10 rounds (`early_stopping_rounds = 10`); the default metric is RMSE (`metrics = "rmse"`). Tunable hyperparameters include `eta`, `max_depth`, `min_child_weight`, `colsample_bytree`, `colsample_bylevel` and `lambda`.
+
+-   **KNN** ([FastKNN](https://cran.r-project.org/web/packages/FastKNN/FastKNN.pdf)) with $k = 10$ neighbors by default.
+
+-   **Distributional Random Forest (**[drf](https://github.com/lorismichel/drf)**).** Fits a distributional random forest using the drf package with defaults `min.node.size = 15`, `num.trees = 2000`, and `splitting.rule = "FourierMMD"`.
+
+For the list of methods used for multi-class treatments, consider a separate vignette.
+
+<br>
+
+## Short- and Standard-Stacking
+
+We follow Ahrens et al. (2024) approach to stack individual base learners into an ensemble. The package supports two types of stacking. For the complete treatment, see Ahrens et al. (2024).
+
+### Standard-Stacking
+
+Combining DDML with conventional stacking involves two layers of re-sampling as can be seen in Figure (borrowed from Ahrens et al., 2024). The cross-fitting layer divides the sample into $K$ cross-fitting folds, denoted by $I_1,\ldots,I_K$. In each cross-fitting step $k\in\{1,\ldots,K\}$, the stacking learner is trained on the training sample which excludes fold $I_k$ and which we label $T_k\equiv I\setminus I_k$. Fitting the stacking learner, in turn, requires sub-dividing the training sample $T_k$ further into $V$ cross-validation folds. This second sample split constitutes the cross-validation layer. We denote the cross-validation folds in cross-fitting step $k$ by $T_{k,1},\ldots,T_{k,V}$. Each candidate learner $j\in\{1,\ldots,J\}$ is cross-validated on these folds, yielding cross-validated predicted values for each learner.
+
+The final learner fits the outcome $Y_i$ against the cross-validated predicted values of each candidate learner. The approach purpued in this package (which is also the most common choice) is to construct a convex combination via constrained least squares (CLS), with weights restricted to be non-negative and summing to one. This is done using non-negative least squares (`nnls` package). The resulting $\hat{w}_{k,j}$ are then the stacking weights. The stacking predictions are obtained as $\sum_j \hat{w}_{k,j} \hat{\ell}_{T_k}^{(j)}(X_i)$ where each learner $j$ is re-fit on $T_k$.
+
+```{r ahrens-stacking, echo=FALSE, out.width="100%", fig.cap="Standard stacking - borrowed from Ahrens et al. (2024)"}
+knitr::include_graphics("images/stacking_diagram.pdf")
+```
+
+A drawback of DDML with stacking is its computational complexity. As pointed in Ahrens et al. (2024), DDML with stacking heuristically has a computational cost proportional to $K\times V \times J$ (considering the estimation of a single candidate learner as the unit of complexity). For example, when considering DDML with $K=5$ cross-fitting folds and $J=10$ candidate learners that are combined based on $V=5$ fold cross-validation, more than 250 candidate learners need to be individually estimated. Another potential concern is that DDML with stacking might not perform well in small samples, given that candidate learners are effectively trained on approximately $\frac{(K-1)(V-1)}{KV}$% of the full sample. These two concerns motivate short-stacking.
+
+### Short-stacking
+
+Ahrens et al. (2024) propose to take a short-cut: Instead of fitting the final learner on the cross-validated fitted values in each step $k$ of the cross-fitting process, one can directly train the final learner on the cross-fitted values using the full sample; see Figure (borrowed from Ahrens et al., 2024). Cross-fitting thus serves a double purpose: First, it avoids the own-observation bias by avoiding overlap between the samples used for estimating high-dimensional nuisance functions and the samples used for estimating structural parameters. Second, it yields out-of-sample predicted values which we leverage for constructing the final stacking learner. As a consequence, the computational cost of DDML with short stacking is heuristically only proportional to $K\times J$ in units of estimated candidate learners.
+
+![Short stacking - borrowed from Ahrens et al. (2024)](images/short_diagram.pdf)
+
+### Which one to choose?
+
+Ahrens et al. (2024) recommend DDML with short-stacking in settings where the number of candidate learners is small relative to the sample size, i.e., $J\ll n$. They believe this setting provides a good approximation to current applications of machine learning in economics and other social sciences where it is rare to consider more than a few candidate learners. If instead the number of considered learners is very large relative to the sample size --- i.e., settings in which inference for standard linear regression on $J$ variables is invalid --- pairing DDML with short-stacking may introduce bias.
+
+<br>
+
+## Tuning
+
+```{r}
+if (!require("hdm")) install.packages("hdm", dependencies = TRUE); library(hdm)
+if (!require("OutcomeWeights")) install.packages("OutcomeWeights", dependencies = TRUE); library(OutcomeWeights)
+
+devtools::document()
+```
+
+Define out-of-sample MSE:
+
+```{r}
+calculate_rmse <- function(Y.hat, Y) {
+  sqrt(mean((Y - Y.hat)^2))
+}
+```
+
+```{r}
+data(pension)
+
+# D <- pension$p401
+# Z <- pension$e401
+# Y <- pension$net_tfa
+# X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc
+#                   + male + marr + pira + twoearn, data = pension)
+
+idx <- sample(nrow(pension), size = round(0.45 * nrow(pension)))
+sub <- pension[idx, ]
+
+# subset
+D <- sub$p401
+Z <- sub$e401
+Y <- sub$net_tfa
+X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc + male + marr + pira + twoearn, data = sub)
+
+method = list(
+ "ols" = create_method("ols"),
+ "forest_grf" = create_method("forest_grf"),
+ "xgboost" = create_method("xgboost")
+ )
+
+method_tune = list(
+ "ols" = create_method("ols"),
+ "forest_grf" = create_method("forest_grf", arguments = c("tune_full_sample")),
+ "xgboost" = create_method("xgboost", arguments = c("tune_full_sample"))
+ )
+```
+
+Estimate both:
+
+```{r}
+np <- nuisance_parameters(NuPa = c("Y.hat"),
+                          X = X, Y = Y,
+                          method = method, cf = 5, stacking = "short",
+                          storeModels = "Memory", quiet = FALSE)
+
+np_tune <- nuisance_parameters(NuPa = c("Y.hat"),
+                               X = X, Y = Y,
+                               method = method_tune, cf = 5, stacking = "short",
+                               storeModels = "Memory", quiet = FALSE)
+
+plot(np$numbers$ens_weights)
+plot(np_tune$numbers$ens_weights)
+```
+
+And compute MSE:
+
+```{r}
+rmse <- calculate_rmse(np$nuisance_parameters$Y.hat, Y)
+rmse
+
+rmse <- calculate_rmse(np_tune$nuisance_parameters$Y.hat, Y)
+rmse
+```
+
+We can also check the individual models in terms of rmse:
+
+```{r}
+rmse <- apply(np[["models"]][["Y.hat_m"]][["ens_object"]][["fit_cv"]], 
+              2, calculate_rmse, Y = Y)
+rmse
+
+rmse <- apply(np_tune[["models"]][["Y.hat_m"]][["ens_object"]][["fit_cv"]], 
+              2, calculate_rmse, Y = Y)
+rmse
+```
+
+```{r}
+forest <- grf::regression_forest(X = X, Y = Y)
+forest_t <- grf::regression_forest(X = X, Y = Y, tune.parameters = "all", num.trees = 100)
+forest_t <- grf::regression_forest(X = X, Y = Y, tune.parameters = "all", num.trees = 100)
+
+arguments <- forest_t$tunable.params
+rf <- do.call(grf::regression_forest, c(list(X = X, Y = Y), arguments))
+```
+
+```{r}
+rmse <- apply(forest$predictions, 2, calculate_rmse, Y = Y)
+rmse
+
+rmse <- apply(forest_t$predictions, 2, calculate_rmse, Y = Y)
+rmse
+
+rmse <- apply(rf$predictions, 2, calculate_rmse, Y = Y)
+rmse
+```
+
+Something is off.....

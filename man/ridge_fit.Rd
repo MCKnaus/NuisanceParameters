@@ -2,22 +2,24 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{ridge_fit}
 \alias{ridge_fit}
-\title{Fits Ridge regression}
+\title{Fit ridge regression model}
 \usage{
 ridge_fit(X, Y, arguments = list())
 }
 \arguments{
-\item{X}{Matrix of covariates}
+\item{X}{Numeric matrix of covariates for training sample.}
 
-\item{Y}{Vector of outcomes}
+\item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{arguments}{List of arguments passed to \code{\link[glmnet]{glmnet}}}
+\item{arguments}{List of arguments passed to \code{\link[glmnet]{cv.glmnet}}.}
 }
 \value{
-An object with S3 class \code{\link[glmnet]{glmnet}}
+An object of class \code{ridge_fit} containing the fitted
+  \code{\link[glmnet]{cv.glmnet}} model.
 }
 \description{
-\code{\link{ridge_fit}} estimates cross-validated Ridge regression based on
-the \code{\link{glmnet}} package.
+Estimates ridge regression using the \code{glmnet} package.
+Standardizes covariates and selects optimal lambda via
+cross-validation.
 }
 \keyword{internal}

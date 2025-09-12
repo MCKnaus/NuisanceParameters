@@ -2,23 +2,23 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.rlasso_fit}
 \alias{predict.rlasso_fit}
-\title{Predictions based on \code{hdm::rlasso} regression}
+\title{Predict method for hdm rlasso models}
 \usage{
 \method{predict}{rlasso_fit}(rlasso_fit, Xnew = NULL, ...)
 }
 \arguments{
-\item{rlasso_fit}{Output of \code{\link{rlasso_fit}}}
+\item{rlasso_fit}{An object of class \code{rlasso_fit} from \code{\link{rlasso_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample.
-If not provided, prediction is done for the training sample.}
+\item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},
+predictions are generated for the training data.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Vector of fitted values.
+Numeric vector of predicted values.
 }
 \description{
-Prediction of fitted values (for a potentially new set of covariates Xnew)
-based on a trained Lasso model from hdm package.
+Generates predictions from a fitted post-lasso regression model
+estimated using the \code{hdm} package.
 }
 \keyword{internal}

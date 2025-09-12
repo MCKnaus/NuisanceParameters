@@ -2,21 +2,22 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.ridge_fit}
 \alias{predict.ridge_fit}
-\title{Predictions based on Ridge regression}
+\title{Predict method for ridge regression models}
 \usage{
 \method{predict}{ridge_fit}(ridge_fit, Xnew, ...)
 }
 \arguments{
-\item{ridge_fit}{Output of \code{\link{ridge_fit}}}
+\item{ridge_fit}{An object of class \code{ridge_fit} from \code{\link{ridge_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample.}
+\item{Xnew}{Numeric matrix of covariates for test sample.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Vector of predictions for Xnew.
+Numeric vector of predictions for \code{Xnew}.
 }
 \description{
-Prediction based on fitted Ridge regression model.
+Generates predictions from a fitted ridge regression model.
+Applies the same standardization used during training to new data.
 }
 \keyword{internal}

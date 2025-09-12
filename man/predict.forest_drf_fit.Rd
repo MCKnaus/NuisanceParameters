@@ -2,23 +2,28 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.forest_drf_fit}
 \alias{predict.forest_drf_fit}
-\title{Predictions based on Distributional Random Forest}
+\title{Predict method for distributional random forest models}
 \usage{
 \method{predict}{forest_drf_fit}(forest_drf_fit, Xnew = NULL, functional = "mean", ...)
 }
 \arguments{
-\item{forest_drf_fit}{Output of \code{\link{forest_drf_fit}}}
+\item{forest_drf_fit}{An object of class \code{forest_drf_fit} from 
+\code{\link{forest_drf_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample.
-If not provided, prediction is done for the training sample.}
+\item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},
+predictions are generated for the training data.}
 
-\item{...}{Ignore unused arguments}
+\item{functional}{Character specifying the functional to predict. Defaults
+to \code{"mean"} for mean predictions.}
+
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Vector of fitted values.
+Numeric vector of predicted values.
 }
 \description{
-Prediction of fitted values (for a new set of covariates)
-from a Random Forest.
+Generates predictions from a fitted distributional random forest model.
+By default, returns predictions for the mean functional, but supports
+other distributional characteristics.
 }
 \keyword{internal}

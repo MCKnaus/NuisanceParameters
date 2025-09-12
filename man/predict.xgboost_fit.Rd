@@ -2,23 +2,22 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.xgboost_fit}
 \alias{predict.xgboost_fit}
-\title{Predictions based on XGBoost}
+\title{Predict method for XGBoost models}
 \usage{
 \method{predict}{xgboost_fit}(xgboost_fit, Xnew = NULL, ...)
 }
 \arguments{
-\item{xgboost_fit}{Output of \code{\link{xgboost_fit}}}
+\item{xgboost_fit}{An object of class \code{xgboost_fit} from \code{\link{xgboost_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample.
-If not provided, prediction is done for the training sample.}
+\item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},
+predictions are generated for the training data.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Vector of fitted values.
+Numeric vector of predicted values.
 }
 \description{
-Prediction of fitted values (for a potentially new set of covariates Xnew)
-from an XGBoost.
+Generates predictions from a fitted XGBoost model.
 }
 \keyword{internal}

@@ -2,27 +2,49 @@
 % Please edit documentation in R/utils_cleandata.R
 \name{design_matrix}
 \alias{design_matrix}
-\title{Creates design matrix}
+\title{Create a Design Matrix}
 \usage{
 design_matrix(data, int = NULL, int_d = 2, poly = NULL, poly_d = 2, log = NULL)
 }
 \arguments{
-\item{data}{Matrix with the main variables}
+\item{data}{A matrix or data.frame containing the predictor variables. Must have
+column names for all variables.}
 
-\item{int}{Vector of strings with the variables to be interacted}
+\item{int}{Character vector of variable names to include in interaction terms.
+Use "all" to include all variables. If NULL (default), no interactions are created.}
 
-\item{int_d}{Degree of interactions created. Default is 2.}
+\item{int_d}{Integer specifying the maximum degree of interactions to create.
+For example, `int_d = 2` creates all pairwise interactions. Default is 2.}
 
-\item{poly}{Vector of strings with the variables for which polynomials should be created}
+\item{poly}{Character vector of variable names for which polynomial terms should
+be created. Use "all" to include all variables. Polynomials are only created for degrees greater than 1.}
 
-\item{poly_d}{Degree of polynomials to be created. Default is 2.}
+\item{poly_d}{Integer specifying the degree of polynomial expansion. For example,
+`poly_d = 3` creates terms up to cubic. Default is 2.}
 
-\item{log}{Vector of strings with the variables for which the logged versions should be added}
+\item{log}{Character vector of variable names to be log-transformed. Variables with
+non-positive values will be skipped with a warning.}
 }
 \value{
-Matrix including the main variables and the newly generated ones.
+A numeric matrix with the expanded design matrix. The column names indicate
+  the transformations applied:
+  \itemize{
+    \item Main effects retain their original names
+    \item Interaction terms use colons (e.g., `var1:var2`)
+    \item Polynomial terms use underscores (e.g., `var_2` for quadratic terms)
+    \item Log-transformed variables are prefixed with "ln_" (e.g., `ln_var`)
+  }
+  The matrix includes an intercept term if present in the original data.
 }
 \description{
-\code{\link{design_matrix}} creates interactions and polynomials for a proper
-design matrix that can be used as input for prediction functions.
+\code{design_matrix} constructs an expanded design matrix by creating interaction terms,
+polynomial expansions, and logarithmic transformations of specified variables.
+}
+\examples{
+data(mtcars)
+design_matrix(mtcars[, c("mpg", "wt", "hp")], 
+              int = c("mpg", "wt"), 
+              poly = "hp",
+              log = "wt")
+
 }

@@ -1,0 +1,169 @@
+---
+title: "NuisanceParameters: Quick Start"
+subtitle: ""
+author:
+  - Michael Knaus
+  - Stefan Glaisner
+  - Roman Rakov
+date: "09/25"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{NuisanceParameters: Quick Start}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+# High-level motivation
+
+`NuisanceParameters` lets you estimate conditional expectations that can later be used to estimate target causal parameters of interest. A defining feature of the package is its use of supervised machine learning (“grey box”) algorithms, which—following a general framework established in [Knaus (2024)](https://arxiv.org/abs/2411.11559)—have a representation as a linear combination of observed outcomes: $\hat{\tau} = \sum_{i=1}^N \omega_i Y_i$.
+
+This package is part of an envisaged trilogy, where each package can be seamlessly integrated with the previous one but can also be used as a stand-alone unit:
+
+1.  `NuisanceParameters` – estimates $m(X):=\mathbb{E}[Y \mid X]$, $m_w(w,X):=\mathbb{E}[Y \mid W = w, X]$, $e(X) := \mathbb{P}[W \mid X]$, etc.
+2.  `MLeffects` – combines estimated nuisance parameters ($\hat{m}(X)$, $\hat{m}_w(w,X)$, $\hat{e}(X)$..) in the doubly robust (DR) score to obtain a target parameter $\tau$.
+3.  `OutcomeWeights` – lets you extract the smoother matrices $\omega$ behind the nuisance and target parameters. The weights can be used to access the estimator properties or to check the covariate balance (see [Knaus, 2024](https://arxiv.org/abs/2411.11559)).
+
+Among other features, `NuisanceParameters` offers ensemble estimation (using short and standard stacking), allows for clustering, and saves all necessary models that can be used downstream.
+
+*The package is work in progress (suggestions welcome).*
+
+This notebook offers a gentle general introduction for the package. More details can be found in "*Estimation*" and "*Multivalued treatments*" vignettes.
+
+## Data
+
+The Notebook builds on the dataset that is provided in the `hdm` package. The data was used in [Chernozhukov and Hansen (2004)](#0) and Belloni et al. (2014) where further details can be found. They investigate the effect of participation in the employer-sponsored 401(k) retirement savings plan on net assets (`net_tfa`), using 401(k) eligibility (`e401`) as an instrument for 401(k) participation (`p401`).
+
+The sample is drawn from the 1991 Survey of Income and Program Participation (SIPP) and consists of 9,915 observations.
+
+```{r}
+if (!require("hdm")) install.packages("hdm", dependencies = TRUE); library(hdm)
+if (!require("OutcomeWeights")) install.packages("OutcomeWeights", dependencies = TRUE); library(OutcomeWeights)
+
+devtools::document()
+```
+
+Import the data:
+
+```{r}
+data(pension)
+set.seed(123)
+
+# D <- pension$p401
+# Z <- pension$e401
+# Y <- pension$net_tfa
+# X_raw <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc 
+#                       + male + marr + pira + twoearn, data = pension)
+
+idx <- sample(nrow(pension), size = round(0.15 * nrow(pension)))
+sub <- pension[idx, ]
+
+# subset
+D <- sub$p401
+Z <- sub$e401
+Y <- sub$net_tfa
+X_raw <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc + male + marr + pira + twoearn, data = sub)
+```
+
+The package offers pre-processing for the covariate matrix. `design_matrix` constructs an expanded design matrix by creating interaction terms, polynomial expansions, and logarithmic transformations:
+
+```{r}
+X_big <- design_matrix(data = X_raw, int = "all", int_d = 2, poly = "all", poly_d = 2)
+dim(X_big)
+```
+
+This expansion creates highly correlated covariates. `data_screen` can be used to clean it and improve its suitability for subsequent prediction algorithms.
+
+```{r}
+X <- data_screen(X_big,treat = D, bin_cut = 0.02, corr_cut = 0.9, quiet = FALSE)
+```
+
+Next step is to specify a list of base learners to be used in ensemble estimation. The package offers a great variety of choice, the full list of learners can be found in `?create_method` and in the Estimation Notebook.
+
+```{r}
+# For tree methods, restrict to original features
+cols <- colnames(X) %in% colnames(X_raw)
+
+method = list(
+ "ridge" = create_method("ridge"),
+ "plasso" = create_method("plasso"),
+ "forest_grf" = create_method("forest_grf", arguments = c("tune_full_sample"), x_select=cols),
+ "xgboost" = create_method("xgboost", x_select = cols)
+ )
+```
+
+Note also that this vignette does not cover nuisance parameters estimation for multi-class treatments (see *vignette 1*) or hyperparameter tuning (see *vignette 2*).
+
+## Main Function
+
+We are now ready to run the main function. `nuisance_parameters` performs cross-fitted estimation of nuisance parameters, performing stacking (creating an ensemble learner) if more than a single method is supplied. The details on stacking procedure can be found in the Estimation Notebook.
+
+In the following, we use 5-fold cross-fitting (`cf=5`) and preserve the treatment ratios from full sample within the folds (`stratify=TRUE`). Short stacking is used:
+
+```{r}
+np <- nuisance_parameters(NuPa = c("Y.hat","Y.hat.d","D.hat","Z.hat"),
+                          X = X, Y = Y, D = D, Z = Z,
+                          method = method, cf = 2, stacking = "short",
+                          cluster = NULL, stratify = TRUE,
+                          storeModels = "No", path = NULL, quiet = FALSE)
+```
+
+Estimated nuisance parameters can be immediately inspected:
+
+```{r}
+lapply(np$nuisance_parameters, head)
+```
+
+Along with the ensemble weights in the short stacking procedure. These are obtained by regressing the outcome on the individual cross-fitted ML learners using non-negative least squares:
+
+```{r}
+plot(np$numbers$ens_weights)
+```
+
+For a sanity check, let's estimate some target parameters using early `MLeffect` function and compare them to `dml_with_smoother` of `OutcomeWeights`:
+
+```{r}
+TargetParam <- MLeffect(Y, D, X, Z, 
+                        NuPa.hat = np$nuisance_parameters,
+                        estimators = c("PLR","PLR_IV","AIPW_ATE"))
+
+summary(TargetParam)
+plot(TargetParam)
+```
+
+Observe that the results are very close to those from the 5-fold `dml_with_smoother` routine:
+
+```{r}
+dml_5f = dml_with_smoother(Y,D,X,Z, n_cf_folds = 5, estimators = c("PLR","PLR_IV","AIPW_ATE"))
+results_dml_5f = summary(dml_5f)
+plot(dml_5f)
+```
+
+## Adding nuisance parameters ex-post
+
+Nuisance parameters (and the respective saved models) can be easily replaced/added in a NuisanceParameter object. For example, one might want to her estimation strategy and use a different set of base learners:
+
+```{r}
+method_2 = list(
+ "ols" = create_method("ols"),
+ "xgboost" = create_method("xgboost", arguments = c("tune_on_fold"))
+ )
+```
+
+The only important detail is keep using the same cross-fit indicator matrix from the first model:
+
+```{r}
+np_2 <- nuisance_parameters(NuPa = c("Y.hat","Z.hat"),
+                            X = X, Y = Y, D = D, Z = Z, cf_mat = np$numbers$cf_mat,
+                            method = method_2, cf = 2, stacking = "short",
+                            cluster = NULL, stratify = TRUE,
+                            storeModels = "Memory", path = NULL, quiet = TRUE)
+
+plot(np_2$numbers$ens_weights)
+```
+
+This can be easily done with the help of `add_nupa` function:
+
+```{r}
+np_new <- add_nupa(np = np, np_new = np_2, NuPa = c("Y.hat","Z.hat"), replace = TRUE)
+plot(np_new$numbers$ens_weights)
+```

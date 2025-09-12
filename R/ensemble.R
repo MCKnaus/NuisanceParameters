@@ -162,10 +162,10 @@ ensemble_core <- function(method,
                           quiet = TRUE,
                           pb = NULL, pb_cf = NULL, pb_cv = NULL, pb_np = NULL) {
   method_fit <- list()
-
+  
   # Loop over methods
   for (i in seq_along(method)) {
-    update_progress(pb = pb, pb_np = pb_np, pb_cf = pb_cf, pb_cv = pb_cv, task = "Fitting", method = method[[i]]$method)
+    update_progress(pb = pb, pb_np = pb_np, pb_cf = pb_cf, pb_cv = pb_cv, task = "Fit", method = method[[i]]$method)
 
     wrapper <- paste0(method[[i]]$method, "_fit")
     m_name <- names(method)[i]
@@ -232,12 +232,13 @@ predict.ensemble_core <- function(object, method,
   fit_mat <- NULL
 
   for (i in 1:length(object)) {
-    update_progress(pb = pb, pb_np = pb_np, pb_cf = pb_cf, pb_cv = pb_cv, task = "Predict", method = method[[i]]$method)
+    update_progress(pb = pb, pb_np = pb_np, pb_cf = pb_cf, pb_cv = pb_cv, task = "Pred", method = method[[i]]$method)
 
     wrapper <- paste0(method[[i]]$method, "_fit")
     m_name <- names(method)[i]
     X_tr_sel <- if (!is.null(method[[i]]$x_select)) X_tr[, method[[i]]$x_select] else X_tr
     X_te_sel <- if (!is.null(method[[i]]$x_select)) X_te[, method[[i]]$x_select] else X_te
+    
 
     # Default case
     if (is.null(method[[i]]$multinomial)) {
@@ -266,7 +267,7 @@ predict.ensemble_core <- function(object, method,
       if (is_vec) {
         fit_mat <- matrix(NA, nrow = nrow(X_te), ncol = length(object))
       } else {
-        fit_mat <- array(NA, dim = c(nrow(X_te), ncol(pred), length(object)))
+        fit_mat <- array(NA, dim = c(nrow(X_te), ncol(pred), length(object)+1))
       }
     }
 
@@ -276,6 +277,11 @@ predict.ensemble_core <- function(object, method,
     } else {
       fit_mat[, , i] <- as.matrix(pred)
     }
+  }
+  
+  # Drop the dummy slice (robust for single learner)
+  if (!is_vec) {
+    fit_mat <- fit_mat[, , 1:length(object), drop = FALSE]
   }
 
   return(fit_mat)

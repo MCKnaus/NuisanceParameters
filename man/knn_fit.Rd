@@ -2,21 +2,21 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{knn_fit}
 \alias{knn_fit}
-\title{Pseudo fitting of k-Nearest-Neighbour to training data}
+\title{Pseudo-fitting for k-Nearest Neighbors}
 \usage{
 knn_fit(arguments = list(), ...)
 }
 \arguments{
-\item{arguments}{arguments of arguments passed to \code{\link[FastKNN]{k.nearest.neighbors}}}
+\item{arguments}{List of arguments to be used in k-NN prediction. Typically
+includes \code{k} (number of neighbors).}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored additional arguments.}
 }
 \value{
-A list of possible arguments for \code{\link[FastKNN]{k.nearest.neighbors}}.
+A list of class \code{knn_fit} containing the arguments for k-NN.
 }
 \description{
-\code{\link{knn_fit}} is a pseudo fitting function where only the kNN object
-is initialized but not fitted as the fitting process comes naturally with
-the prediction part.
+Creates a k-NN model object without actual fitting, as k-NN fitting occurs
+naturally during prediction.
 }
 \keyword{internal}
