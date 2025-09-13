@@ -178,7 +178,8 @@ ensemble_core <- function(method,
       # Multiclass treatment case
       fit <- switch(method[[i]]$multinomial,
         "one-vs-one" = {
-          do.call(ovo_fit, list(X = X_tr_sel, Y = Y_tr, method = method[[i]]$method))
+          do.call(ovo_fit, list(X = X_tr_sel, Y = Y_tr, 
+                                method = method[[i]]$method, parallel = method[[i]]$parallel))
         },
         "one-vs-rest" = {
           do.call(ovr_fit, list(X = X_tr_sel, Y = Y_tr, method = method[[i]]$method))
@@ -248,10 +249,12 @@ predict.ensemble_core <- function(object, method,
       # Multiclass treatment case
       pred <- switch(method[[i]]$multinomial,
         "one-vs-one" = {
-          do.call(predict.ovo_fit, list(object[[i]], X = X_tr_sel, Y = Y_tr, Xnew = X_te_sel, method = method[[i]]$method))
+          do.call(predict.ovo_fit, list(object[[i]], X = X_tr_sel, Y = Y_tr, Xnew = X_te_sel, 
+                                        method = method[[i]]$method, parallel = method[[i]]$parallel))
         },
         "one-vs-rest" = {
-          do.call(predict.ovr_fit, list(object[[i]], X = X_tr_sel, Y = Y_tr, Xnew = X_te_sel, method = method[[i]]$method))
+          do.call(predict.ovr_fit, list(object[[i]], X = X_tr_sel, Y = Y_tr, 
+                                        Xnew = X_te_sel, method = method[[i]]$method))
         },
         "multiclass" = {
           do.call(paste0("predict.", wrapper), list(object[[i]], X = X_tr_sel, Y = Y_tr, Xnew = X_te_sel))

@@ -622,6 +622,8 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, models) {
 #'   mode. See details.
 #' @param multinomial Optional character specifying multiclass handling approach.
 #'   One of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.
+#' @param parallel Optional logical. If TRUE, attempts parallelization for the One-Vs-One (OvO) 
+#'   multiclass routine. Requires \code{foreach} and \code{doParallel} packages to be installed.
 #' @param name Optional string naming the method.
 #'
 #' @return List object that can be passed as input to \code{\link{ensemble}}
@@ -644,7 +646,7 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, models) {
 #'   "ols" = create_method("ols"),
 #'   "knn" = create_method("knn", arguments = list("k" = 3)),
 #'   "forest_grf" = create_method("forest_grf", arguments = c("tune_full_sample")),
-#'   "logit_ovo" = create_method("logit", multinomial = "one-vs-rest"),
+#'   "logit_ovo" = create_method("logit", multinomial = "one-vs-one", parallel = TRUE),
 #'   "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
 #' )
 #'
@@ -656,6 +658,7 @@ create_method <- function(
     ),
     x_select = NULL,
     multinomial = NULL,
+    parallel = FALSE,
     arguments = list(),
     name = NULL) {
   
@@ -681,10 +684,14 @@ create_method <- function(
     stop("Provide single string to name method.")
   }
   
+  if (!is.logical(parallel) || length(parallel) != 1) {
+    stop("parallel must be a single logical value (TRUE or FALSE)")
+  }
+  
   if (!is.null(multinomial)) {
     multinomial <- match.arg(multinomial, choices = c("one-vs-one", "one-vs-rest", "multiclass"))
-    if (multinomial == "multiclass" && method %in% c("xgboost_prop", "svm")) {
-      stop("These methods do not support multiclass estimation: xgboost_prop, svm. ", 
+    if (multinomial == "multiclass" && method %in% c("svm")) {
+      stop("SVM does not support multiclass estimation.", 
            "Please set multinomial to either 'one-vs-one' or 'one-vs-rest'.")
     }
   }
@@ -693,6 +700,7 @@ create_method <- function(
   return(list(
     method = method, 
     multinomial = multinomial, 
+    parallel = parallel,
     arguments = arguments, 
     x_select = x_select, 
     name = name
@@ -717,7 +725,6 @@ create_method <- function(
 #' @return Nested list object organized by nuisance parameter that will be passed as input to \code{\link{ensemble}}
 #'
 #' @keywords internal
-#'
 create_final_method <- function(method, NuPa, K) {
   available_NuPa <- c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat")
   multiclass_method <- c("logit", "logit_nnet", "nb_gaussian", "nb_bernoulli", "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop")
@@ -735,7 +742,7 @@ create_final_method <- function(method, NuPa, K) {
     # Case 1: "One for all" method list - replicate for all NuPa after filtering
     result <- stats::setNames(vector("list", length(NuPa)), NuPa)
 
-    filter_multiclass <- NuPa[(NuPa %in% c("Y.hat", "Y.hat.d", "Y.hat.z", "Z.hat")) | (NuPa %in% c("D.hat", "D.hat.z") & K == 2)]
+    filter_multiclass <- NuPa[(NuPa %in% c("Y.hat", "Y.hat.d", "Y.hat.z"))]
     filter_base <- NuPa[NuPa %in% c("D.hat", "D.hat.z") & K > 2]
 
     # If any methods need to be removed
@@ -744,12 +751,12 @@ create_final_method <- function(method, NuPa, K) {
     base_in_method <- any(method_types %in% base_method)
 
     if (length(filter_multiclass) > 0 && multiclass_in_method) {
-      message("Multiclass classification methods are incompatible with the NuPa: ", 
-              paste(filter_multiclass, collapse = ", "), ", they will be omitted from methods.")
+      message("Multiclass methods incompatible with NuPa: ", 
+              paste(filter_multiclass, collapse = ", "), ", they will be omitted.")
     }
     if (length(filter_base) > 0 && base_in_method) {
-      message("Base methods are incompatible with the NuPa: ", 
-              paste(filter_base, collapse = ", "), ", they will be omitted from methods.")
+      message("Base methods incompatible with NuPa: ", 
+              paste(filter_base, collapse = ", "), ", they will be omitted.")
     }
 
     # Apply filters
@@ -771,7 +778,7 @@ create_final_method <- function(method, NuPa, K) {
       method_types <- get_method_types(method[[nupa]])
 
       # Multiclass methods to remove
-      if ((nupa %in% c("Y.hat", "Y.hat.d", "Y.hat.z", "Z.hat")) || (nupa %in% c("D.hat", "D.hat.z") && K == 2)) {
+      if ((nupa %in% c("Y.hat", "Y.hat.d", "Y.hat.z"))) {
         if (any(method_types %in% multiclass_method)) {
           multiclass_nupas <- c(multiclass_nupas, nupa)
         }
@@ -785,20 +792,19 @@ create_final_method <- function(method, NuPa, K) {
     }
 
     if (length(multiclass_nupas) > 0) {
-      message("Multiclass classification methods are incompatible with the NuPa: ", 
-              paste(unique(multiclass_nupas), collapse = ", "), ", they will be omitted from methods.")
+      message("Multiclass methods incompatible with NuPa: ", 
+              paste(unique(multiclass_nupas), collapse = ", "), ", they will be omitted.")
     }
     if (length(base_nupas) > 0) {
-      message("Base methods are incompatible with the NuPa: ", 
-              paste(unique(base_nupas), collapse = ", "), ", they will be omitted from methods.")
+      message("Base methods incompatible with NuPa: ", 
+              paste(unique(base_nupas), collapse = ", "), ", they will be omitted.")
     }
 
     # Apply filters
     for (nupa in intersect(names(method), NuPa)) {
       method_types <- get_method_types(method[[nupa]])
 
-      if ((nupa %in% c("Y.hat", "Y.hat.d", "Y.hat.z", "Z.hat")) ||
-        (nupa %in% c("D.hat", "D.hat.z") && K == 2)) {
+      if ((nupa %in% c("Y.hat", "Y.hat.d", "Y.hat.z"))) {
         result[[nupa]] <- method[[nupa]][!method_types %in% multiclass_method]
       } else if (nupa %in% c("D.hat", "D.hat.z") && K > 2) {
         result[[nupa]] <- method[[nupa]][!method_types %in% base_method]

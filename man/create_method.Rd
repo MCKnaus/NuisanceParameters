@@ -10,6 +10,7 @@ create_method(
     "nb_bernoulli", "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop"),
   x_select = NULL,
   multinomial = NULL,
+  parallel = FALSE,
   arguments = list(),
   name = NULL
 )
@@ -24,6 +25,9 @@ interactions that Lasso is using.}
 
 \item{multinomial}{Optional character specifying multiclass handling approach.
 One of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.}
+
+\item{parallel}{Optional logical. If TRUE, attempts parallelization for the One-Vs-One (OvO) 
+multiclass routine. Requires \code{foreach} and \code{doParallel} packages to be installed.}
 
 \item{arguments}{Optional list containing additional arguments that should be
 passed to the underlying method, or a character string specifying tuning
@@ -53,7 +57,7 @@ method <- list(
   "ols" = create_method("ols"),
   "knn" = create_method("knn", arguments = list("k" = 3)),
   "forest_grf" = create_method("forest_grf", arguments = c("tune_full_sample")),
-  "logit_ovo" = create_method("logit", multinomial = "one-vs-rest"),
+  "logit_ovo" = create_method("logit", multinomial = "one-vs-one", parallel = TRUE),
   "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
 )
 
