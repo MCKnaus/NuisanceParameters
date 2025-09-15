@@ -177,7 +177,7 @@ predict.ovo_fit <- function(ovo_fit, X, Y, Xnew = NULL, method,
     })
     fit <- t(simplify2array(opt_results))
   }
-
+  
   colnames(fit) <- unique(unlist(strsplit(names(ovo_fit), "_")))
   return(fit)
 }

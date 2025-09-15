@@ -2,22 +2,22 @@
 % Please edit documentation in R/get_outcome_weights.R
 \name{weights.forest_grf_fit}
 \alias{weights.forest_grf_fit}
-\title{Smoother weights from Random Forest model}
+\title{Smoother weights from random forest model}
 \usage{
 \method{weights}{forest_grf_fit}(forest_grf_fit, Xnew = NULL, ...)
 }
 \arguments{
-\item{forest_grf_fit}{Output of \code{\link{forest_grf_fit}}}
+\item{forest_grf_fit}{Output of \code{\link{forest_grf_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample.
-If not provided, prediction is done for the training sample.}
+\item{Xnew}{Covariate matrix of test sample. If not provided, 
+prediction is done for the training sample.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignore unused arguments.}
 }
 \value{
-Matrix of smoother weights.
+A matrix of smoother weights.
 }
 \description{
-Extract smoother weights for test sample from a Random Forest model.
+Extract smoother weights for test sample from a random forest model.
 }
 \keyword{internal}

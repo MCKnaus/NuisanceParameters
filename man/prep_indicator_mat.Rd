@@ -8,7 +8,7 @@ prep_indicator_mat(x)
 }
 \arguments{
 \item{x}{Treatment (instrument) vector.
-Provide as factor to control category ordering, otherwise arranged 
+Provide as factor to control category ordering, otherwise arranged
 in ascending order or alphabetically.}
 }
 \value{
@@ -16,8 +16,8 @@ Logical matrix (N x C) where C is the number of unique categories in `x`.
         Each column is a binary indicator for one category.
 }
 \description{
-\code{\link{prep_indicator_mat}} creates a logical matrix of binary indicators 
-(N x C) where each column represents a unique category from the input vector. 
+\code{\link{prep_indicator_mat}} creates a logical matrix of binary indicators
+(N x C) where each column represents a unique category from the input vector.
 Useful for encoding treatments/instruments.
 }
 \examples{

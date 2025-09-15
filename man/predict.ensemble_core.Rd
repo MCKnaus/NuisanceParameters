@@ -6,7 +6,7 @@
 \usage{
 \method{predict}{ensemble_core}(
   object,
-  method,
+  methods,
   X_tr,
   Y_tr,
   X_te,
@@ -19,37 +19,38 @@
 )
 }
 \arguments{
-\item{object}{List of fitted methods (from \code{\link{ensemble_core}}.}
+\item{object}{An object of class \code{"ensemble_core"} returned by \code{\link{ensemble_core}}.}
 
-\item{method}{List of raw methods built via \code{\link{create_method}}.}
+\item{methods}{List of raw methods created with \code{\link{create_method}}.}
 
-\item{X_tr}{Covariate matrix of training sample.}
+\item{X_tr}{Covariate matrix of the training sample.}
 
-\item{Y_tr}{Vector of outcomes of training sample.}
+\item{Y_tr}{Vector of outcomes of the training sample.}
 
-\item{X_te}{Covariate matrix of test sample.}
+\item{X_te}{Covariate matrix of the test sample.}
 
-\item{quiet}{If FALSE, progress output is printed into console.}
+\item{quiet}{Logical. If \code{FALSE}, progress output is printed to the console.}
 
 \item{pb}{A progress bar object to track overall computation progress.}
 
-\item{pb_cf}{Integer indicating the current cross-fitting fold
+\item{pb_cf}{Integer indicating the current cross-fitting fold 
 (for progress bar updates).}
 
-\item{pb_cv}{Integer indicating the current cross-validation fold
+\item{pb_cv}{Integer indicating the current cross-validation fold 
 (for progress bar updates).}
 
-\item{pb_np}{String indicating the current nuisance parameter being
-estimated/predicted (for progress bar updates).}
+\item{pb_np}{String indicating the current nuisance parameter being 
+estimated or predicted (for progress bar updates).}
 
-\item{...}{Additional arguments.}
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Returns matrix of dimension \code{nrow(X_te)} X \code{length(method)}
-that contains the predictions of fitted values for each method in the ensemble.
+A matrix of dimension \code{nrow(X_te)} x \code{length(methods)} containing 
+predictions from each method in the ensemble. If learners return multi-column predictions, 
+an array of dimension \code{nrow(X_te)} x \code{ncol(m_pred)} x \code{length(methods)} is returned.
 }
 \description{
-Predicts fitted values for some (new) covariate matrix based on the fully
-trained models of the ensemble model from \code{\link{ensemble_core}}.
+Generate predictions for (new) covariates based on trained ensemble models 
+from \code{\link{ensemble_core}}.
 }
 \keyword{internal}

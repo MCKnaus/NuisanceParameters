@@ -2,21 +2,28 @@
 % Please edit documentation in R/utils.R
 \name{agg_array}
 \alias{agg_array}
-\title{Aggregate 3D array}
+\title{Aggregate along an array dimension with weights}
 \usage{
-agg_array(a, w)
+agg_array(a, w, dim = 2)
 }
 \arguments{
-\item{a}{A 3D array}
+\item{a}{A numeric array of at least 2 dimensions.}
 
-\item{w}{A numeric vector.
-The length of w should match the third dimension of a.}
+\item{w}{A numeric vector of weights. Its length must match the size
+of the dimension being aggregated.}
+
+\item{dim}{Integer. The dimension over which to aggregate
+(default is \code{2}).}
 }
 \value{
-A matrix of the same dimension as the first two dimensions of a.
+A numeric array with the same dimensions as \code{a},
+  except with the specified dimension removed. For example, if
+  \code{a} is \eqn{N \times M} and \code{dim = 2}, the result is
+  a length-\eqn{N} vector. If \code{a} is \eqn{N \times M \times K},
+  the result is an \eqn{N \times K} matrix.
 }
 \description{
-This function computes the weighted sum along the third dimension of a
-three dimensional array.
+Computes the weighted sum of an array along a specified dimension.
+By default, aggregates along the second dimension.
 }
 \keyword{internal}

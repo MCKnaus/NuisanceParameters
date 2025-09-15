@@ -4,30 +4,31 @@
 \alias{weights.ensemble}
 \title{Smoother weights from cross-validated ensemble learner}
 \usage{
-\method{weights}{ensemble}(object, method, X, Y, Xnew, quiet = TRUE, ...)
+\method{weights}{ensemble}(object, methods, X, Y, Xnew, nnls_w = NULL, quiet = TRUE, ...)
 }
 \arguments{
-\item{object}{Trained ensemble object from \code{\link{ensemble}}}
+\item{object}{Trained ensemble object from \code{\link{ensemble}}.}
 
-\item{method}{List of raw methods built via \code{\link{create_method}}}
+\item{methods}{List of methods built via \code{\link{create_method}}.}
 
-\item{X}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of training sample.}
 
-\item{Y}{Vector of outcomes of training sample}
+\item{Y}{Vector of outcomes of training sample.}
 
-\item{Xnew}{Covariate matrix of test sample}
+\item{Xnew}{Covariate matrix of test sample.}
 
-\item{quiet}{If FALSE, method that is currently computed is printed into the
-console}
+\item{nnls_w}{Ensemble weights to aggregate predictions from different learners. 
+Must be a vector of length \code{ncol(object$cf_preds)}. Optional.}
 
-\item{...}{Ignore unused arguments}
+\item{quiet}{If \code{FALSE}, the method currently computed is printed to the console.}
+
+\item{...}{Ignore unused arguments.}
 }
 \value{
-Matrix of dimension \code{nrow(Xnew)} X \code{nrow(X)} containing
-ensemble smoother weights.
+A matrix of dimension \code{nrow(Xnew)} × \code{nrow(X)} containing ensemble smoother weights.
 }
 \description{
-\code{\link{weights.ensemble}} extract ensemble smoother weights for some
-(new) covariate matrix based on a fitted and cross-validated ensemble model from
-\code{\link{ensemble}}.
+Extract ensemble smoother weights for a covariate matrix based on a
+cross-validated ensemble model created by \code{\link{ensemble}}.
 }
+\keyword{internal}

@@ -28,7 +28,7 @@ tune_xgb_hyperband(
 
 \item{nfold}{Number of cross-validation folds. Default is 5.}
 
-\item{metrics}{Evaluation metric for early stopping. Options include "rmse", "mae", 
+\item{metrics}{Evaluation metric for early stopping. Options include "rmse", "mae",
 "logloss", "error", etc. Default is "rmse".}
 
 \item{seed}{Random seed for reproducibility. Default is 123.}
@@ -41,7 +41,7 @@ A list with two components:
 }
 }
 \description{
-Implements the Hyperband multi-armed bandit for hyperparameter optimization. 
+Implements the Hyperband multi-armed bandit for hyperparameter optimization.
 Progressively allocates resources (boosting rounds)
 to the most promising configurations across successive rungs of evaluation.
 }

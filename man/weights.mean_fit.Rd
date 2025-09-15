@@ -2,22 +2,21 @@
 % Please edit documentation in R/get_outcome_weights.R
 \name{weights.mean_fit}
 \alias{weights.mean_fit}
-\title{Arithmetic mean smoother weights}
+\title{Compute smoother weights from arithmetic mean}
 \usage{
 \method{weights}{mean_fit}(mean_fit, Xnew, ...)
 }
 \arguments{
-\item{mean_fit}{Output of \code{\link{mean_fit}}}
+\item{mean_fit}{An object returned by \code{\link{mean_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample}
+\item{Xnew}{Covariate matrix of the test sample.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored arguments.}
 }
 \value{
-Matrix of smoother weights.
+A matrix of smoother weights.
 }
 \description{
-Returns smoother weights for test sample based on
-arithmetic mean fitting of the training sample.
+Generate smoother weights for a test sample using arithmetic mean fitting of the training sample.
 }
 \keyword{internal}

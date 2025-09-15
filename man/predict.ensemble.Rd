@@ -2,11 +2,11 @@
 % Please edit documentation in R/ensemble.R
 \name{predict.ensemble}
 \alias{predict.ensemble}
-\title{Prediction of fitted values by cross-validated ensemble learner}
+\title{Predict method for standard-stacked ensemble}
 \usage{
 \method{predict}{ensemble}(
   object,
-  method,
+  methods,
   X,
   Y,
   Xnew,
@@ -18,33 +18,37 @@
 )
 }
 \arguments{
-\item{object}{Trained ensemble object from \code{\link{ensemble}}.}
+\item{object}{An object of class \code{"ensemble"} returned by \code{\link{ensemble}}.}
 
-\item{method}{List of raw methods built via \code{\link{create_method}}.}
+\item{methods}{List of methods created with \code{\link{create_method}}.}
 
-\item{X}{Covariate matrix of training sample.}
+\item{X}{Covariate matrix of the training sample.}
 
-\item{Y}{Vector of outcomes of training sample.}
+\item{Y}{Vector of outcomes of the training sample.}
 
-\item{Xnew}{Covariate matrix of test sample.}
+\item{Xnew}{Covariate matrix of the test sample.}
 
-\item{quiet}{If FALSE, progress output is printed into console.}
+\item{quiet}{Logical. If \code{FALSE}, progress output is printed to the console.}
 
 \item{pb}{A progress bar object to track overall computation progress.}
 
-\item{pb_cf}{Integer indicating the current cross-fitting fold
+\item{pb_cf}{Integer indicating the current cross-fitting fold 
 (for progress bar updates).}
 
-\item{pb_np}{String indicating the current nuisance parameter being
-estimated/predicted (for progress bar updates).}
+\item{pb_np}{String indicating the current nuisance parameter being 
+estimated or predicted (for progress bar updates).}
 
-\item{...}{Additional arguments.}
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Vector containing ensemble predictions.
+A list containing:
+\describe{
+  \item{cf_preds}{A matrix of predictions for the test sample from the individual learners.}
+  \item{np}{A numeric vector containing aggregated ensemble predictions.}
+}
 }
 \description{
-\code{\link{predict.ensemble}} makes prediction of fitted values for a cross-
-validated ensemble learner.
+Generate predictions from a trained ensemble standard-stacked learner 
+created with \code{\link{ensemble}}.
 }
 \keyword{internal}

@@ -4,7 +4,7 @@
 \alias{setup_pb}
 \title{Setup a Progress Bar from the \code{progress} package}
 \usage{
-setup_pb(NuPa, n_d, n_z, cf_folds, cv_folds, models)
+setup_pb(NuPa, n_d, n_z, cf_folds, cv_folds, methods)
 }
 \arguments{
 \item{NuPa}{Character vector specifying the nuisance parameters to estimate.
@@ -19,7 +19,7 @@ Currently supported options:
 
 \item{cv_folds}{Integer, number of cross-validation folds.}
 
-\item{models}{List of methods to use for \code{\link{ensemble}} estimation.}
+\item{methods}{List of methods to use for \code{\link{ensemble}} estimation.}
 }
 \value{
 A progress bar object from the \code{progress} package, configured with:

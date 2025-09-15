@@ -7,17 +7,19 @@
 \method{weights}{xgboost_fit}(xgboost_fit, X, Xnew = NULL, ...)
 }
 \arguments{
-\item{xgboost_fit}{Output of \code{\link{xgboost_fit}}}
+\item{xgboost_fit}{Output of \code{\link{xgboost_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample.
+\item{X}{Covariate matrix of training sample.}
+
+\item{Xnew}{Covariate matrix of test sample. 
 If not provided, prediction is done for the training sample.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignore unused arguments.}
 }
 \value{
-Matrix of smoother weights.
+A matrix of smoother weights.
 }
 \description{
-Extract smoother weights for test sample from a XGBoost model.
+Extract smoother weights for test sample from an XGBoost model.
 }
 \keyword{internal}

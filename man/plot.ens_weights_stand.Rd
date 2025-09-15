@@ -7,7 +7,7 @@
 \method{plot}{ens_weights_stand}(x, ncols = 3, base_size = 12, ...)
 }
 \arguments{
-\item{x}{An object of class `ens_weights_stand` containing cross-validated 
+\item{x}{An object of class `ens_weights_stand` containing cross-validated
 ensemble weights from standard stacking}
 
 \item{ncols}{Number of columns for the facet grid (default: 3)}

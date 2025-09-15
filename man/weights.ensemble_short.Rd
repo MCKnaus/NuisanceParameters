@@ -2,16 +2,16 @@
 % Please edit documentation in R/get_outcome_weights.R
 \name{weights.ensemble_short}
 \alias{weights.ensemble_short}
-\title{Extraction of smoother weights for short-stacked ensemble learner}
+\title{Smoother weights from short-stacked ensemble learner}
 \usage{
 \method{weights}{ensemble_short}(
   object,
-  method,
+  methods,
   X,
   Y,
-  subset = NULL,
-  w = NULL,
   cf_mat,
+  subset = NULL,
+  nnls_w = NULL,
   quiet = TRUE,
   ...
 )
@@ -19,32 +19,31 @@
 \arguments{
 \item{object}{Short-stacked ensemble learner from \code{\link{ensemble_short}}.}
 
-\item{method}{List of method models by \code{\link{create_method}} that was used as
-input for \code{\link{ensemble_short}}.}
+\item{methods}{List of method models from \code{\link{create_method}} used 
+as input for \code{\link{ensemble_short}}.}
 
 \item{X}{Covariate matrix of training sample.}
 
 \item{Y}{Vector of outcomes of training sample.}
 
-\item{subset}{Logical vector indicating which observations to use for determining
-ensemble weights. If not provided, all observations are used.}
+\item{cf_mat}{Logical matrix with \code{k} columns of indicators representing 
+folds (for example created by \code{\link{prep_cf_mat}}).}
 
-\item{w}{Ensemble weights to aggregate predictions from different learners (optional).
-Needs to be a vector of length \code{ncol(object$fit_cv)}.}
+\item{subset}{Logical vector indicating which observations to use for 
+determining ensemble weights. If not provided, all observations are used.}
 
-\item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
-(for example created by \code{\link{prep_cf_mat}}).}
+\item{nnls_w}{Ensemble weights to aggregate predictions from different learners. 
+Must be a vector of length \code{ncol(object$cf_preds)}. Optional.}
 
-\item{quiet}{If FALSE, method that is currently computed is printed into the
-console.}
+\item{quiet}{If \code{FALSE}, the method currently computed is printed to the console.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignore unused arguments.}
 }
 \value{
-Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing
-ensemble smoother weights.
+A matrix of dimension \code{nrow(X)} × \code{nrow(X)} containing ensemble smoother weights.
 }
 \description{
-Extract smoother weights from short-stacked ensemble model created by
+Extract smoother weights from a short-stacked ensemble model created by
 \code{\link{ensemble_short}}.
 }
+\keyword{internal}

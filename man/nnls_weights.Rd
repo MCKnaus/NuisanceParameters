@@ -2,30 +2,43 @@
 % Please edit documentation in R/utils.R
 \name{nnls_weights}
 \alias{nnls_weights}
-\title{Non-negative least squares function for estimation of ensemble weights}
+\title{Estimate ensemble weights using non-negative least squares (NNLS)}
 \usage{
-nnls_weights(X, Y)
+nnls_weights(X, Y, subset = NULL, is_mult = FALSE, do_bfgs = FALSE)
 }
 \arguments{
-\item{X}{A matrix where each column represents a different predictor variable
-and each row represents an observation}
+\item{X}{For continuous/binary outcomes: a numeric matrix of predictions
+with rows as observations and columns as base learners.
+For multinomial outcomes: a 3D array of predictions with dimensions
+\eqn{N × K × M}, where \eqn{N} is the number of observations,
+\eqn{K} the number of classes, and \eqn{M} the number of learners.}
 
-\item{Y}{A numeric vector of actual target values}
+\item{Y}{A numeric vector of observed outcomes. For multinomial outcomes,
+a factor or integer vector of class labels.}
+
+\item{subset}{Optional logical vector if only subset of data should be used.}
+
+\item{is_mult}{Logical. Indicates whether the outcome is multinomial
+(\code{TRUE}) or binary/continuous (\code{FALSE}).}
+
+\item{do_bfgs}{Logical. If \code{TRUE} and the outcome is multinomial,
+estimates weights by BFGS optimization with a softmax constraint.
+If \code{FALSE}, estimates weights via stacked NNLS from the \code{nnls} package.}
 }
 \value{
-A numeric vector of the non-negative least weights.
+A numeric vector of ensemble weights, normalized to sum to 1.
 }
 \description{
-\code{\link{nnls_weights}} estimates ensemble weights for a prediction problem
-on the basis of the non-negative least squares algorithm that puts a positive
-constraint on the regression coefficients.
+Estimates ensemble weights via non-negative least squares from the \code{nnls} 
+package. Supports binary/continuous and multinomial outcomes. Optionally, 
+BFGS optimization with a softmax parametrization can be used for multinomial 
+outcomes to directly minimize the Brier score (i.e. MSE).
 }
 \examples{
 X <- matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2)
 Y <- c(0.25, 0.45, 0.65)
 \donttest{
-nnls_w <- nnls_weights(X, Y)
+nnls_w <- nnls_weights(X = X, Y = Y)
 }
-
 }
 \keyword{internal}

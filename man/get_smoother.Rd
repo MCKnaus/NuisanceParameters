@@ -2,36 +2,35 @@
 % Please edit documentation in R/get_outcome_weights.R
 \name{get_smoother}
 \alias{get_smoother}
-\title{Extraction of smoother weights for ensemble learner}
+\title{Smoother weights from ensemble learner}
 \usage{
-get_smoother(object, method, X, Y, subset = NULL, cf_mat, cv, quiet = TRUE)
+get_smoother(object, methods, X, Y, subset = NULL, cf_mat, cv, quiet = TRUE)
 }
 \arguments{
 \item{object}{Stacked ensemble learner from \code{\link{ensemble_short}} or \code{\link{ensemble}}.}
 
-\item{method}{List of models by \code{\link{create_method}} that was used as
-input for \code{\link{ensemble_short}} or \code{\link{ensemble}}.}
+\item{methods}{List of methods built via \code{\link{create_method}}.}
 
 \item{X}{Covariate matrix of training sample.}
 
 \item{Y}{Vector of outcomes of training sample.}
 
-\item{subset}{Logical vector indicating which observations to use for determining
+\item{subset}{Logical vector indicating which observations to use when determining
 ensemble weights. If not provided, all observations are used.}
 
-\item{cf_mat}{Logical matrix with k columns of indicators representing the different folds
-(for example created by \code{\link{prep_cf_mat}}).}
+\item{cf_mat}{Logical matrix with \code{k} columns of indicators representing folds,
+typically created by \code{\link{prep_cf_mat}}.}
 
-\item{cv}{Number of cross-validation folds when estimating ensemble model.}
+\item{cv}{Integer specifying the number of cross-validation folds used in estimating
+the ensemble model.}
 
-\item{quiet}{If FALSE, method that is currently computed is printed into the
-console.}
+\item{quiet}{If \code{FALSE}, the method currently computed is printed to the console.}
 }
 \value{
-Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing 
-ensemble smoother weights.
+A matrix of dimension \code{nrow(X)} × \code{nrow(X)} containing ensemble smoother weights.
 }
 \description{
-Extract smoother weights from short- or standard-stacked ensemble model 
+Extract smoother weights from a short- or standard-stacked ensemble model
 created by \code{\link{ensemble_short}} or \code{\link{ensemble}}.
 }
+\keyword{internal}

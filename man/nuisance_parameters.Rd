@@ -10,7 +10,7 @@ nuisance_parameters(
   Y = NULL,
   D = NULL,
   Z = NULL,
-  method,
+  methods,
   stacking,
   cluster = NULL,
   stratify = FALSE,
@@ -26,15 +26,15 @@ nuisance_parameters(
 Currently supported options:
 \code{c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat")}}
 
-\item{X}{Covariate matrix.}
+\item{X}{A numeric matrix of covariates, with rows as observations and columns as covariates.}
 
-\item{Y}{Numeric vector containing the outcome variable.}
+\item{Y}{A numeric vector indicating the outcome variable}
 
-\item{D}{Numeric vector containing the treatment variable.}
+\item{D}{A numeric vector indicating the treatment variable}
 
-\item{Z}{Numeric vector containing the instrument variable.}
+\item{Z}{A numeric vector indicating the instrumental variable.}
 
-\item{method}{List of methods to use for \code{\link{ensemble}} estimation.
+\item{methods}{List of methods to use for \code{\link{ensemble}} estimation.
 Methods can be created using \code{\link{create_method}}.}
 
 \item{stacking}{Stacking option: Either "short" for short stacking or an integer >1
@@ -86,7 +86,7 @@ Estimates nuisance parameters using ensemble methods.
     X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc + male + 
                       marr + pira + twoearn, data = pension)
     
-    method = list(
+    methods = list(
       "ols" = create_method("ols"),
       "forest_grf" = create_method("forest_grf"),
       "xgboost" = create_method("xgboost")
@@ -95,7 +95,7 @@ Estimates nuisance parameters using ensemble methods.
     np <- nuisance_parameters(
       NuPa = c("Y.hat", "D.hat"),
       X = X, Y = Y, D = D,
-      method = method, cf = 2, stacking = "short"
+      methods = methods, cf = 2, stacking = "short"
     )
     
     print(head(np$nuisance_parameters[["Y.hat"]]))

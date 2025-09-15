@@ -2,10 +2,10 @@
 % Please edit documentation in R/ensemble.R
 \name{ensemble}
 \alias{ensemble}
-\title{Ensemble learner training}
+\title{Train ensemble learner with standard stacking}
 \usage{
 ensemble(
-  method,
+  methods,
   X,
   Y,
   nfolds = 5,
@@ -17,37 +17,40 @@ ensemble(
 )
 }
 \arguments{
-\item{method}{List of methods built via \code{\link{create_method}} to be used in ensemble model}
+\item{methods}{List of methods created with \code{\link{create_method}} to be 
+used in the ensemble model.}
 
-\item{X}{Covariate matrix of training sample.}
+\item{X}{Covariate matrix of the training sample.}
 
-\item{Y}{Vector of outcomes of training sample.}
+\item{Y}{Vector of outcomes of the training sample.}
 
-\item{nfolds}{Number of folds used in cross-validation of ensemble weights (default: 5)}
+\item{nfolds}{Integer. Number of folds used in cross-validation of 
+ensemble weights. Default is 5.}
 
-\item{quiet}{If FALSE, progress output is printed into console.}
+\item{quiet}{Logical. If \code{FALSE}, progress output is printed to the console.}
 
 \item{pb}{A progress bar object to track overall computation progress.}
 
-\item{pb_np}{String indicating the current nuisance parameter being
-estimated/predicted (for progress bar updates).}
+\item{pb_np}{String indicating the current nuisance parameter being 
+estimated or predicted (for progress bar updates).}
 
-\item{pb_cf}{Integer indicating the current cross-fitting fold
+\item{pb_cf}{Integer indicating the current cross-fitting fold 
 (for progress bar updates).}
 
-\item{pb_cv}{Integer indicating the current cross-validation fold
+\item{pb_cv}{Integer indicating the current cross-validation fold 
 (for progress bar updates).}
 }
 \value{
-List object containing:
-\item{fit_cv}{matrix of dimension \code{nrow(X)} X \code{length(method)} containing
-the cross-fitted predictions of the machine learning methods from the ensemble}
-\item{nnls_weights}{the weights that each machine learning method receives in
-the ensemble}
-\item{method}{list of fitted machine learning models from all cross-fitting folds
-(if storeModels is not set to "No")}
+A list with class \code{"ensemble"} containing:
+\describe{
+  \item{cf_preds}{A matrix of dimension \code{nrow(X)} x \code{length(methods)} 
+   containing the cross-fitted predictions of the machine learning methods from the ensemble.}
+  \item{nnls_w}{A numeric vector of weights that each machine learning 
+   method receives in the ensemble.}
+  \item{ens_models}{A list of fitted machine learning models from the full sample.}
+}
 }
 \description{
-\code{\link{ensemble}} trains an ensemble learner on the given training data.
+Train an ensemble learner on the given training data using cross-validation for ensemble weights.
 }
 \keyword{internal}

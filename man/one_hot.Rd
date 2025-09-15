@@ -4,7 +4,7 @@
 \alias{one_hot}
 \title{One-Hot Encoding (numeric output)}
 \usage{
-one_hot(x)
+one_hot(Y)
 }
 \arguments{
 \item{x}{A factor or character vector.}

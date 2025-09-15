@@ -2,23 +2,21 @@
 % Please edit documentation in R/get_outcome_weights.R
 \name{weights.rlasso_fit}
 \alias{weights.rlasso_fit}
-\title{Smoother weights from hdm::rlasso prediction}
+\title{Smoother weights from \code{hdm::rlasso} prediction}
 \usage{
 \method{weights}{rlasso_fit}(rlasso_fit, Xnew = NULL, ...)
 }
 \arguments{
-\item{rlasso_fit}{Output of \code{\link{rlasso_fit}}}
+\item{rlasso_fit}{Output of \code{\link{rlasso_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample.
-If not provided, prediction is done for the training sample.}
+\item{Xnew}{Covariate matrix of test sample. If not provided, prediction is done for the training sample.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignore unused arguments.}
 }
 \value{
-Matrix of smoother weights.
+A matrix of smoother weights.
 }
 \description{
-Extract smoother weights for test sample from a Lasso regression model.
-Only works if post-lasso estimation was performed.
+Extract smoother weights for test sample from a post-lasso regression model.
 }
 \keyword{internal}

@@ -5,7 +5,7 @@
 \title{Ensemble core fitting}
 \usage{
 ensemble_core(
-  method,
+  methods,
   X_tr,
   Y_tr,
   quiet = TRUE,
@@ -16,32 +16,32 @@ ensemble_core(
 )
 }
 \arguments{
-\item{method}{List of methods built via \code{\link{create_method}} to be used in
-ensemble model.}
+\item{methods}{List of methods created with \code{\link{create_method}} to be 
+used in the ensemble model.}
 
-\item{X_tr}{Covariate matrix of training sample.}
+\item{X_tr}{Covariate matrix of the training sample.}
 
-\item{Y_tr}{Vector of outcomes of training sample.}
+\item{Y_tr}{Vector of outcomes of the training sample.}
 
-\item{quiet}{If FALSE, progress output is printed into console.}
+\item{quiet}{Logical. If \code{FALSE}, progress output is printed to the console.}
 
 \item{pb}{A progress bar object to track overall computation progress.}
 
-\item{pb_cf}{Integer indicating the current cross-fitting fold
+\item{pb_cf}{Integer indicating the current cross-fitting fold 
 (for progress bar updates).}
 
-\item{pb_cv}{Integer indicating the current cross-validation fold
+\item{pb_cv}{Integer indicating the current cross-validation fold 
 (for progress bar updates).}
 
-\item{pb_np}{String indicating the current nuisance parameter being
-estimated/predicted (for progress bar updates).}
+\item{pb_np}{String indicating the current nuisance parameter being estimated 
+or predicted (for progress bar updates).}
 }
 \value{
-Returns list object containing the trained models of the ensemble.
+An object of class \code{"ensemble_core"} containing the 
+ trained models of the ensemble.
 }
 \description{
-Core function of \code{\link{ensemble}} used for fitting (i.e. training) the
-inputted (machine learning) methods for the ensemble model for one given set
-of covariates and targets.
+Train the inputted machine learning methods for one given set of covariates 
+and outcomes within the ensemble framework.
 }
 \keyword{internal}

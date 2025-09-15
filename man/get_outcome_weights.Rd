@@ -2,29 +2,30 @@
 % Please edit documentation in R/get_outcome_weights.R
 \name{get_outcome_weights}
 \alias{get_outcome_weights}
-\title{Extraction of smoother weights for ensemble learner}
+\title{Smoother weights for outcome models}
 \usage{
-get_outcome_weights(np_object, NuPa, quiet = TRUE, subset = NULL, ...)
+get_outcome_weights(object, NuPa, quiet = TRUE, subset = NULL, ...)
 }
 \arguments{
-\item{np_object}{A \code{NuisanceParameters} object created by 
-\code{\link{nuisance_parameters}} function}
+\item{object}{A \code{NuisanceParameters} object created by
+\code{\link{nuisance_parameters}}, or a path to an RDS file containing one.}
 
-\item{NuPa}{String vector specifying which nuisance parameters to extract smoother matrices for.}
+\item{NuPa}{Character vector specifying which nuisance parameters to extract 
+smoothers for. Available outcome nuisance parameters 
+are \code{c("Y.hat", "Y.hat.d", "Y.hat.z")}.}
 
-\item{quiet}{If FALSE, method that is currently computed is printed into the
-console.}
+\item{quiet}{If \code{FALSE}, the method currently computed is printed to the console.}
 
-\item{subset}{Logical vector indicating which observations to use for determining
+\item{subset}{Logical vector indicating which observations to use when determining
 ensemble weights. If not provided, all observations are used.}
 
-\item{...}{Additional arguments}
+\item{...}{Additional arguments.}
 }
 \value{
-Matrix of dimension \code{nrow(X)} X \code{nrow(X)} containing
-ensemble smoother weights, or list of such matrices if multiple models are requested.
+A list of matrices of dimension \code{nrow(X)} × \code{nrow(X)} containing ensemble smoother
+  matrices
 }
 \description{
-Extract smoother weights from short- or standard-stacked ensemble model 
-created by \code{\link{ensemble_short}} or \code{\link{ensemble}}.
+Extract smoother matrices for nuisance parameter outcome models from a
+\code{NuisanceParameters} object created by \code{\link{nuisance_parameters}}.
 }

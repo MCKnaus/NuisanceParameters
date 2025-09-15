@@ -4,32 +4,31 @@
 \alias{weights.ensemble_core}
 \title{Ensemble smoother weights}
 \usage{
-\method{weights}{ensemble_core}(object, method, X_tr, Y_tr, X_te, quiet = TRUE, ...)
+\method{weights}{ensemble_core}(object, methods, X_tr, Y_tr, X_te, quiet = TRUE, ...)
 }
 \arguments{
-\item{object}{List of fitted methods (from \code{\link{ensemble_core}}}
+\item{object}{List of trained models from \code{\link{ensemble_core}}.}
 
-\item{method}{List of raw methods built via \code{\link{create_method}}}
+\item{methods}{List of methods built via \code{\link{create_method}}.}
 
-\item{X_tr}{Covariate matrix of training sample}
+\item{X_tr}{Covariate matrix of training sample.}
 
-\item{Y_tr}{Vector of outcomes of training sample}
+\item{Y_tr}{Vector of outcomes of training sample.}
 
-\item{X_te}{Covariate matrix of test sample}
+\item{X_te}{Covariate matrix of test sample.}
 
-\item{quiet}{If FALSE, method that is currently computed is printed into the
-console}
+\item{quiet}{If \code{FALSE}, the method currently computed is printed to the console.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignore unused arguments.}
 }
 \value{
-Returns a three-dimensional array of dimension
-\code{nrow(Xnew)} X \code{nrow(X)} X \code{length(method)}
-containing the smoother weights that deliver predictions of each method
-where each row gives the weight that each training outcome received in the
-prediction of the respective test set observation.
+A three-dimensional array of dimension
+  \code{nrow(X_te)} × \code{nrow(X_tr)} × \code{length(methods)} containing smoother weights.
+  Each slice corresponds to one method, where each row gives the weights
+  assigned to training outcomes in predicting the respective test observation.
 }
 \description{
-Extract smoother weights for some (new) covariate matrix based on the fully
-trained models of the ensemble model from \code{\link{ensemble_core}}.
+Extract smoother weights for a (new) covariate matrix based on the fully trained
+models of an ensemble created by \code{\link{ensemble_core}}.
 }
+\keyword{internal}

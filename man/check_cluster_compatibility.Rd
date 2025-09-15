@@ -15,7 +15,7 @@ check_cluster_compatibility(cluster, cf)
 Does not return anything; throws an error if checks fail.
 }
 \description{
-\code{\link{check_cluster_compatibility}} checks if the cross-fitting procedure 
+\code{\link{check_cluster_compatibility}} checks if the cross-fitting procedure
 is feasible given the cluster vector and desired number of cross-fitting folds.
 }
 \keyword{internal}

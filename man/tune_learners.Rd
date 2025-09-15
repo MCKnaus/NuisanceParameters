@@ -4,21 +4,21 @@
 \alias{tune_learners}
 \title{Tune learner hyperparameters}
 \usage{
-tune_learners(type = c("tune_full_sample", "tune_on_fold"), method, X, Y)
+tune_learners(type = c("tune_full_sample", "tune_on_fold"), methods, X, Y)
 }
 \arguments{
 \item{type}{Tuning type, either "\code{tune_full_sample}" or "\code{tune_on_fold}".}
 
-\item{method}{List of methods for ensemble estimation.}
+\item{methods}{List of methods for ensemble estimation.}
 
 \item{X}{Covariate matrix.}
 
 \item{Y}{Numeric vector containing the outcome variable.}
 }
 \value{
-Modified method list with tuned parameters.
+Modified methods list with tuned parameters.
 }
 \description{
-Automatically tunes hyperparameters for specified learners in a method list
+Automatically tunes hyperparameters for specified learners in a methods list
 }
 \keyword{internal}

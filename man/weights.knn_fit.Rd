@@ -2,25 +2,24 @@
 % Please edit documentation in R/get_outcome_weights.R
 \name{weights.knn_fit}
 \alias{weights.knn_fit}
-\title{Smoother weights from k-Nearest-Neighbor algorithm}
+\title{Smoother weights from k-nearest neighbor algorithm}
 \usage{
 \method{weights}{knn_fit}(arguments, X, Xnew = NULL, ...)
 }
 \arguments{
-\item{arguments}{Output of \code{\link{knn_fit}}}
+\item{arguments}{Output of \code{\link{knn_fit}}.}
 
-\item{X}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of training sample.}
 
-\item{Xnew}{Covariate matrix of test sample}
+\item{Xnew}{Covariate matrix of test sample.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignore unused arguments.}
 }
 \value{
-Matrix of smoother weights.
+A matrix of smoother weights.
 }
 \description{
-Extract smoother weights for k-Nearest Neighbor algorithm.
-This comes quite naturally here as the weight will be \code{1 / k} for all
-'neighbors' and 0 for all 'non-neighbors' (for a given test set observation).
+Extract smoother weights from a k-nearest neighbor algorithm.
+Each weight equals \code{1 / k} for neighbors and 0 for non-neighbors.
 }
 \keyword{internal}

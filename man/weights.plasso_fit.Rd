@@ -2,22 +2,22 @@
 % Please edit documentation in R/get_outcome_weights.R
 \name{weights.plasso_fit}
 \alias{weights.plasso_fit}
-\title{Smoother weights from Post-Lasso prediction}
+\title{Compute smoother weights from post-Lasso}
 \usage{
 \method{weights}{plasso_fit}(plasso_fit, Xnew = NULL, ...)
 }
 \arguments{
-\item{plasso_fit}{Output of \code{\link{plasso_fit}}}
+\item{plasso_fit}{An object returned by \code{\link{plasso_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample.
-If not provided, prediction is done for the training sample.}
+\item{Xnew}{Optional covariate matrix of the test sample. 
+If not provided, predictions are computed for the training sample.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored arguments.}
 }
 \value{
-Matrix of smoother weights.
+A matrix of smoother weights.
 }
 \description{
-Extract smoother weights for test sample from a Post-Lasso regression model.
+Generate smoother weights for a test sample from a post-Lasso regression model.
 }
 \keyword{internal}

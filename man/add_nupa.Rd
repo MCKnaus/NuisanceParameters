@@ -33,28 +33,27 @@ Y <- rnorm(N)
 X <- matrix(rnorm(N * 10), ncol = 10)
 D <- Z <- rbinom(N, 1, 0.5)
 
-method1 <- list(
+methods1 <- list(
   "ols" = create_method("ols"),
   "plasso" = create_method("plasso")
 )
 
-method2 <- list(
+methods2 <- list(
   "forest_grf" = create_method("forest_grf"),
   "xgboost" = create_method("xgboost")
 )
 
 np1 <- nuisance_parameters(
   NuPa = c("Y.hat", "D.hat"), X = X, Y = Y, D = D,
-  method = method1, cf = 5, stacking = "short", storeModels = "Memory"
+  methods = methods1, cf = 5, stacking = "short", storeModels = "Memory"
 )
 
 np2 <- nuisance_parameters(
-  NuPa = c("D.hat", "Z.hat"), X = X, D = D, Z = Z, 
-  cf_mat = np1$numbers$cf_mat, method = method2, cf = 5, 
+  NuPa = c("D.hat", "Z.hat"), X = X, D = D, Z = Z,
+  cf_mat = np1$numbers$cf_mat, methods = methods2, cf = 5,
   stacking = "short", storeModels = "Memory"
 )
 
 np3 <- add_nupa(np = np1, np_new = np2, NuPa = c("D.hat", "Z.hat"), replace = TRUE)
 }
-
 }

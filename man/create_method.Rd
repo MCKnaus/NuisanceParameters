@@ -26,7 +26,7 @@ interactions that Lasso is using.}
 \item{multinomial}{Optional character specifying multiclass handling approach.
 One of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.}
 
-\item{parallel}{Optional logical. If TRUE, attempts parallelization for the One-Vs-One (OvO) 
+\item{parallel}{Optional logical. If TRUE, attempts parallelization for the One-Vs-One (OvO)
 multiclass routine. Requires \code{foreach} and \code{doParallel} packages to be installed.}
 
 \item{arguments}{Optional list containing additional arguments that should be
@@ -53,12 +53,11 @@ be one of \code{c("tune_on_fold", "tune_full_sample")} to specify tuning mode.
 }
 \examples{
 # Create list of methods for ensemble
-method <- list(
+methods <- list(
   "ols" = create_method("ols"),
   "knn" = create_method("knn", arguments = list("k" = 3)),
   "forest_grf" = create_method("forest_grf", arguments = c("tune_full_sample")),
   "logit_ovo" = create_method("logit", multinomial = "one-vs-one", parallel = TRUE),
   "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
 )
-
 }

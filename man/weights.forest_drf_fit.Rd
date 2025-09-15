@@ -2,23 +2,23 @@
 % Please edit documentation in R/get_outcome_weights.R
 \name{weights.forest_drf_fit}
 \alias{weights.forest_drf_fit}
-\title{Smoother weights from Distributional Random Forest model}
+\title{Smoother weights from distributional random forest model}
 \usage{
 \method{weights}{forest_drf_fit}(forest_drf_fit, Xnew = NULL, ...)
 }
 \arguments{
-\item{forest_drf_fit}{Output of \code{\link{forest_drf_fit}}}
+\item{forest_drf_fit}{Output of \code{\link{forest_drf_fit}}.}
 
-\item{Xnew}{Covariate matrix of test sample.
+\item{Xnew}{Covariate matrix of test sample. 
 If not provided, prediction is done for the training sample.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignore unused arguments.}
 }
 \value{
-Matrix of smoother weights.
+A matrix of smoother weights.
 }
 \description{
-Extract smoother (or adaptive nearest neighbor) weights for test sample from
-Distributional Random Forest model.
+Extract smoother (adaptive nearest neighbor) weights for test sample
+from a distributional random forest model.
 }
 \keyword{internal}

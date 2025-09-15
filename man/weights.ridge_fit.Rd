@@ -2,26 +2,25 @@
 % Please edit documentation in R/get_outcome_weights.R
 \name{weights.ridge_fit}
 \alias{weights.ridge_fit}
-\title{Smoother weights from Ridge regression prediction}
+\title{Compute smoother weights from ridge regression}
 \usage{
 \method{weights}{ridge_fit}(ridge_fit, X, Y, Xnew = NULL, ...)
 }
 \arguments{
-\item{ridge_fit}{Output of \code{\link{ridge_fit}}}
+\item{ridge_fit}{An object returned by \code{\link{ridge_fit}}.}
 
-\item{X}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of the training sample.}
 
-\item{Y}{Vector of outcomes of training sample}
+\item{Y}{Vector of outcomes of the training sample.}
 
-\item{Xnew}{Covariate matrix of test sample.
-If not provided, prediction is done for the training sample.}
+\item{Xnew}{Optional covariate matrix of the test sample. If not provided, predictions are computed for the training sample.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored arguments.}
 }
 \value{
-Matrix of smoother weights.
+A matrix of smoother weights.
 }
 \description{
-Extract smoother weights for test sample from a Ridge regression model.
+Generate smoother weights for a test sample from a ridge regression model.
 }
 \keyword{internal}

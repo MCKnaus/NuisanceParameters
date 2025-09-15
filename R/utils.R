@@ -1,26 +1,24 @@
 #' One-hot encoding of treatment/instrument vector
 #'
 #' @description
-#' \code{\link{prep_indicator_mat}} creates a logical matrix of binary indicators 
-#' (N x C) where each column represents a unique category from the input vector. 
+#' \code{\link{prep_indicator_mat}} creates a logical matrix of binary indicators
+#' (N x C) where each column represents a unique category from the input vector.
 #' Useful for encoding treatments/instruments.
 #'
 #' @param x Treatment (instrument) vector.
-#'          Provide as factor to control category ordering, otherwise arranged 
+#'          Provide as factor to control category ordering, otherwise arranged
 #'          in ascending order or alphabetically.
 #'
 #' @return Logical matrix (N x C) where C is the number of unique categories in `x`.
 #'         Each column is a binary indicator for one category.
-#'
-#' @keywords internal
 #'
 #' @examples
 #' D <- factor(c("A", "B", "A", "C", "B", "C"))
 #' d_mat <- prep_indicator_mat(D)
 #' head(d_mat)
 #'
+#' @keywords internal
 prep_indicator_mat <- function(x) {
-  # Input validation
   if (length(unique(x)) <= 1) {
     stop("Input vector must contain at least two unique values.")
   }
@@ -38,7 +36,7 @@ prep_indicator_mat <- function(x) {
 #' Compatibility check of cluster vector
 #'
 #' @description
-#' \code{\link{check_cluster_compatibility}} checks if the cross-fitting procedure 
+#' \code{\link{check_cluster_compatibility}} checks if the cross-fitting procedure
 #' is feasible given the cluster vector and desired number of cross-fitting folds.
 #'
 #' @param cluster A vector representing the cluster assignments
@@ -53,7 +51,7 @@ check_cluster_compatibility <- function(cluster, cf) {
 
   if (num_clusters < cf) {
     stop(
-      "The number of clusters is less than the desired number of folds. 
+      "The number of clusters is less than the desired number of folds.
       Either choose a smaller number of folds or do not specify a cluster vector."
     )
   }
@@ -63,7 +61,7 @@ check_cluster_compatibility <- function(cluster, cf) {
 
   if (max_cluster_share > (1 / cf) * 0.9) {
     stop(
-      "There is a high imbalance in the cluster sizes. This poses a problem for the cross-fitting procedure. 
+      "There is a high imbalance in the cluster sizes. This poses a problem for the cross-fitting procedure.
       Either choose a smaller number of folds or do not specify a cluster vector."
     )
   }
@@ -72,15 +70,13 @@ check_cluster_compatibility <- function(cluster, cf) {
 
 #' Cross-fitting fold indicators
 #'
-#' @description
-#' \code{\link{prep_cf_mat}} creates a matrix of binary cross-fitting fold
-#' indicators (N x # cross-folds)
+#' Creates a matrix of binary cross-fitting fold indicators (\eqn{N \times cf})
 #'
 #' @param N Number of observations
 #' @param cf Number of cross-fitting folds
 #' @param cluster Optional vector of cluster variable if cross-fitting should account
 #'                for clusters within the data.
-#' @param d_mat Optional logical matrix of treatment indicators (N x T+1 with T
+#' @param d_mat Optional logical matrix of treatment indicators (\eqn{N x T+1} with \eqn{T}
 #'              being the number of treatments). For example created by \code{\link{prep_indicator_mat}}.
 #'              If specified, cross-fitting folds will preserve the treatment ratios from full sample.
 #'              However, if cluster vector is provided, \code{d_mat} is ignored due to computational
@@ -88,23 +84,20 @@ check_cluster_compatibility <- function(cluster, cf) {
 #'
 #' @return Logical matrix of cross-fitting folds (N x # folds).
 #'
-#' @keywords internal
-#'
 #' @examples
 #' N <- 1000
 #' d_mat <- prep_indicator_mat(sample(3, N, replace = TRUE))
 #' cf_mat <- prep_cf_mat(N, cf = 5, d_mat = d_mat)
 #' head(cf_mat)
 #'
-prep_cf_mat <- function(N, 
-                        cf, 
-                        cluster = NULL, 
+#' @keywords internal
+prep_cf_mat <- function(N,
+                        cf,
+                        cluster = NULL,
                         d_mat = NULL) {
-  # Check if both cluster vector and treatment matrix are provided
   if (!is.null(cluster) & !is.null(d_mat)) {
-    warning("You provided both a cluster vector and a treatment matrix. 
-            This is not feasible due to computational constraints and randomization issues. 
-            Thus, only cluster vector is considered.")
+    warning("Both cluster vector and treatment matrix were provided. 
+            Only the cluster vector will be used.")
     d_mat <- NULL
   }
 
@@ -146,9 +139,10 @@ prep_cf_mat <- function(N,
 
     cf_mat_balance <- colSums(cf_mat) / nrow(cf_mat)
 
-    if (any(cf_mat_balance < (1 / cf) * 0.5)) 
-      stop("There is a high imbalance in the cluster sizes. This poses a problem for the cross-fitting procedure. 
+    if (any(cf_mat_balance < (1 / cf) * 0.5)) {
+      stop("There is a high imbalance in the cluster sizes. This poses a problem for the cross-fitting procedure.
            Either choose a smaller number of folds or do not specify a cluster vector.")
+    }
   }
 
   colnames(cf_mat) <- sprintf("CF %d", 1:cf)
@@ -157,43 +151,80 @@ prep_cf_mat <- function(N,
 }
 
 
-#' Non-negative least squares function for estimation of ensemble weights
+#' Estimate ensemble weights using non-negative least squares (NNLS)
 #'
-#' @description
-#' \code{\link{nnls_weights}} estimates ensemble weights for a prediction problem
-#' on the basis of the non-negative least squares algorithm that puts a positive
-#' constraint on the regression coefficients.
+#' Estimates ensemble weights via non-negative least squares from the \code{nnls} 
+#' package. Supports binary/continuous and multinomial outcomes. Optionally, 
+#' BFGS optimization with a softmax parametrization can be used for multinomial 
+#' outcomes to directly minimize the Brier score (i.e. MSE).
 #'
-#' @param X A matrix where each column represents a different predictor variable
-#' and each row represents an observation
-#' @param Y A numeric vector of actual target values
+#' @param X For continuous/binary outcomes: a numeric matrix of predictions
+#'   with rows as observations and columns as base learners.
+#'   For multinomial outcomes: a 3D array of predictions with dimensions
+#'   \eqn{N × K × M}, where \eqn{N} is the number of observations,
+#'   \eqn{K} the number of classes, and \eqn{M} the number of learners.
+#' @param Y A numeric vector of observed outcomes. For multinomial outcomes,
+#'   a factor or integer vector of class labels.
+#' @param subset Optional logical vector if only subset of data should be used.
+#' @param is_mult Logical. Indicates whether the outcome is multinomial
+#'   (\code{TRUE}) or binary/continuous (\code{FALSE}).
+#' @param do_bfgs Logical. If \code{TRUE} and the outcome is multinomial,
+#'   estimates weights by BFGS optimization with a softmax constraint.
+#'   If \code{FALSE}, estimates weights via stacked NNLS from the \code{nnls} package.
 #'
-#' @return A numeric vector of the non-negative least weights.
-#'
-#' @keywords internal
+#' @return A numeric vector of ensemble weights, normalized to sum to 1.
 #'
 #' @examples
 #' X <- matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2)
 #' Y <- c(0.25, 0.45, 0.65)
 #' \donttest{
-#' nnls_w <- nnls_weights(X, Y)
+#' nnls_w <- nnls_weights(X = X, Y = Y)
 #' }
-#'
-nnls_weights <- function(X, Y) {
+#' @keywords internal
+nnls_weights <- function(X, Y, 
+                         subset = NULL, 
+                         is_mult = FALSE, 
+                         do_bfgs = FALSE) {
+  if (is.null(subset)) subset <- rep(TRUE, length(Y))
   
-  nnls_result <- nnls::nnls(as.matrix(X), Y)
-  nnls_w <- nnls_result$x
-
-  # In case of perfectly agreeing predictions, nnls provides only zeros.
-  # In this scenario: uniform weights that add up to 1
-  if (sum(nnls_w) == 0) {
-    nnls_w <- nnls_w + 1 / length(nnls_w)
+  ## Multinomial + BFGS optimization
+  if (is_mult && do_bfgs) {
+    softmax <- function(z) { z <- z - max(z); exp(z) / sum(exp(z)) }
+    one_hot_Y <- one_hot(Y = Y)
+    
+    obj_fun <- function(raw_w) {
+      weights <- softmax(raw_w)
+      ens_pred <- agg_array(a = X, w = weights)
+      mean((one_hot_Y - ens_pred)^2)
+    }
+    
+    bfgs <- optim(
+      par = rep(0, dim(X)[3]),
+      fn = obj_fun,
+      method = "BFGS",
+      control = list(reltol = 1e-8)
+    )
+    nnls_w <- softmax(bfgs$par)
+    
+  } else if (is_mult && !do_bfgs) {
+    ## Multinomial + stacked NNLS
+    # Stack outcomes (K*N vector) + flatten predictions (K*N × M matrix)
+    Y <- Y[subset]
+    X <- X[subset, ,]
+    Y_stack <- as.vector(one_hot(Y = Y))
+    X_stack <- sapply(dimnames(X)[[3]], function(m) as.vector(X[, , m]))
+    nnls_w <- nnls::nnls(A = X_stack, b = Y_stack)$x
+    
+  } else {
+    ## Binary/continuous outcome
+    nnls_w <- nnls::nnls(A = X[subset, ], b = Y[subset])$x
   }
-
-  # Normalize weights
+  
+  # Handle degenerate all-zero weights
+  if (sum(nnls_w) == 0) nnls_w <- rep(1 / length(nnls_w), length(nnls_w))
+  
   nnls_w <- nnls_w / sum(nnls_w)
-
-  if (!is.null(colnames(X))) names(nnls_w) <- colnames(X)
+  names(nnls_w) <- if (length(dim(X)) == 3) dimnames(X)[[3]] else colnames(X)
 
   return(nnls_w)
 }
@@ -201,7 +232,6 @@ nnls_weights <- function(X, Y) {
 
 #' Adds an intercept to a matrix
 #'
-#' @description
 #' \code{\link{add_intercept}} adds an intercept to a matrix.
 #'
 #' @param mat Any matrix.
@@ -209,7 +239,6 @@ nnls_weights <- function(X, Y) {
 #' @return Matrix with intercept.
 #'
 #' @keywords internal
-#'
 add_intercept <- function(mat) {
   if (is.null(dim(mat))) {
     mat <- as.matrix(mat, ncol = 1)
@@ -223,62 +252,64 @@ add_intercept <- function(mat) {
 }
 
 
-#' Aggregate 3D array
+#' Aggregate along an array dimension with weights
 #'
-#' @description
-#' This function computes the weighted sum along the third dimension of a
-#' three dimensional array.
+#' Computes the weighted sum of an array along a specified dimension.
+#' By default, aggregates along the second dimension.
 #'
-#' @param a A 3D array
-#' @param w A numeric vector.
-#' The length of w should match the third dimension of a.
+#' @param a A numeric array of at least 2 dimensions.
+#' @param w A numeric vector of weights. Its length must match the size
+#'   of the dimension being aggregated.
+#' @param dim Integer. The dimension over which to aggregate
+#'   (default is \code{2}).
 #'
-#' @return A matrix of the same dimension as the first two dimensions of a.
+#' @return A numeric array with the same dimensions as \code{a},
+#'   except with the specified dimension removed. For example, if
+#'   \code{a} is \eqn{N \times M} and \code{dim = 2}, the result is
+#'   a length-\eqn{N} vector. If \code{a} is \eqn{N \times M \times K},
+#'   the result is an \eqn{N \times K} matrix.
 #'
 #' @keywords internal
-#'
-agg_array <- function(a, w) {
-  return(apply(a, c(1, 2), function(x) sum(x * w)))
+agg_array <- function(a, w, dim = 2) {
+  apply(a, c(1, dim), function(x) sum(x * w))
 }
 
 
-#' Prepare fit_cv matrix for cross-fitted ensemble predictions
+#' Prepare \code{cf_preds} matrix for cross-fitted ensemble predictions
 #'
-#' @description
 #' Creates a matrix or array to store cross-fitted ensemble predictions.
 #'
-#' @param method List of methods built via \code{\link{create_method}} to be used in ensemble
+#' @param methods List of methods built via \code{\link{create_method}} to be used in ensemble
 #' @param N Number of observations
 #' @param Y Outcome vector (used to determine number of classes for multinomial outcomes)
 #'
-#' @return A matrix of NAs with dimensions \code{N} x \code{length(method)} for binary outcomes,
-#'         or a 3D array with dimensions \code{N} x \code{K} x \code{length(method)} for multinomial
+#' @return A matrix of NAs with dimensions \code{N} x \code{length(methods)} for binary outcomes,
+#'         or a 3D array with dimensions \code{N} x \code{K} x \code{length(methods)} for multinomial
 #'         outcomes (where K is number of unique classes in Y)
 #'
 #' @keywords internal
 #'
-make_fit_cv <- function(method, N, Y) {
-  is_mult <- !is.null(method[[1]]$multinomial)
-  n_methods <- length(method)
-  method_names <- names(method)
-  
+make_cf_preds <- function(methods, N, Y) {
+  is_mult <- !is.null(methods[[1]]$multinomial)
+  n_methods <- length(methods)
+  method_names <- names(methods)
+
   if (is_mult) {
     n_classes <- length(unique(Y))
-    fit_cv <- array(NA, dim = c(N, n_classes, n_methods))
+    cf_preds <- array(NA, dim = c(N, n_classes, n_methods))
     class_names <- if (!is.null(levels(Y))) levels(Y) else seq_len(n_classes) - 1
-    dimnames(fit_cv) <- list(NULL, class_names, method_names)
+    dimnames(cf_preds) <- list(NULL, class_names, method_names)
   } else {
-    fit_cv <- matrix(NA, nrow = N, ncol = n_methods)
-    colnames(fit_cv) <- if (!is.null(method_names)) method_names else sprintf("method%s", seq_len(n_methods))
+    cf_preds <- matrix(NA, nrow = N, ncol = n_methods)
+    colnames(cf_preds) <- if (!is.null(method_names)) method_names else sprintf("methods%s", seq_len(n_methods))
   }
-  
-  return(fit_cv)
+
+  return(cf_preds)
 }
 
 
 #' Short- or Standard-stacking message
 #'
-#' @description
 #' Prints a message into the console whether short- or standard-stacking is used.
 #'
 #' @param cv Cross-validation value for ensemble weights.
@@ -286,7 +317,6 @@ make_fit_cv <- function(method, N, Y) {
 #' @return Message in console. No object is returned.
 #'
 #' @keywords internal
-#'
 which_stacking <- function(cv = 1) {
   if (cv == 1) {
     message("Short-stacking is used.")
@@ -298,7 +328,6 @@ which_stacking <- function(cv = 1) {
 
 #' Update progress bar
 #'
-#' @description
 #' Updates progress bar with standardized formatting.
 #'
 #' @param pb Progress bar object from \code{progress} package
@@ -307,9 +336,8 @@ which_stacking <- function(cv = 1) {
 #' @param pb_cv Current cross-validation fold number (integer)
 #' @param task Task description (character)
 #' @param method Method name (character)
-#'  
+#'
 #' @keywords internal
-#' 
 update_progress <- function(pb, pb_np, pb_cf, pb_cv, task, method) {
   if (is.null(pb)) {
     return(invisible(NULL))
@@ -333,15 +361,39 @@ update_progress <- function(pb, pb_np, pb_cf, pb_cv, task, method) {
 }
 
 
+#' Extract ensemble weights from the output of \code{nuisance_cf}
+#'
+#' @param np_cf A cross-fitted nuisance parameters object containing ensemble models.
+#'   The object can have two possible structures:
+#'   \enumerate{
+#'     \item List of sublists, each containing \code{nnls_w} elements
+#'     \item Top-level \code{nnls_w} element directly accessible
+#'   }
+#'
+#' @return Ensemble weights as named numeric vectors. Returns a list of weights
+#'   if multiple sublists are present, or a single named vector if \code{nnls_w}
+#'   is directly accessible.
+#'
+#' @keywords internal
+extract_w <- function(np_cf) {
+  if ("nnls_w" %in% names(np_cf$models_nupa)) {
+    # Structure 2: nnls_w is top-level element
+    np_cf$models_nupa$nnls_w
+  } else {
+    # Structure 1: nnls_w is within each sublist
+    lapply(np_cf$models_nupa, function(x) x$nnls_w)
+  }
+}
+
+
 #' Format ensemble weights for short- or standard-stacking
 #'
 #' @param ens_weights List of ensemble weights to be formatted
 #' @param cv Integer indicating number of cross-validation folds
-#' 
+#'
 #' @return A data.frame (\code{cv = 1}) or list of data.frames (\code{cv > 1}) with formatted weights
-#' 
+#'
 #' @keywords internal
-#' 
 format_weights <- function(ens_weights, cv) {
   # Short stacking: Single matrix with all learners
   if (cv == 1) {
@@ -359,7 +411,7 @@ format_weights <- function(ens_weights, cv) {
     out <- as.data.frame(ens_weights_mat)
     out[is.na(out)] <- 0
     class(out) <- c("ens_weights_short", "data.frame")
-    
+
     # Standard stacking: List of fold-specific weights
   } else {
     out <- list()
@@ -391,7 +443,6 @@ format_weights <- function(ens_weights, cv) {
 
 #' Generate a color palette for ensemble weights visuals
 #'
-#' @description
 #' Creates a consistent color palette for visualizing ensemble method weights.
 #' Returns a predefined set of colors for up to 12 methods, and generates
 #' additional colors using \code{colorRampPalette} when more methods are needed.
@@ -401,15 +452,14 @@ format_weights <- function(ens_weights, cv) {
 #' @return A character vector of hex color codes of length `n`
 #'
 #' @keywords internal
-#'
 get_palette <- function(n) {
   palette <- c(
     "#FB8072", "#80B1D3", "#FFED6F", "#BEBADA",
     "#8DD3C7", "#FDB462", "#B3DE69", "#BC80BD",
     "#FCCDE5", "#D9D9D9", "#FFFFB3", "#8DA0CB"
   )
-  if (n > length(palette)) { 
-    palette <- grDevices::colorRampPalette(palette)(n) 
+  if (n > length(palette)) {
+    palette <- grDevices::colorRampPalette(palette)(n)
   }
   return(palette[1:n])
 }
@@ -417,11 +467,10 @@ get_palette <- function(n) {
 
 #' Visualize standard-stacked ensemble weights
 #'
-#' @description
 #' Creates a stacked bar plot showing the distribution of ensemble weights across
 #' different learners and cross-validation folds for standard stacking.
 #'
-#' @param x An object of class `ens_weights_stand` containing cross-validated 
+#' @param x An object of class `ens_weights_stand` containing cross-validated
 #'   ensemble weights from standard stacking
 #' @param ncols Number of columns for the facet grid (default: 3)
 #' @param base_size Base font size for plot elements (default: 12)
@@ -448,9 +497,7 @@ get_palette <- function(n) {
 #' }
 #'
 #' @export
-#'
 #' @method plot ens_weights_stand
-#' 
 plot.ens_weights_stand <- function(x,
                                    ncols = 3,
                                    base_size = 12,
@@ -503,7 +550,6 @@ plot.ens_weights_stand <- function(x,
 
 #' Visualize short-stacked ensemble weights
 #'
-#' @description
 #' Plots single set of ensemble weights for short stacking,
 #' showing the weight assigned to each learner.
 #'
@@ -513,8 +559,6 @@ plot.ens_weights_stand <- function(x,
 #'
 #' @return A ggplot object showing learner weights as a stacked bar plot
 #'
-#' @export
-#' 
 #' @examples
 #' \dontrun{
 #' weights <- data.frame(
@@ -526,8 +570,8 @@ plot.ens_weights_stand <- function(x,
 #' plot(weights)
 #' }
 #'
+#' @export
 #' @method plot ens_weights_short
-#' 
 plot.ens_weights_short <- function(x,
                                    base_size = 12,
                                    ...) {
@@ -535,21 +579,21 @@ plot.ens_weights_short <- function(x,
   if (!inherits(x, "ens_weights_short")) {
     stop("x must be an object of class 'ens_weights_short'")
   }
-  
+
   df <- as.data.frame(x)
-  df$method <- rownames(df)
+  df$methods <- rownames(df)
 
   df_long <- data.frame(
-    method = rep(df$method, times = ncol(df) - 1),
+    methods = rep(df$methods, times = ncol(df) - 1),
     variable = rep(names(df)[-ncol(df)], each = nrow(df)),
     value = unlist(df[-ncol(df)]),
     stringsAsFactors = FALSE
   )
 
-  all_methods <- unique(df$method)
+  all_methods <- unique(df$methods)
   method_palette <- stats::setNames(get_palette(length(all_methods)), all_methods)
 
-  ggplot2::ggplot(df_long, ggplot2::aes(x = variable, y = value, fill = method)) +
+  ggplot2::ggplot(df_long, ggplot2::aes(x = variable, y = value, fill = methods)) +
     ggplot2::geom_col(position = "stack", width = 0.7) +
     ggplot2::scale_fill_manual(values = method_palette, name = "Method") +
     ggplot2::labs(x = "Nuisance Parameter", y = "Weight", fill = "Method") +
@@ -560,7 +604,6 @@ plot.ens_weights_short <- function(x,
 
 #' Setup a Progress Bar from the \code{progress} package
 #'
-#' @description
 #' Creates a customized progress bar to track progress.
 #'
 #' @param NuPa Character vector specifying the nuisance parameters to estimate.
@@ -570,7 +613,7 @@ plot.ens_weights_short <- function(x,
 #' @param n_z Integer, number of unique instrument values.
 #' @param cf_folds Integer, number of cross-fitting folds.
 #' @param cv_folds Integer, number of cross-validation folds.
-#' @param models List of methods to use for \code{\link{ensemble}} estimation.
+#' @param methods List of methods to use for \code{\link{ensemble}} estimation.
 #'
 #' @return A progress bar object from the \code{progress} package, configured with:
 #' \itemize{
@@ -580,36 +623,34 @@ plot.ens_weights_short <- function(x,
 #' }
 #'
 #' @seealso \code{\link[progress]{progress_bar}} for the underlying progress bar implementation.
-#' 
+#'
 #' @keywords internal
-#' 
-setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, models) {
-  count_nested_lists <- function(models, n_d, n_z) {
+setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, methods) {
+  count_nested_lists <- function(methods, n_d, n_z) {
     multipliers <- list("Y.hat.d" = n_d, "Y.hat.z" = n_z, "D.hat.z" = n_z)
 
     # Calculate weighted counts
-    sum(sapply(names(models), function(key) {
-      base_count <- length(models[[key]])
+    sum(sapply(names(methods), function(key) {
+      base_count <- length(methods[[key]])
       multiplier <- ifelse(key %in% names(multipliers), multipliers[[key]], 1)
       base_count * multiplier
     }))
   }
 
-  # Final ticks: cf folds × models × 2 (i.e. fitting+prediction) × cv folds
-  total_ticks <- cf_folds * count_nested_lists(models, n_d, n_z) * 2 * if (cv_folds > 1) (cv_folds + 1) else 1 # && length(models) > 1
+  # Final ticks: cf folds × methods × 2 (i.e. fitting+prediction) × cv folds
+  total_ticks <- cf_folds * count_nested_lists(methods, n_d, n_z) * 2 * if (cv_folds > 1) (cv_folds + 1) else 1 # && length(methods) > 1
 
   pb <- progress::progress_bar$new(
     format = "[:bar] :percent | :current/:total | :nuisance | cf =:pb_cf, cv =:pb_cv | :task :model",
     total = total_ticks, clear = TRUE, width = 80, force = FALSE
   )
-  
+
   return(pb)
 }
 
 
 #' Method creation for ensemble
 #'
-#' @description
 #' Creates the methods to be used in the subsequent \code{\link{ensemble}} model.
 #'
 #' @param method Choose method from available options. See details for supported methods.
@@ -622,7 +663,7 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, models) {
 #'   mode. See details.
 #' @param multinomial Optional character specifying multiclass handling approach.
 #'   One of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.
-#' @param parallel Optional logical. If TRUE, attempts parallelization for the One-Vs-One (OvO) 
+#' @param parallel Optional logical. If TRUE, attempts parallelization for the One-Vs-One (OvO)
 #'   multiclass routine. Requires \code{foreach} and \code{doParallel} packages to be installed.
 #' @param name Optional string naming the method.
 #'
@@ -642,18 +683,17 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, models) {
 #'
 #' @examples
 #' # Create list of methods for ensemble
-#' method <- list(
+#' methods <- list(
 #'   "ols" = create_method("ols"),
 #'   "knn" = create_method("knn", arguments = list("k" = 3)),
 #'   "forest_grf" = create_method("forest_grf", arguments = c("tune_full_sample")),
 #'   "logit_ovo" = create_method("logit", multinomial = "one-vs-one", parallel = TRUE),
 #'   "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
 #' )
-#'
 create_method <- function(
     method = c(
-      "mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf", 
-      "xgboost", "rlasso", "logit", "logit_nnet", "nb_gaussian", "nb_bernoulli", 
+      "mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf",
+      "xgboost", "rlasso", "logit", "logit_nnet", "nb_gaussian", "nb_bernoulli",
       "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop"
     ),
     x_select = NULL,
@@ -661,48 +701,49 @@ create_method <- function(
     parallel = FALSE,
     arguments = list(),
     name = NULL) {
-  
   # Sanity checks
   method <- match.arg(method)
-  
+
   # Check if other inputs are valid
   if (!(is.null(arguments) || is.list(arguments) || is.character(arguments))) {
     stop("Provide either NULL, a list, or a character string for arguments.")
   }
-  
+
   if (is.character(arguments) && length(arguments) == 1) {
     if (!arguments %in% c("tune_on_fold", "tune_full_sample")) {
       stop("If arguments is a character string, it must be one of: 'tune_on_fold', 'tune_full_sample'")
     }
   }
-  
+
   if (!(is.null(x_select) || is.logical(x_select))) {
     stop("Provide either NULL or logical for x_select.")
   }
-  
+
   if (!((is.character(name) && length(name) == 1) || is.null(name))) {
     stop("Provide single string to name method.")
   }
-  
+
   if (!is.logical(parallel) || length(parallel) != 1) {
     stop("parallel must be a single logical value (TRUE or FALSE)")
   }
-  
+
   if (!is.null(multinomial)) {
     multinomial <- match.arg(multinomial, choices = c("one-vs-one", "one-vs-rest", "multiclass"))
     if (multinomial == "multiclass" && method %in% c("svm")) {
-      stop("SVM does not support multiclass estimation.", 
-           "Please set multinomial to either 'one-vs-one' or 'one-vs-rest'.")
+      stop(
+        "SVM does not support multiclass estimation.",
+        "Please set multinomial to either 'one-vs-one' or 'one-vs-rest'."
+      )
     }
   }
-  
+
   # Return method specification
   return(list(
-    method = method, 
-    multinomial = multinomial, 
+    method = method,
+    multinomial = multinomial,
     parallel = parallel,
-    arguments = arguments, 
-    x_select = x_select, 
+    arguments = arguments,
+    x_select = x_select,
     name = name
   ))
 }
@@ -710,7 +751,6 @@ create_method <- function(
 
 #' Method creation for ensemble (internal version)
 #'
-#' @description
 #' Creates the methods to be actually used in the subsequent \code{\link{ensemble}} model,
 #' allowing for either a simple method list or nuisance-parameter-specific method lists.
 #'
@@ -725,57 +765,61 @@ create_method <- function(
 #' @return Nested list object organized by nuisance parameter that will be passed as input to \code{\link{ensemble}}
 #'
 #' @keywords internal
-create_final_method <- function(method, NuPa, K) {
+process_methods <- function(methods, NuPa, K) {
   available_NuPa <- c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat")
   multiclass_method <- c("logit", "logit_nnet", "nb_gaussian", "nb_bernoulli", "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop")
   base_method <- c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf", "xgboost", "rlasso")
 
-  # A function to extract method types from a method list
+  # A function to extract method types from a methods list
   get_method_types <- function(method_list) {
     sapply(method_list, function(x) x$method)
   }
 
-  # Check if a "one for all" method list
-  is_simple_list <- !any(names(method) %in% available_NuPa)
+  # Check if a "one for all" methods list
+  is_simple_list <- !any(names(methods) %in% available_NuPa)
 
   if (is_simple_list) {
-    # Case 1: "One for all" method list - replicate for all NuPa after filtering
+    # Case 1: "One for all" methods list - replicate for all NuPa after filtering
     result <- stats::setNames(vector("list", length(NuPa)), NuPa)
 
     filter_multiclass <- NuPa[(NuPa %in% c("Y.hat", "Y.hat.d", "Y.hat.z"))]
     filter_base <- NuPa[NuPa %in% c("D.hat", "D.hat.z") & K > 2]
 
     # If any methods need to be removed
-    method_types <- get_method_types(method)
+    method_types <- get_method_types(methods)
     multiclass_in_method <- any(method_types %in% multiclass_method)
     base_in_method <- any(method_types %in% base_method)
 
     if (length(filter_multiclass) > 0 && multiclass_in_method) {
-      message("Multiclass methods incompatible with NuPa: ", 
-              paste(filter_multiclass, collapse = ", "), ", they will be omitted.")
+      message(
+        "Multiclass methods incompatible with NuPa: ",
+        paste(filter_multiclass, collapse = ", "), ", they will be omitted."
+      )
     }
     if (length(filter_base) > 0 && base_in_method) {
-      message("Base methods incompatible with NuPa: ", 
-              paste(filter_base, collapse = ", "), ", they will be omitted.")
+      message(
+        "Base methods incompatible with NuPa: ",
+        paste(filter_base, collapse = ", "), ", they will be omitted."
+      )
     }
 
     # Apply filters
     for (nupa in NuPa) {
       if (nupa %in% filter_multiclass) {
-        result[[nupa]] <- method[!method_types %in% multiclass_method]
+        result[[nupa]] <- methods[!method_types %in% multiclass_method]
       } else if (nupa %in% filter_base) {
-        result[[nupa]] <- method[!method_types %in% base_method]
+        result[[nupa]] <- methods[!method_types %in% base_method]
       } else {
-        result[[nupa]] <- method
+        result[[nupa]] <- methods
       }
     }
   } else {
-    # Case 2: NuPa-specific method list
+    # Case 2: NuPa-specific methods list
     result <- stats::setNames(vector("list", length(NuPa)), NuPa)
     multiclass_nupas <- base_nupas <- character(0)
 
-    for (nupa in intersect(names(method), NuPa)) {
-      method_types <- get_method_types(method[[nupa]])
+    for (nupa in intersect(names(methods), NuPa)) {
+      method_types <- get_method_types(methods[[nupa]])
 
       # Multiclass methods to remove
       if ((nupa %in% c("Y.hat", "Y.hat.d", "Y.hat.z"))) {
@@ -792,32 +836,38 @@ create_final_method <- function(method, NuPa, K) {
     }
 
     if (length(multiclass_nupas) > 0) {
-      message("Multiclass methods incompatible with NuPa: ", 
-              paste(unique(multiclass_nupas), collapse = ", "), ", they will be omitted.")
+      message(
+        "Multiclass methods incompatible with NuPa: ",
+        paste(unique(multiclass_nupas), collapse = ", "), ", they will be omitted."
+      )
     }
     if (length(base_nupas) > 0) {
-      message("Base methods incompatible with NuPa: ", 
-              paste(unique(base_nupas), collapse = ", "), ", they will be omitted.")
+      message(
+        "Base methods incompatible with NuPa: ",
+        paste(unique(base_nupas), collapse = ", "), ", they will be omitted."
+      )
     }
 
     # Apply filters
-    for (nupa in intersect(names(method), NuPa)) {
-      method_types <- get_method_types(method[[nupa]])
+    for (nupa in intersect(names(methods), NuPa)) {
+      method_types <- get_method_types(methods[[nupa]])
 
       if ((nupa %in% c("Y.hat", "Y.hat.d", "Y.hat.z"))) {
-        result[[nupa]] <- method[[nupa]][!method_types %in% multiclass_method]
+        result[[nupa]] <- methods[[nupa]][!method_types %in% multiclass_method]
       } else if (nupa %in% c("D.hat", "D.hat.z") && K > 2) {
-        result[[nupa]] <- method[[nupa]][!method_types %in% base_method]
+        result[[nupa]] <- methods[[nupa]][!method_types %in% base_method]
       } else {
-        result[[nupa]] <- method[[nupa]]
+        result[[nupa]] <- methods[[nupa]]
       }
     }
   }
 
   empty_nupas <- names(which(lengths(result) == 0))
   if (length(empty_nupas) > 0) {
-    stop(paste("The following nuisance parameters have empty method lists:", 
-               paste(empty_nupas, collapse = ", "), "\nPlease provide at least one valid method for each NuPa"))
+    stop(paste(
+      "The following nuisance parameters have empty methods lists:",
+      paste(empty_nupas, collapse = ", "), "\nPlease provide at least one valid method for each NuPa"
+    ))
   }
 
   return(result)
@@ -843,36 +893,35 @@ create_final_method <- function(method, NuPa, K) {
 #' @examples
 #' \dontrun{
 #' set.seed(123)
-#' 
+#'
 #' N <- 100
 #' Y <- rnorm(N)
 #' X <- matrix(rnorm(N * 10), ncol = 10)
 #' D <- Z <- rbinom(N, 1, 0.5)
-#' 
-#' method1 <- list(
+#'
+#' methods1 <- list(
 #'   "ols" = create_method("ols"),
 #'   "plasso" = create_method("plasso")
 #' )
-#' 
-#' method2 <- list(
+#'
+#' methods2 <- list(
 #'   "forest_grf" = create_method("forest_grf"),
 #'   "xgboost" = create_method("xgboost")
 #' )
-#' 
+#'
 #' np1 <- nuisance_parameters(
 #'   NuPa = c("Y.hat", "D.hat"), X = X, Y = Y, D = D,
-#'   method = method1, cf = 5, stacking = "short", storeModels = "Memory"
+#'   methods = methods1, cf = 5, stacking = "short", storeModels = "Memory"
 #' )
-#' 
+#'
 #' np2 <- nuisance_parameters(
-#'   NuPa = c("D.hat", "Z.hat"), X = X, D = D, Z = Z, 
-#'   cf_mat = np1$numbers$cf_mat, method = method2, cf = 5, 
+#'   NuPa = c("D.hat", "Z.hat"), X = X, D = D, Z = Z,
+#'   cf_mat = np1$numbers$cf_mat, methods = methods2, cf = 5,
 #'   stacking = "short", storeModels = "Memory"
 #' )
-#' 
+#'
 #' np3 <- add_nupa(np = np1, np_new = np2, NuPa = c("D.hat", "Z.hat"), replace = TRUE)
 #' }
-#' 
 add_nupa <- function(np, np_new, NuPa = NULL, replace = FALSE) {
   # Check if both objects are of class NuisanceParameters
   if (!inherits(np, "NuisanceParameters") || !inherits(np_new, "NuisanceParameters")) {
@@ -921,53 +970,52 @@ add_nupa <- function(np, np_new, NuPa = NULL, replace = FALSE) {
     if (replace ||
       (is.character(np$nuisance_parameters[[param]]) &&
         grepl("not specified", np$nuisance_parameters[[param]]))) {
-      # Add the nuisance parameter and the method
+      # Add the nuisance parameter and the methods
       np$nuisance_parameters[[param]] <- np_new$nuisance_parameters[[param]]
-      np$numbers$method[[param]] <- np_new$numbers$method[[param]]
-      
+      np$numbers$methods[[param]] <- np_new$numbers$methods[[param]]
+
       if (np$numbers$cv == 1) {
         # Combine the ensemble weights
         w_ens <- as.matrix(np[["numbers"]][["ens_weights"]])
         w_new_ens <- as.matrix(np_new[["numbers"]][["ens_weights"]])
-        
+
         all_methods <- union(rownames(w_ens), rownames(w_new_ens))
         all_nupas <- union(colnames(w_ens), colnames(w_new_ens))
-        
-        ens_weights <- matrix(0, nrow = length(all_methods), ncol = length(all_nupas),
-                              dimnames = list(all_methods, all_nupas))
-        
+
+        ens_weights <- matrix(0,
+          nrow = length(all_methods), ncol = length(all_nupas),
+          dimnames = list(all_methods, all_nupas)
+        )
+
         ens_weights[rownames(w_ens), colnames(w_ens)] <- w_ens
         ens_weights[, NuPa] <- 0
         ens_weights[rownames(w_new_ens), NuPa] <- w_new_ens[, NuPa, drop = FALSE]
-        
+
         ens_weights <- as.data.frame(ens_weights)
         class(ens_weights) <- c("ens_weights_short", "data.frame")
         np[["numbers"]][["ens_weights"]] <- ens_weights
-      } 
-      else {
-        
+      } else {
         w_ens <- np[["numbers"]][["ens_weights"]]
         w_new_ens <- np_new[["numbers"]][["ens_weights"]]
         ens_weights <- w_ens
-        
+
         # Completely replace the NuPa elements with those from np_new
         for (nupa in NuPa) {
           if (nupa %in% names(w_new_ens)) {
             ens_weights[[nupa]] <- w_new_ens[[nupa]]
           }
         }
-        
+
         # Add any new NuPa elements from np_new that weren't in the original
         new_nupas <- setdiff(names(w_new_ens), names(w_ens))
         new_nupas_to_add <- intersect(new_nupas, NuPa)
-        
+
         for (nupa in new_nupas_to_add) {
           ens_weights[[nupa]] <- w_new_ens[[nupa]]
         }
-        
+
         class(ens_weights) <- c("ens_weights_stand", "list")
         np[["numbers"]][["ens_weights"]] <- ens_weights
-        
       }
 
       # Add the corresponding model if it exists
@@ -985,25 +1033,26 @@ add_nupa <- function(np, np_new, NuPa = NULL, replace = FALSE) {
 #' One-Hot Encoding (numeric output)
 #'
 #' Convert categorical vector to one-hot encoded matrix.
-#' 
+#'
 #' @param x A factor or character vector.
-#' 
+#'
 #' @return A numeric matrix with one column per unique category.
-#' 
+#'
 #' @keywords internal
-#' 
-one_hot <- function(x) {
-  ux <- unique(x)
-  out <- matrix(0L, nrow = length(x), ncol = length(ux))
-  out[cbind(seq_along(x), match(x, ux))] <- 1L
-  colnames(out) <- ux
-  out
+#'
+one_hot <- function(Y) {
+  uY <- unique(Y)
+  out <- matrix(0L, nrow = length(Y), ncol = length(uY))
+  out[cbind(seq_along(Y), match(Y, uY))] <- 1L
+  colnames(out) <- uY
+  
+  return(out)
 }
 
 
 #' Hyperparameter Tuning for XGBoost via Hyperband
 #'
-#' Implements the Hyperband multi-armed bandit for hyperparameter optimization. 
+#' Implements the Hyperband multi-armed bandit for hyperparameter optimization.
 #' Progressively allocates resources (boosting rounds)
 #' to the most promising configurations across successive rungs of evaluation.
 #'
@@ -1013,10 +1062,10 @@ one_hot <- function(x) {
 #' @param n_configs Initial number of random hyperparameter configurations to sample. Default is 50.
 #' @param eta_downfactor Downsampling factor between rungs (η in Hyperband terminology). Default is 3.
 #' @param nfold Number of cross-validation folds. Default is 5.
-#' @param metrics Evaluation metric for early stopping. Options include "rmse", "mae", 
+#' @param metrics Evaluation metric for early stopping. Options include "rmse", "mae",
 #'                "logloss", "error", etc. Default is "rmse".
 #' @param seed Random seed for reproducibility. Default is 123.
-#' 
+#'
 #' @return A list with two components:
 #' \itemize{
 #'   \item{\code{params}}: Named list of optimal hyperparameter values
@@ -1030,13 +1079,13 @@ one_hot <- function(x) {
 #'   \item \strong{Second rung:} 30 boosting rounds - keep top 1/η configurations
 #'   \item \strong{Final rung:} `max_rounds` boosting rounds - keep top configuration
 #' }
-#' 
+#'
 #' Tunable hyperparameters include learning rate (eta), tree depth, regularization terms,
 #' and subsampling parameters. The search space is designed for general-purpose optimization
 #' with log-uniform sampling for continuous parameters.
 #'
 #' @keywords internal
-#' 
+#'
 tune_xgb_hyperband <- function(X, Y, max_rounds = 100, n_configs = 50,
                                eta_downfactor = 3, nfold = 5,
                                metrics = "rmse", seed = 123) {
@@ -1052,8 +1101,8 @@ tune_xgb_hyperband <- function(X, Y, max_rounds = 100, n_configs = 50,
       # tree_method = "hist",
       lambda = 10^runif(1, log10(1e-3), log10(10)),
       subsample = 1,
-      alpha = 0, 
-      max_delta_step = 0, 
+      alpha = 0,
+      max_delta_step = 0,
       base_score = 0,
       objective = "reg:squarederror"
     )
@@ -1112,34 +1161,33 @@ tune_xgb_hyperband <- function(X, Y, max_rounds = 100, n_configs = 50,
 
 #' Tune learner hyperparameters
 #'
-#' Automatically tunes hyperparameters for specified learners in a method list
+#' Automatically tunes hyperparameters for specified learners in a methods list
 #'
-#' @param method List of methods for ensemble estimation.
+#' @param methods List of methods for ensemble estimation.
 #' @param type Tuning type, either "\code{tune_full_sample}" or "\code{tune_on_fold}".
 #' @param X Covariate matrix.
 #' @param Y Numeric vector containing the outcome variable.
-#' 
-#' @return Modified method list with tuned parameters.
+#'
+#' @return Modified methods list with tuned parameters.
 #'
 #' @keywords internal
-#' 
+#'
 tune_learners <- function(type = c("tune_full_sample", "tune_on_fold"),
-                          method,
+                          methods,
                           X, Y) {
   type <- match.arg(type)
 
   # Process each method in the list
-  for (i in seq_along(method)) {
-    current_method <- method[[i]]
+  for (i in seq_along(methods)) {
+    current_method <- methods[[i]]
 
     if (!is.null(current_method$arguments) && identical(current_method$arguments, type)) {
-      
       if (is.null(current_method$x_select)) {
         X_sub <- X
       } else {
         X_sub <- X[, current_method$x_select, drop = FALSE]
       }
-      
+
       # GRF forest tuning
       if (identical(current_method$method, "forest_grf")) {
         tuned_forest <- grf::regression_forest(
@@ -1149,17 +1197,17 @@ tune_learners <- function(type = c("tune_full_sample", "tune_on_fold"),
           num.trees = 100
         )
 
-        method[[i]][["arguments"]] <- tuned_forest[["tuning.output"]][["params"]]
+        methods[[i]][["arguments"]] <- tuned_forest[["tuning.output"]][["params"]]
       }
 
       # XGBoost tuning using hyperband
       else if (identical(current_method$method, "xgboost")) {
         tuned_xgb <- tune_xgb_hyperband(X = X_sub, Y = Y)
 
-        method[[i]][["arguments"]] <- tuned_xgb[["params"]]
+        methods[[i]][["arguments"]] <- tuned_xgb[["params"]]
       }
     }
   }
 
-  return(method)
+  return(methods)
 }

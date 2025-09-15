@@ -5,7 +5,7 @@
 \title{Cross-fitting of nuisance parameters}
 \usage{
 nuisance_cf(
-  method,
+  methods,
   Y,
   X,
   cf_mat,
@@ -18,7 +18,7 @@ nuisance_cf(
 )
 }
 \arguments{
-\item{method}{List of methods to be used in \code{\link{ensemble}} estimation.}
+\item{methods}{List of methods to be used in \code{\link{ensemble}} estimation.}
 
 \item{Y}{Vector of variable to be predicted.}
 
@@ -45,7 +45,6 @@ A list containing:
   \item \code{np}: A vector (or matrix for multinomial outcomes) of length N 
                    containing nuisance parameter estimates
   \item \code{models}: An object of class \code{ens.learner} containing fitted ensemble models
-  \item \code{ens_weights}: A list of stacking weights
  }
 }
 \description{

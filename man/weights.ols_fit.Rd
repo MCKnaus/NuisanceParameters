@@ -2,23 +2,23 @@
 % Please edit documentation in R/get_outcome_weights.R
 \name{weights.ols_fit}
 \alias{weights.ols_fit}
-\title{Smoother weights from OLS prediction}
+\title{Compute smoother weights from OLS}
 \usage{
 \method{weights}{ols_fit}(ols_fit, X, Xnew, ...)
 }
 \arguments{
-\item{ols_fit}{Output of \code{\link{ols_fit}}}
+\item{ols_fit}{An object returned by \code{\link{ols_fit}}.}
 
-\item{X}{Covariate matrix of training sample}
+\item{X}{Covariate matrix of the training sample.}
 
-\item{Xnew}{Covariate matrix of test sample}
+\item{Xnew}{Covariate matrix of the test sample.}
 
-\item{...}{Ignore unused arguments}
+\item{...}{Ignored arguments.}
 }
 \value{
-Matrix of smoother weights.
+A matrix of smoother weights.
 }
 \description{
-Extract smoother weights for test sample from an OLS model.
+Generate smoother weights for a test sample from an OLS model.
 }
 \keyword{internal}
