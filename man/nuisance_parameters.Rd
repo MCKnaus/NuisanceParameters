@@ -99,7 +99,7 @@ Estimates nuisance parameters using ensemble methods.
     )
     
     print(head(np$nuisance_parameters[["Y.hat"]]))
-    plot(np_short$numbers$ens_weights)
+    plot(np$numbers$ens_weights)
   }
 }
 

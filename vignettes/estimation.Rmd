@@ -80,10 +80,8 @@ Ahrens et al. (2024) recommend DDML with short-stacking in settings where the nu
 ## Tuning
 
 ```{r}
-if (!require("hdm")) install.packages("hdm", dependencies = TRUE); library(hdm)
-if (!require("OutcomeWeights")) install.packages("OutcomeWeights", dependencies = TRUE); library(OutcomeWeights)
-
-devtools::document()
+library(hdm)
+library(NuisanceParameters)
 ```
 
 Define out-of-sample MSE:
@@ -95,8 +93,8 @@ calculate_rmse <- function(Y.hat, Y) {
 ```
 
 ```{r}
-data(pension)
-
+# load the pension dataset
+data("pension", package = "hdm")
 # D <- pension$p401
 # Z <- pension$e401
 # Y <- pension$net_tfa
@@ -112,13 +110,13 @@ Z <- sub$e401
 Y <- sub$net_tfa
 X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc + male + marr + pira + twoearn, data = sub)
 
-method = list(
+methods = list(
  "ols" = create_method("ols"),
  "forest_grf" = create_method("forest_grf"),
  "xgboost" = create_method("xgboost")
  )
 
-method_tune = list(
+methods_tune = list(
  "ols" = create_method("ols"),
  "forest_grf" = create_method("forest_grf", arguments = c("tune_full_sample")),
  "xgboost" = create_method("xgboost", arguments = c("tune_full_sample"))
@@ -130,12 +128,12 @@ Estimate both:
 ```{r}
 np <- nuisance_parameters(NuPa = c("Y.hat"),
                           X = X, Y = Y,
-                          method = method, cf = 5, stacking = "short",
+                          methods = methods, cf = 5, stacking = "short",
                           storeModels = "Memory", quiet = FALSE)
 
 np_tune <- nuisance_parameters(NuPa = c("Y.hat"),
                                X = X, Y = Y,
-                               method = method_tune, cf = 5, stacking = "short",
+                               methods = methods_tune, cf = 5, stacking = "short",
                                storeModels = "Memory", quiet = FALSE)
 
 plot(np$numbers$ens_weights)
@@ -155,18 +153,17 @@ rmse
 We can also check the individual models in terms of rmse:
 
 ```{r}
-rmse <- apply(np[["models"]][["Y.hat_m"]][["ens_object"]][["fit_cv"]], 
+rmse <- apply(np[["models"]][["Y.hat_m"]][["ens_object"]][["cf_preds"]], 
               2, calculate_rmse, Y = Y)
 rmse
 
-rmse <- apply(np_tune[["models"]][["Y.hat_m"]][["ens_object"]][["fit_cv"]], 
+rmse <- apply(np_tune[["models"]][["Y.hat_m"]][["ens_object"]][["cf_preds"]], 
               2, calculate_rmse, Y = Y)
 rmse
 ```
 
 ```{r}
 forest <- grf::regression_forest(X = X, Y = Y)
-forest_t <- grf::regression_forest(X = X, Y = Y, tune.parameters = "all", num.trees = 100)
 forest_t <- grf::regression_forest(X = X, Y = Y, tune.parameters = "all", num.trees = 100)
 
 arguments <- forest_t$tunable.params

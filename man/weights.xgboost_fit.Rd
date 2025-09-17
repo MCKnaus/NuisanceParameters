@@ -4,7 +4,7 @@
 \alias{weights.xgboost_fit}
 \title{Smoother weights from XGBoost model}
 \usage{
-\method{weights}{xgboost_fit}(xgboost_fit, X, Xnew = NULL, ...)
+\method{weights}{xgboost_fit}(xgboost_fit, X, Y, Xnew = NULL, ...)
 }
 \arguments{
 \item{xgboost_fit}{Output of \code{\link{xgboost_fit}}.}

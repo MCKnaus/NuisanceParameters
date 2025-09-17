@@ -541,8 +541,8 @@ weights.forest_grf_fit <- function(forest_grf_fit, Xnew = NULL, ...) {
 #'
 #' @method weights xgboost_fit
 #' @keywords internal
-weights.xgboost_fit <- function(xgboost_fit, X, Xnew = NULL, ...) {
-  dtrain <- xgboost::xgb.DMatrix(data = as.matrix(X))
+weights.xgboost_fit <- function(xgboost_fit, X, Y, Xnew = NULL, ...) {
+  dtrain <- xgboost::xgb.DMatrix(data = as.matrix(X), label = Y)
   dtest <- xgboost::xgb.DMatrix(data = as.matrix(Xnew))
 
   w <- get_xgboost_weights(xgboost_fit, dtrain = dtrain, dtest = dtest)

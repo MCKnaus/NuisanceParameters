@@ -17,14 +17,14 @@ test_that("design_matrix handles interactions correctly", {
   
   # Test interactions
   result <- design_matrix(data, int = c("x1", "x2", "x3"), int_d = 2)
-  expect_equal(ncol(result), 6) # "x1","x2","x3","x1:x2","x1:x3","x2:x3"
-  expect_true("x1:x2" %in% colnames(result))
-  expect_true("x2:x3" %in% colnames(result))
-  expect_true("x1:x3" %in% colnames(result))
+  expect_equal(ncol(result), 6) # "x1","x2","x3","x1.x2","x1.x3","x2.x3"
+  expect_true("x1.x2" %in% colnames(result))
+  expect_true("x2.x3" %in% colnames(result))
+  expect_true("x1.x3" %in% colnames(result))
   
   # Test higher order interactions
   result <- design_matrix(data, int = c("x1", "x2", "x3"), int_d = 3)
-  expect_true("x1:x2:x3" %in% colnames(result))
+  expect_true("x1.x2.x3" %in% colnames(result))
 })
 
 test_that("design_matrix handles polynomials correctly", {
@@ -47,7 +47,9 @@ test_that("design_matrix handles logs correctly", {
   # Test non-positive values handling
   data[,1] <- c(-1, 0, 1, 2)
   
-  result <- design_matrix(data, log = "x1")
+  warnings <- capture_warnings(result <- design_matrix(data, log = "x1"))
+  expect_true(any(grepl("Variables not logged due to non-positive values", warnings)))
+  
   expect_equal(ncol(result), 1)
   expect_equal(colnames(result), "x1")
 })
@@ -62,7 +64,7 @@ test_that("design_matrix combines all transformations correctly", {
                           log = "x1")
   
   # Check all transformation types are present
-  expect_true(any(grepl(":", colnames(result)))) # Interaction
+  expect_true(any(grepl(".", colnames(result)))) # Interaction
   expect_true(any(grepl("\\d$", colnames(result)))) # Polynomial
   expect_true(any(grepl("^ln_", colnames(result)))) # Log
 })

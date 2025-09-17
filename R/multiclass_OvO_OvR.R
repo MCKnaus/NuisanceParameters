@@ -154,7 +154,7 @@ predict.ovo_fit <- function(ovo_fit, X, Y, Xnew = NULL, method,
     `%dopar%` <- foreach::`%dopar%`
     
     opt_results <- foreach::foreach(row = 1:n_samples, .combine = "rbind", .export = "kl_convergence") %dopar% {
-      opt_result <- optim(rep(1 / n_classes, n_classes),
+      opt_result <- stats::optim(rep(1 / n_classes, n_classes),
         kl_convergence,
         q_matrix = q_matrix_tensor[row, , ],
         method = "L-BFGS-B",
@@ -167,7 +167,7 @@ predict.ovo_fit <- function(ovo_fit, X, Y, Xnew = NULL, method,
     if (parallel && verbose) message("Parallel backend not available. Falling back to sequential prediction.")
 
     opt_results <- apply(q_matrix_tensor, MARGIN = 1, function(q_matrix_row) {
-      opt_result <- optim(rep(1 / n_classes, n_classes),
+      opt_result <- stats::optim(rep(1 / n_classes, n_classes),
         kl_convergence,
         q_matrix = matrix(q_matrix_row, nrow = n_classes),
         method = "L-BFGS-B",

@@ -7,15 +7,15 @@
 process_methods(methods, NuPa, K)
 }
 \arguments{
-\item{NuPa}{Character vector of nuisance parameters to be estimated}
-
-\item{K}{Number of unique treatment statuses (default is 2, binary treatment)}
-
-\item{method}{Either:
+\item{methods}{Either:
 \enumerate{
   \item{A list of methods (like in \code{create_method}) that will be used for all nuisance parameters, or}
   \item{A named list where each name corresponds to a nuisance parameter and contains a list of methods for that parameter}
 }}
+
+\item{NuPa}{Character vector of nuisance parameters to be estimated}
+
+\item{K}{Number of unique treatment statuses (default is 2, binary treatment)}
 }
 \value{
 Nested list object organized by nuisance parameter that will be passed as input to \code{\link{ensemble}}

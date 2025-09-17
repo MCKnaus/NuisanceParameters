@@ -4,10 +4,10 @@
 \alias{predict.logit_nnet_fit}
 \title{Predict method for \code{nnet} logistic regression fits}
 \usage{
-\method{predict}{logit_nnet_fit}(multinom_fit, X, Y, Xnew = NULL)
+\method{predict}{logit_nnet_fit}(logit_nnet_fit, X, Y, Xnew = NULL)
 }
 \arguments{
-\item{multinom_fit}{Output of \code{\link{logit_nnet_fit}}.}
+\item{logit_nnet_fit}{Output of \code{\link{logit_nnet_fit}}.}
 
 \item{X}{Covariate matrix of training sample.}
 

@@ -96,10 +96,10 @@ predict.ols_fit <- function(ols_fit, Xnew = NULL, ...) {
 #'
 #' @param X Numeric matrix of covariates for training sample.
 #' @param Y Numeric vector of outcomes for training sample.
-#' @param arguments List of arguments passed to \code{\link[glmnet]{cv.glmnet}}.
+#' @param arguments List of arguments passed to \code{cv.glmnet}.
 #'
 #' @return An object of class \code{ridge_fit} containing the fitted
-#'   \code{\link[glmnet]{cv.glmnet}} model.
+#'   \code{cv.glmnet} model.
 #'
 #' @keywords internal
 ridge_fit <- function(X, Y, arguments = list()) {
@@ -148,10 +148,10 @@ predict.ridge_fit <- function(ridge_fit, Xnew, ...) {
 #'
 #' @param X Numeric matrix of covariates for training sample.
 #' @param Y Numeric vector of outcomes for training sample.
-#' @param arguments List of arguments passed to \code{\link[plasso]{cv.plasso}}.
+#' @param arguments List of arguments passed to \code{cv.plasso}.
 #'
 #' @return An object of class \code{plasso_fit} containing the fitted
-#'   \code{\link[plasso]{cv.plasso}} model.
+#'   \code{cv.plasso} model.
 #'
 #' @keywords internal
 plasso_fit <- function(X, Y, arguments = list()) {
@@ -196,10 +196,10 @@ predict.plasso_fit <- function(plasso_fit, Xnew = NULL, ...) {
 #'
 #' @param X Numeric matrix of covariates for training sample.
 #' @param Y Numeric vector of outcomes for training sample.
-#' @param arguments List of arguments passed to \code{\link[hdm]{rlasso}}.
+#' @param arguments List of arguments passed to \code{rlasso}.
 #'
 #' @return An object of class \code{rlasso_fit} containing the fitted
-#'   \code{\link[hdm]{rlasso}} model.
+#'   \code{rlasso} model.
 #'
 #' @keywords internal
 rlasso_fit <- function(X, Y, arguments = list()) {
@@ -242,10 +242,10 @@ predict.rlasso_fit <- function(rlasso_fit, Xnew = NULL, ...) {
 #'
 #' @param X Numeric matrix of covariates for training sample.
 #' @param Y Numeric vector of outcomes for training sample.
-#' @param arguments List of arguments passed to \code{\link[grf]{regression_forest}}.
+#' @param arguments List of arguments passed to \code{regression_forest}.
 #'
 #' @return An object of class \code{forest_grf_fit} containing the fitted
-#'   \code{\link[grf]{regression_forest}} model.
+#'   \code{regression_forest} model.
 #'
 #' @keywords internal
 forest_grf_fit <- function(X, Y, arguments = list()) {
@@ -290,7 +290,7 @@ predict.forest_grf_fit <- function(forest_grf_fit, Xnew = NULL, ...) {
 #'
 #' @param X Numeric matrix of covariates for training sample.
 #' @param Y Numeric vector of outcomes for training sample.
-#' @param arguments List of arguments passed to \code{\link[xgboost]{xgb.train}}.
+#' @param arguments List of arguments passed to \code{xgb.train}.
 #'
 #' @details
 #' Parameter restrictions for the smoother matrix multiplied by the outcome 
@@ -308,7 +308,7 @@ predict.forest_grf_fit <- function(forest_grf_fit, Xnew = NULL, ...) {
 #' }
 #'
 #' @return An object of class \code{xgboost_fit} containing the fitted
-#'   \code{\link[xgboost]{xgb.Booster}} model.
+#'   \code{xgb.Booster} model.
 #'
 #' @keywords internal
 xgboost_fit <- function(X, Y, arguments = list()) {
@@ -335,8 +335,7 @@ xgboost_fit <- function(X, Y, arguments = list()) {
   # sanitize restricted params
   for (nm in names(fixed)) {
     if (!is.null(arguments[[nm]]) && !identical(arguments[[nm]], fixed[[nm]])) {
-      message("xgboost_fit: resetting ", nm, " to ", fixed[[nm]],
-              " (user-specified value ignored).")
+      message("Resetting ", nm, " to ", fixed[[nm]]," (user value ignored).")
     }
     arguments[[nm]] <- fixed[[nm]]
   }
@@ -348,15 +347,16 @@ xgboost_fit <- function(X, Y, arguments = list()) {
             paste(grey, collapse = ", "), ". S*Y = Y.hat is not guaranteed.")
   }
   
-  if (is.null(arguments$eta)) arguments$eta <- 0.3
+  if (is.null(arguments$base_score)) arguments$base_score <- 0
   if (is.null(arguments$lambda)) arguments$lambda <- 1
+  if (is.null(arguments$eta)) arguments$eta <- 0.3
 
   nrounds <- if (is.null(arguments[["nrounds"]])) 100 else nrounds
   arguments[["nrounds"]] <- NULL
   
   dtrain <- xgboost::xgb.DMatrix(data = as.matrix(X), label = Y)
   xgb <- do.call(xgboost::xgb.train, c(list(data = dtrain, nrounds = nrounds, params = arguments)))
-  
+  #browser()
   class(xgb) = c(class(xgb), "xgboost_fit")
   return(xgb)
 }
@@ -390,10 +390,10 @@ predict.xgboost_fit <- function(xgboost_fit, Xnew = NULL, ...) {
 #'
 #' @param X Numeric matrix of covariates for training sample.
 #' @param Y Numeric vector of outcomes for training sample.
-#' @param arguments List of arguments passed to \code{\link[glmnet]{cv.glmnet}}.
+#' @param arguments List of arguments passed to \code{cv.glmnet}.
 #'
 #' @return An object of class \code{lasso_fit} containing the fitted
-#'   \code{\link[glmnet]{cv.glmnet}} model.
+#'   \code{cv.glmnet} model.
 #'
 #' @keywords internal
 lasso_fit <- function(X, Y, arguments = list()) {
@@ -438,10 +438,10 @@ predict.lasso_fit <- function(lasso_fit, Xnew = NULL, ...) {
 #'
 #' @param X Numeric matrix of covariates for training sample.
 #' @param Y Numeric vector of outcomes for training sample.
-#' @param arguments List of arguments passed to \code{\link[drf]{drf}}.
+#' @param arguments List of arguments passed to \code{drf}.
 #'
 #' @return An object of class \code{forest_drf_fit} containing the fitted
-#'   \code{\link[drf]{drf}} model.
+#'   \code{drf} model.
 #'
 #' @keywords internal
 forest_drf_fit <- function(X, Y, arguments = list()) {
@@ -638,7 +638,7 @@ logit_nnet_fit <- function(X, Y, arguments = list()) {
 #' 
 #' Generates predicted class probabilities from fitted logistic regression models.
 #'
-#' @param multinom_fit Output of \code{\link{logit_nnet_fit}}.
+#' @param logit_nnet_fit Output of \code{\link{logit_nnet_fit}}.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
@@ -650,12 +650,12 @@ logit_nnet_fit <- function(X, Y, arguments = list()) {
 #'   }  
 #'
 #' @keywords internal
-predict.logit_nnet_fit <- function(multinom_fit, X, Y, Xnew = NULL) {
+predict.logit_nnet_fit <- function(logit_nnet_fit, X, Y, Xnew = NULL) {
   if (is.null(Xnew)) Xnew <- X
   data <- as.data.frame(Xnew)
   data$Y <- as.factor(0)
   
-  fit <- as.data.frame(predict(multinom_fit, newdata = Xnew, type = "probs"))
+  fit <- as.data.frame(predict(logit_nnet_fit, newdata = Xnew, type = "probs"))
   
   if (length(unique(Y)) == 2) {
     fit[, 2] <- 1 - fit[, 1]

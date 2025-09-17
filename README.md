@@ -1,5 +1,5 @@
 
-# NuisanceParameters <!-- <img src="assets/temp_logo.png" align="right" height="139" /> -->
+# NuisanceParameters <img src="assets/temp_logo.png" align="right" height="139" />
 
 <!-- # NuisanceParameters <img src='assets/NuisanceParameters.png' align="right" height="139" /> -->
 
@@ -15,20 +15,26 @@
 <!-- badges: end -->
 
 `NuisanceParameters` lets you estimate conditional expectations that can
-later be used to estimate target causal parameters of interest. A
-defining feature of the package is its use of supervised machine
-learning (“grey box”) algorithms, which—following a general framework
-established in [Knaus (2024)](https://arxiv.org/abs/2411.11559)—have a
+later be used to estimate target causal parameters of interest. Among
+others, it is an implementation of double/debiased machine learning
+framework as proposed by Chernozhukov et al. (2018).
+
+A defining feature of the package is its use of supervised machine
+learning (“grey box”) algorithms, which — following a general framework
+established in [Knaus (2024)](https://arxiv.org/abs/2411.11559) — have a
 representation as a linear combination of observed outcomes:
-$\hat{\tau} = \sum_{i=1}^N \omega_i Y_i$.
+$\hat{\tau} = \sum_{i=1}^N \omega_i Y_i$. These weights can be extracted
+and used in established routines for classic weighting estimators.
 
 This package is part of an envisaged trilogy, where each package can be
 seamlessly integrated with the previous one but can also be used as a
 stand-alone unit:
 
-1.  `NuisanceParameters` – estimates $m(X):=\mathbb{E}[Y \mid X]$,
+1.  `NuisanceParameters` – flexibly estimates
+    $m(X):=\mathbb{E}[Y \mid X]$,
     $m_w(w,X):=\mathbb{E}[Y \mid W = w, X]$,
-    $e(X) := \mathbb{P}[W \mid X]$, etc.
+    $e(X) := \mathbb{P}[W \mid X]$ and other user-specified nuisance
+    parameters.
 2.  `MLeffects` – combines estimated nuisance parameters ($\hat{m}(X)$,
     $\hat{m}_w(w,X)$, $\hat{e}(X)$..) in the doubly robust (DR) score to
     obtain a target parameter $\tau$.
@@ -38,65 +44,33 @@ stand-alone unit:
     (see [Knaus, 2024](https://arxiv.org/abs/2411.11559)).
 
 Among other features, `NuisanceParameters` offers ensemble estimation
-(using short and standard stacking), allows for clustering, and saves
-all necessary models that can be used downstream.
+(using short and standard stacking), works with binary and multivalued
+treatments and allows for a rich selection of base learners.
+
+### In progress
 
 The package is work in progress. Find here the current state
 (suggestions welcome):
-
-### In progress
 
 - [ ] Compatibility with
   [`OutcomeWeights`](https://github.com/MCKnaus/OutcomeWeights) package
   - [x] Create a separate `get_outcome_weights` function that takes the
     objects produced by `nuisance_parameters` as inputs and provides the
-    user with a list of NxN smoother matrices for all outcome
+    user with a list of $N \times N$ smoother matrices for all outcome
     regressions produced in `NuisanceParameters`, or raise a flag (e.g.,
     for Lasso)
   - [ ] Integrate it with `OutcomeWeights` package
 - [ ] Storage options
   - [x] Allow the user to choose where to store the models: “No” (just
     the nuisance parameters in the output), “Memory” (keep all trained
-    models in the object), or “Disk” (write them to disk).
-  - [ ] Store more efficiently: use sparse matrices or save only what’s
-    needed for `get_outcome_weights`
-- [x] Implement a progress bar
-  - <img src="assets/progress_bar.gif" width="500" />
-- [x] Nicely display ensemble weights
-  - <img src="assets/short_plot.png" width="250" />
-    <img src="assets/stand_plot.png" width="250" />
-- [ ] Create vignettes
-  - [ ] General tutorial notebook
-  - [ ] Explainers for (1) different types of stacking, (2) different
-    learners and ML methods and (3) clustering options
-- [ ] Miscellaneous and bugs to fix
-  - [ ] Fix the inability of the ensemble mechanism to work with a
-    single `ml` method
-  - [ ] Name objects consistently throughout the package, in tune with
-    `OutcomeWeights`
-  - [ ] Decide on whether `cf_mat` should be created internally or
-    externally of `nuisance_parameters`
-
-### Envisioned features
-
-- [ ] Hyperparameter tuning: both on the fold and in full sample
-  - [x] For `grf`’s random forest
-  - [ ] For other learners
-- [ ] Add support for more smoothers (e.g., XGBoost)
-- [ ] Add more Double ML estimators (DiD is a first priority)
+    models in the object), or “Disk” (write them to disk)
+  - [ ] Store more efficiently with sparse matrices
 - [ ] Allow for more general treatment types
   - [x] Binary
-  - [ ] Multivalued
+  - [x] Multivalued
   - [ ] Continuous
 
-Currently supported nuisance parameters and their respective target
-parameters:
-
-<p align="center">
-
-<img src="assets/dml_mindmap.png" width="220"/>
-
-</p>
+### Example: financial wealth and 401(k) plan participation
 
 The following code shows how desired nuisance parameters can be flexibly
 estimated. The data was used in [Chernozhukov and Hansen
@@ -105,69 +79,90 @@ who investigated the effect of participation in the employer-sponsored
 401(k) retirement savings plan (`p401`) on net assets (`net_tfa`).
 
 ``` r
-if (!require("NuisanceParameters")) install.packages("NuisanceParameters", dependencies = TRUE)
 library(NuisanceParameters)
-library(hdm) # 401(k) dataset
-library(estimatr) # lm_robust
+library(hdm)
 
 set.seed(123)
-idx <- sample(nrow(pension), size = round(0.1 * nrow(pension)))
+idx <- sample(nrow(pension), size = round(0.5 * nrow(pension)))
 sub <- pension[idx, ]
 
-# subset
-W <- sub$p401
-Z <- sub$e401
+# Find dataset description if you type ?pension in console
 Y <- sub$net_tfa
-X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc + male + marr + pira + twoearn, 
-                  data = sub)
+D <- sub$p401
+Z <- sub$e401
+X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc 
+                  + male + marr + pira + twoearn, data = sub)
 
-# Cross-fitting folds and stacking type
-cf = 5 
-cv = 1
 
-# Prepare the input
-w_mat = prep_w_mat(W)
-z_mat = prep_w_mat(Z)
-cf_mat = prep_cf_mat(n=nrow(X), cf = cf, w_mat = w_mat)
-
-ml = list(
+methods = list(
  "ols" = create_method("ols"),
- "forest_grf" = create_method("forest_grf"),
- "knn" = create_method("knn", arguments = list("k" = 3))
-)
+ "plasso" = create_method("plasso"),
+ "xgboost" = create_method("xgboost"),
+ "forest_grf" = create_method("forest_grf")
+ )
 
-# Core functionality of NuisanceParameters
-np_short <- nuisance_parameters(NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
-                          ml = ml, x = X, y = Y, w = W, z = Z,
-                          cf_mat = cf_mat, w_mat = w_mat, z_mat = z_mat, 
-                          cv = cv, learner = c("t"), 
-                          storeModels = "Memory", path = NULL, quiet = TRUE)
+# Core functionality 
+np <- nuisance_parameters(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat"),
+                          X = X, Y = Y, D = D, Z = Z,
+                          methods = methods, cf = 5, stacking = "short",
+                          cluster = NULL, stratify = TRUE,
+                          storeModels = "Memory", path = NULL, quiet = TRUE
+                          )
 
-# Produces smoother matrices for each outcome nuisance parameter
-S <- NuisanceParameters::get_outcome_weights(np_object = np_short, 
-                         ml = ml, 
-                         x = X, y = Y, w_mat=w_mat, z_mat=z_mat,
-                         cv = cv, cf_mat = cf_mat,
-                         NuPa = c("Y.hat","Yw.hat","Yz.hat","W.hat", "Wz.hat", "Z.hat"),
-                         quiet=TRUE)
-
-# Check if SY = Y_hat
-all.equal(all.equal(as.numeric(S$Y.hat_ml%*%Y), np_short$nuisance_parameters$Y.hat), 
-          all.equal(as.numeric(S$Yw.hat_ml[[1]]%*%Y), np_short$nuisance_parameters$Yw.hat[,1]),
-          all.equal(as.numeric(S$Yw.hat_ml[[2]]%*%Y), np_short$nuisance_parameters$Yw.hat[,2]),
-          all.equal(as.numeric(S$Yz.hat_ml[[1]]%*%Y), np_short$nuisance_parameters$Yz.hat[,1]),
-          all.equal(as.numeric(S$Yz.hat_ml[[2]]%*%Y), np_short$nuisance_parameters$Yz.hat[,2]))
+# Estimated nuisance parameters
+lapply(np$nuisance_parameters, head)
 ```
 
-The development version will be soon available using the `devtools`
+    ## $Y.hat
+    ## [1]  6009.854 -4575.957  3437.862 14168.764  5993.148 33811.825
+    ## 
+    ## $Y.hat.d
+    ##               0         1
+    ## [1,]  1832.7005 22391.548
+    ## [2,] -2039.6889 -2530.582
+    ## [3,]  1096.0878 12711.518
+    ## [4,] 11063.2579 34638.079
+    ## [5,]   517.2776 13682.718
+    ## [6,] 22420.5076 38720.661
+    ## 
+    ## $Y.hat.z
+    ##              0         1
+    ## [1,]  3536.709 16492.263
+    ## [2,] -3346.530 -4988.276
+    ## [3,]  1201.548 10706.441
+    ## [4,] 10834.829 29859.396
+    ## [5,]  1679.534 13203.072
+    ## [6,] 30257.424 37035.402
+    ## 
+    ## $D.hat
+    ## [1] 0.14332452 0.03899012 0.13601290 0.27249500 0.30314992 0.44431399
+    ## 
+    ## $D.hat.z
+    ## [1] "This nuisance parameter was not specified and is therefore empty."
+    ## 
+    ## $Z.hat
+    ## [1] "This nuisance parameter was not specified and is therefore empty."
+
+``` r
+# Ensemble weights
+plot(np$numbers$ens_weights)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
+
+### Learn More about `NuisanceParameters`
+
+See our vignettes to learn more: (to be filled)
+
+### Bug reports & support
+
+The development version will soon be available using the `devtools`
 package:
 
 ``` r
 library(devtools)
 install_github(repo="MCKnaus/NuisanceParameters")
 ```
-
-### Bug reports & support
 
 For reporting a bug, simply [open an
 issue](https://github.com/stefan-1997/NuisanceParameters/issues/new) on

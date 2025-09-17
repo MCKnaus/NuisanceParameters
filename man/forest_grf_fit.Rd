@@ -11,11 +11,11 @@ forest_grf_fit(X, Y, arguments = list())
 
 \item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{arguments}{List of arguments passed to \code{\link[grf]{regression_forest}}.}
+\item{arguments}{List of arguments passed to \code{regression_forest}.}
 }
 \value{
 An object of class \code{forest_grf_fit} containing the fitted
-  \code{\link[grf]{regression_forest}} model.
+  \code{regression_forest} model.
 }
 \description{
 Fits a random forest for regression using the \code{grf} package.

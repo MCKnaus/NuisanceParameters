@@ -27,10 +27,12 @@ Logical matrix of cross-fitting folds (N x # folds).
 Creates a matrix of binary cross-fitting fold indicators (\eqn{N \times cf})
 }
 \examples{
+\dontrun{
 N <- 1000
-d_mat <- prep_indicator_mat(sample(3, N, replace = TRUE))
-cf_mat <- prep_cf_mat(N, cf = 5, d_mat = d_mat)
+d_mat <- prep_indicator_mat(x = sample(3, N, replace = TRUE))
+cf_mat <- prep_cf_mat(N = N, cf = 5, d_mat = d_mat)
 head(cf_mat)
+}
 
 }
 \keyword{internal}

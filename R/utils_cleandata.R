@@ -175,13 +175,12 @@ design_matrix = function(data, int = NULL, int_d = 2, poly = NULL, poly_d = 2, l
 #' data <- data.frame(
 #'   constant = rep(1, n),
 #'   good_predictor = rnorm(n),
-#'   rare_dummy = sample(0:1, n, replace = TRUE, prob = c(0.99, 0.01)),
-#'   correlated_var = good_predictor * 1.01 + rnorm(n, sd = 0.001)
+#'   rare_dummy = sample(0:1, n, replace = TRUE, prob = c(0.99, 0.01))
 #' )
+#' data$correlated_var <- with(data, good_predictor * 1.01 + rnorm(n, sd = 0.001))
 #' screened_data <- data_screen(data, quiet = FALSE)
 #' 
 #' @export
-#' 
 data_screen <- function(data, treat = NULL, bin_cut = 0.01, corr_cut = 0.99, quiet = TRUE) {
   
   if (!is.null(treat)) {
@@ -230,7 +229,7 @@ data_screen <- function(data, treat = NULL, bin_cut = 0.01, corr_cut = 0.99, qui
   
   # Remove nearly-empty binary variables
   is_binary <- apply(data, 2, function(x) {
-    all(na.omit(x) %in% 0:1)
+    all(stats::na.omit(x) %in% 0:1)
   })
   
   nm_del_step2 <- character(0)

@@ -31,7 +31,8 @@ Suggests:
     kknn, 
     ranger, 
     hdm,
-    glmnet
+    glmnet,
+    OutcomeWeights
 Imports:
     stats,
     Matrix,

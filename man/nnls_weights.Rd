@@ -35,9 +35,9 @@ BFGS optimization with a softmax parametrization can be used for multinomial
 outcomes to directly minimize the Brier score (i.e. MSE).
 }
 \examples{
+\dontrun{
 X <- matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2)
 Y <- c(0.25, 0.45, 0.65)
-\donttest{
 nnls_w <- nnls_weights(X = X, Y = Y)
 }
 }

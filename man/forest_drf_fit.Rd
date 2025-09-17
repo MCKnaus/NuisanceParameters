@@ -11,11 +11,11 @@ forest_drf_fit(X, Y, arguments = list())
 
 \item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{arguments}{List of arguments passed to \code{\link[drf]{drf}}.}
+\item{arguments}{List of arguments passed to \code{drf}.}
 }
 \value{
 An object of class \code{forest_drf_fit} containing the fitted
-  \code{\link[drf]{drf}} model.
+  \code{drf} model.
 }
 \description{
 Fits a distributional random forest using the \code{drf} package with

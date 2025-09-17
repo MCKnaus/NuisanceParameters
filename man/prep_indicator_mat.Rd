@@ -21,9 +21,11 @@ Logical matrix (N x C) where C is the number of unique categories in `x`.
 Useful for encoding treatments/instruments.
 }
 \examples{
+\dontrun{
 D <- factor(c("A", "B", "A", "C", "B", "C"))
 d_mat <- prep_indicator_mat(D)
 head(d_mat)
+}
 
 }
 \keyword{internal}

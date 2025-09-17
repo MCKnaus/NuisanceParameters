@@ -42,9 +42,9 @@ n <- 100
 data <- data.frame(
   constant = rep(1, n),
   good_predictor = rnorm(n),
-  rare_dummy = sample(0:1, n, replace = TRUE, prob = c(0.99, 0.01)),
-  correlated_var = good_predictor * 1.01 + rnorm(n, sd = 0.001)
+  rare_dummy = sample(0:1, n, replace = TRUE, prob = c(0.99, 0.01))
 )
+data$correlated_var <- with(data, good_predictor * 1.01 + rnorm(n, sd = 0.001))
 screened_data <- data_screen(data, quiet = FALSE)
 
 }

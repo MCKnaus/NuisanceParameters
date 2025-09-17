@@ -11,11 +11,11 @@ ridge_fit(X, Y, arguments = list())
 
 \item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{arguments}{List of arguments passed to \code{\link[glmnet]{cv.glmnet}}.}
+\item{arguments}{List of arguments passed to \code{cv.glmnet}.}
 }
 \value{
 An object of class \code{ridge_fit} containing the fitted
-  \code{\link[glmnet]{cv.glmnet}} model.
+  \code{cv.glmnet} model.
 }
 \description{
 Estimates ridge regression using the \code{glmnet} package.

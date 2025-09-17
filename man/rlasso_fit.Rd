@@ -11,11 +11,11 @@ rlasso_fit(X, Y, arguments = list())
 
 \item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{arguments}{List of arguments passed to \code{\link[hdm]{rlasso}}.}
+\item{arguments}{List of arguments passed to \code{rlasso}.}
 }
 \value{
 An object of class \code{rlasso_fit} containing the fitted
-  \code{\link[hdm]{rlasso}} model.
+  \code{rlasso} model.
 }
 \description{
 Estimates post-lasso regression under homoscedastic and heteroscedastic

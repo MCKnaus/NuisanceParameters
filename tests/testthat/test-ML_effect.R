@@ -35,7 +35,7 @@ test_that("MLeffect works correctly with basic inputs", {
   NuPa.hat <- list(
     Y.hat = rnorm(N),
     Y.hat.d = cbind(rnorm(N), rnorm(N)),
-    D.hat = runif(N, 0.1, 0.9)
+    D.hat = stats::runif(N, 0.1, 0.9)
   )
   
   # Test PLR estimator
@@ -71,9 +71,9 @@ test_that("MLeffect works with IV estimators when Z is provided", {
   NuPa.hat <- list(
     Y.hat = rnorm(N),
     Y.hat.z = cbind(rnorm(N), rnorm(N)),
-    D.hat = runif(N, 0.1, 0.9),
+    D.hat = stats::runif(N, 0.1, 0.9),
     D.hat.z = cbind(rnorm(N), rnorm(N)),
-    Z.hat = runif(N, 0.1, 0.9)
+    Z.hat = stats::runif(N, 0.1, 0.9)
   )
   
   # Test PLR_IV estimator
@@ -96,7 +96,7 @@ test_that("MLeffect handles errors correctly", {
   
   NuPa.hat <- list(
     Y.hat = rnorm(N),
-    D.hat = runif(N, 0.1, 0.9)
+    D.hat = stats::runif(N, 0.1, 0.9)
   )
   
   # Test unsupported estimator
@@ -130,9 +130,9 @@ test_that("MLeffect works with multiple estimators", {
     Y.hat = rnorm(N),
     Y.hat.d = cbind(rnorm(N), rnorm(N)),
     Y.hat.z = cbind(rnorm(N), rnorm(N)),
-    D.hat = runif(N, 0.1, 0.9),
+    D.hat = stats::runif(N, 0.1, 0.9),
     D.hat.z = cbind(rnorm(N), rnorm(N)),
-    Z.hat = runif(N, 0.1, 0.9)
+    Z.hat = stats::runif(N, 0.1, 0.9)
   )
   
   estimators <- c("PLR", "PLR_IV", "AIPW_ATE", "Wald_AIPW")

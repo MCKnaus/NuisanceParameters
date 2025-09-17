@@ -53,8 +53,14 @@ The function implements the Hyperband algorithm with three resource levels (rung
   \item \strong{Final rung:} `max_rounds` boosting rounds - keep top configuration
 }
 
-Tunable hyperparameters include learning rate (eta), tree depth, regularization terms,
-and subsampling parameters. The search space is designed for general-purpose optimization
-with log-uniform sampling for continuous parameters.
+Tunable hyperparameters include the learning rate (\code{eta}), tree depth (\code{max_depth}),
+minimum child weight (\code{min_child_weight}), \code{gamma}, column subsampling fractions
+(\code{colsample_bytree}, \code{colsample_bylevel}, \code{colsample_bynode}),
+L2 regularization (\code{lambda}), \code{grow_policy}, \code{max_leaves}, and \code{max_bin}.
+The search space uses log-uniform sampling for \code{eta} and \code{lambda},
+and uniform or discrete sampling for the others. Parameters kept fixed are:
+\code{subsample = 1}, \code{alpha = 0}, \code{max_delta_step = 0},
+\code{tree_method = "hist"}, \code{objective = "reg:squarederror"},
+and \code{base_score = mean(Y)}.
 }
 \keyword{internal}

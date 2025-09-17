@@ -13,9 +13,11 @@
 #'         Each column is a binary indicator for one category.
 #'
 #' @examples
+#' \dontrun{
 #' D <- factor(c("A", "B", "A", "C", "B", "C"))
 #' d_mat <- prep_indicator_mat(D)
 #' head(d_mat)
+#' }
 #'
 #' @keywords internal
 prep_indicator_mat <- function(x) {
@@ -85,10 +87,12 @@ check_cluster_compatibility <- function(cluster, cf) {
 #' @return Logical matrix of cross-fitting folds (N x # folds).
 #'
 #' @examples
+#' \dontrun{
 #' N <- 1000
-#' d_mat <- prep_indicator_mat(sample(3, N, replace = TRUE))
-#' cf_mat <- prep_cf_mat(N, cf = 5, d_mat = d_mat)
+#' d_mat <- prep_indicator_mat(x = sample(3, N, replace = TRUE))
+#' cf_mat <- prep_cf_mat(N = N, cf = 5, d_mat = d_mat)
 #' head(cf_mat)
+#' }
 #'
 #' @keywords internal
 prep_cf_mat <- function(N,
@@ -140,8 +144,7 @@ prep_cf_mat <- function(N,
     cf_mat_balance <- colSums(cf_mat) / nrow(cf_mat)
 
     if (any(cf_mat_balance < (1 / cf) * 0.5)) {
-      stop("There is a high imbalance in the cluster sizes. This poses a problem for the cross-fitting procedure.
-           Either choose a smaller number of folds or do not specify a cluster vector.")
+      stop("High cluster size imbalance detected. Choose fewer folds or omit cluster vector.")
     }
   }
 
@@ -175,9 +178,9 @@ prep_cf_mat <- function(N,
 #' @return A numeric vector of ensemble weights, normalized to sum to 1.
 #'
 #' @examples
+#' \dontrun{
 #' X <- matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2)
 #' Y <- c(0.25, 0.45, 0.65)
-#' \donttest{
 #' nnls_w <- nnls_weights(X = X, Y = Y)
 #' }
 #' @keywords internal
@@ -198,7 +201,7 @@ nnls_weights <- function(X, Y,
       mean((one_hot_Y - ens_pred)^2)
     }
     
-    bfgs <- optim(
+    bfgs <- stats::optim(
       par = rep(0, dim(X)[3]),
       fn = obj_fun,
       method = "BFGS",
@@ -581,19 +584,19 @@ plot.ens_weights_short <- function(x,
   }
 
   df <- as.data.frame(x)
-  df$methods <- rownames(df)
+  df$method <- rownames(df)
 
   df_long <- data.frame(
-    methods = rep(df$methods, times = ncol(df) - 1),
+    method = rep(df$method, times = ncol(df) - 1),
     variable = rep(names(df)[-ncol(df)], each = nrow(df)),
     value = unlist(df[-ncol(df)]),
     stringsAsFactors = FALSE
   )
 
-  all_methods <- unique(df$methods)
+  all_methods <- unique(df$method)
   method_palette <- stats::setNames(get_palette(length(all_methods)), all_methods)
 
-  ggplot2::ggplot(df_long, ggplot2::aes(x = variable, y = value, fill = methods)) +
+  ggplot2::ggplot(df_long, ggplot2::aes(x = variable, y = value, fill = method)) +
     ggplot2::geom_col(position = "stack", width = 0.7) +
     ggplot2::scale_fill_manual(values = method_palette, name = "Method") +
     ggplot2::labs(x = "Nuisance Parameter", y = "Weight", fill = "Method") +
@@ -754,7 +757,7 @@ create_method <- function(
 #' Creates the methods to be actually used in the subsequent \code{\link{ensemble}} model,
 #' allowing for either a simple method list or nuisance-parameter-specific method lists.
 #'
-#' @param method Either:
+#' @param methods Either:
 #' \enumerate{
 #'   \item{A list of methods (like in \code{create_method}) that will be used for all nuisance parameters, or}
 #'   \item{A named list where each name corresponds to a nuisance parameter and contains a list of methods for that parameter}
@@ -1034,7 +1037,7 @@ add_nupa <- function(np, np_new, NuPa = NULL, replace = FALSE) {
 #'
 #' Convert categorical vector to one-hot encoded matrix.
 #'
-#' @param x A factor or character vector.
+#' @param Y A factor or character vector.
 #'
 #' @return A numeric matrix with one column per unique category.
 #'
@@ -1080,31 +1083,45 @@ one_hot <- function(Y) {
 #'   \item \strong{Final rung:} `max_rounds` boosting rounds - keep top configuration
 #' }
 #'
-#' Tunable hyperparameters include learning rate (eta), tree depth, regularization terms,
-#' and subsampling parameters. The search space is designed for general-purpose optimization
-#' with log-uniform sampling for continuous parameters.
+#' Tunable hyperparameters include the learning rate (\code{eta}), tree depth (\code{max_depth}),
+#' minimum child weight (\code{min_child_weight}), \code{gamma}, column subsampling fractions
+#' (\code{colsample_bytree}, \code{colsample_bylevel}, \code{colsample_bynode}),
+#' L2 regularization (\code{lambda}), \code{grow_policy}, \code{max_leaves}, and \code{max_bin}.
+#' The search space uses log-uniform sampling for \code{eta} and \code{lambda},
+#' and uniform or discrete sampling for the others. Parameters kept fixed are:
+#' \code{subsample = 1}, \code{alpha = 0}, \code{max_delta_step = 0},
+#' \code{tree_method = "hist"}, \code{objective = "reg:squarederror"},
+#' and \code{base_score = mean(Y)}.
 #'
 #' @keywords internal
-#'
-tune_xgb_hyperband <- function(X, Y, max_rounds = 100, n_configs = 50,
-                               eta_downfactor = 3, nfold = 5,
-                               metrics = "rmse", seed = 123) {
+tune_xgb_hyperband <- function(X, Y,
+                               max_rounds = 100, 
+                               n_configs = 50,
+                               eta_downfactor = 3, 
+                               nfold = 5,
+                               metrics = "rmse", 
+                               seed = 123) {
   set.seed(seed)
-
+  
   sample_params <- function() {
     list(
-      eta = 10^runif(1, log10(1e-4), log10(0.3)),
+      eta = 10^stats::runif(1, log10(0.01), log10(0.3)),
       max_depth = sample(2:10, 1),
-      min_child_weight = sample(c(1, 2, 5, 10), 1),
-      colsample_bytree = runif(1, 0.5, 1),
-      colsample_bylevel = runif(1, 0.5, 1),
-      # tree_method = "hist",
-      lambda = 10^runif(1, log10(1e-3), log10(10)),
+      min_child_weight = stats::runif(1, 0, 10),
+      gamma = stats::runif(1, 0, 10),
+      colsample_bytree = stats::runif(1, 0.5, 1),
+      colsample_bylevel = stats::runif(1, 0.5, 1),
+      colsample_bynode = stats::runif(1, 0.5, 1),
+      lambda = 10^stats::runif(1, log10(1e-3), log10(10)),
+      max_leaves = sample(0:10, 1),
+      max_bin = sample(10:256, 1),
+      tree_method = "hist",
+      ## Must be fixed:
+      objective = "reg:squarederror",
       subsample = 1,
       alpha = 0,
       max_delta_step = 0,
-      base_score = 0,
-      objective = "reg:squarederror"
+      base_score = mean(Y)
     )
   }
 
@@ -1132,13 +1149,14 @@ tune_xgb_hyperband <- function(X, Y, max_rounds = 100, n_configs = 50,
         ),
         error = function(e) NULL
       )
-      scores[i] <- if (!is.null(cv)) min(cv$evaluation_log[[paste0("test_", metrics, "_mean")]]) else NA
+      scores[i] <- if (!is.null(cv)) 
+        min(cv$evaluation_log[[paste0("test_", metrics, "_mean")]]) 
+      else NA
     }
 
     # Remove configs with NA scores
     valid_idx <- which(!is.na(scores))
-    if (length(valid_idx) == 0) break # nothing left
-
+    if (length(valid_idx) == 0) break
     scores <- scores[valid_idx]
     configs <- configs[valid_idx]
 
@@ -1154,7 +1172,10 @@ tune_xgb_hyperband <- function(X, Y, max_rounds = 100, n_configs = 50,
     top_idx <- order(scores)[1:keep_n]
     configs <- configs[top_idx]
   }
-
+  
+  # Important for standard stacking 
+  best_params$base_score <- NULL
+  
   return(list("params" = best_params, "best_score" = best_score))
 }
 
@@ -1194,7 +1215,7 @@ tune_learners <- function(type = c("tune_full_sample", "tune_on_fold"),
           X = X_sub,
           Y = Y,
           tune.parameters = "all",
-          num.trees = 100
+          num.trees = 50
         )
 
         methods[[i]][["arguments"]] <- tuned_forest[["tuning.output"]][["params"]]

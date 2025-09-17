@@ -2,7 +2,7 @@ test_that("nnls_weights produces correct weights", {
   set.seed(42)
   n = 1000
   p = 5
-  X = matrix(runif(n*p), ncol = p)
+  X = matrix(stats::runif(n*p), ncol = p)
   true_weights = c(0.3, 0, 0, 0.1, 0.6)
   Y = X %*% true_weights + rnorm(n, sd = 0.1)
 

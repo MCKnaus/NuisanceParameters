@@ -7,7 +7,7 @@
 one_hot(Y)
 }
 \arguments{
-\item{x}{A factor or character vector.}
+\item{Y}{A factor or character vector.}
 }
 \value{
 A numeric matrix with one column per unique category.

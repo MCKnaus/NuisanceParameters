@@ -1,7 +1,4 @@
 test_that("smoother weights lead to correct prediction of fitted values", {
-
-  library(mvtnorm)
-
   n = 2000
   n_test = 25
   p = 12
@@ -161,9 +158,6 @@ test_that("knn weight matrix plausibility check", {
 
 
 test_that("(rough) equality of plasso and ols prediction solution for clear cut dgp", {
-
-  library(mvtnorm)
-
   n = 100000
   n_test = 10
   p = 6
@@ -186,3 +180,162 @@ test_that("(rough) equality of plasso and ols prediction solution for clear cut 
   expect_equal(p_ols, p_p, tolerance = 0.01)
 
 })
+
+
+# Minimal data for regression and classification
+set.seed(42)
+X <- matrix(rnorm(50 * 5), ncol = 5)
+colnames(X) <- paste0("X", 1:5)
+Y_reg <- rnorm(50)
+Y_bin <- sample(0:1, 50, replace = TRUE)
+Y_multi <- sample(1:3, 50, replace = TRUE)
+
+test_that("mean_fit and predict.mean_fit work", {
+  fit <- mean_fit(X, Y_reg)
+  expect_s3_class(fit, "mean_fit")
+  pred <- predict(fit, X)
+  expect_equal(length(pred), nrow(X))
+  expect_true(all(pred == mean(Y_reg)))
+})
+
+test_that("ols_fit and predict.ols_fit work", {
+  fit <- ols_fit(X, Y_reg)
+  expect_s3_class(fit, "ols_fit")
+  pred <- predict(fit, X)
+  expect_equal(length(pred), nrow(X))
+})
+
+test_that("ridge_fit and predict.ridge_fit work", {
+  skip_if_not_installed("glmnet")
+  fit <- ridge_fit(X, Y_reg)
+  expect_s3_class(fit, "ridge_fit")
+  pred <- predict(fit, X)
+  expect_equal(length(pred), nrow(X))
+})
+
+test_that("plasso_fit and predict.plasso_fit work", {
+  skip_if_not_installed("plasso")
+  fit <- plasso_fit(X, Y_reg)
+  expect_s3_class(fit, "plasso_fit")
+  pred <- predict(fit, X)$plasso
+  expect_equal(length(pred), nrow(X))
+})
+
+test_that("rlasso_fit and predict.rlasso_fit work", {
+  skip_if_not_installed("hdm")
+  fit <- rlasso_fit(X, Y_reg)
+  expect_s3_class(fit, "rlasso_fit")
+  pred <- predict(fit, X)
+  expect_equal(length(pred), nrow(X))
+})
+
+test_that("forest_grf_fit and predict.forest_grf_fit work", {
+  skip_if_not_installed("grf")
+  fit <- forest_grf_fit(X, Y_reg)
+  expect_s3_class(fit, "forest_grf_fit")
+  pred <- predict(fit, X)
+  expect_equal(length(pred$predictions), nrow(X))
+})
+
+test_that("xgboost_fit and predict.xgboost_fit work", {
+  skip_if_not_installed("xgboost")
+  fit <- xgboost_fit(X, Y_reg)
+  expect_s3_class(fit, "xgboost_fit")
+  pred <- predict(fit, X)
+  expect_equal(length(pred), nrow(X))
+})
+
+test_that("lasso_fit and predict.lasso_fit work", {
+  skip_if_not_installed("glmnet")
+  fit <- lasso_fit(X, Y_reg)
+  expect_s3_class(fit, "lasso_fit")
+  pred <- predict(fit, X)
+  expect_equal(length(pred), nrow(X))
+})
+
+test_that("forest_drf_fit and predict.forest_drf_fit work", {
+  skip_if_not_installed("drf")
+  fit <- forest_drf_fit(X, Y_reg)
+  expect_s3_class(fit, "forest_drf_fit")
+  pred <- predict(fit, X)
+  expect_equal(length(pred$y), nrow(X))
+})
+
+test_that("knn_fit and predict.knn_fit work", {
+  fit <- knn_fit(list(k = 5))
+  expect_s3_class(fit, "knn_fit")
+  pred <- predict(fit, X, Y_reg, X)
+  expect_equal(length(pred), nrow(X))
+})
+
+test_that("logit_fit and predict.logit_fit work for binary", {
+  skip_if_not_installed("glmnet")
+  fit <- logit_fit(X, Y_bin)
+  pred <- predict.logit_fit(fit, X, Y_bin, X)
+  expect_true(all(dim(pred) == c(nrow(X), 2)))
+  expect_true(all(abs(rowSums(as.matrix(pred)) - 1) < 1e-6))
+  })
+
+test_that("logit_fit and predict.logit_fit work for multiclass", {
+  skip_if_not_installed("glmnet")
+  fit <- logit_fit(X, Y_multi)
+  pred <- predict.logit_fit(fit, X, Y_multi, X)
+  expect_true(all(dim(pred) == c(nrow(X), length(unique(Y_multi)))))
+})
+
+test_that("logit_nnet_fit and predict.logit_nnet_fit work", {
+  skip_if_not_installed("nnet")
+  fit <- logit_nnet_fit(X, Y_multi)
+  pred <- predict.logit_nnet_fit(fit, X, Y_multi, X)
+  expect_true(all(dim(as.matrix(pred)) == c(nrow(X), length(unique(Y_multi)))))
+})
+
+test_that("nb_gaussian_fit and predict.nb_gaussian_fit work", {
+  skip_if_not_installed("naivebayes")
+  fit <- nb_gaussian_fit(X, Y_bin)
+  pred <- predict.nb_gaussian_fit(fit, X, Y_bin, X)
+  expect_true(is.matrix(pred) || is.data.frame(pred))
+})
+
+test_that("nb_bernoulli_fit and predict.nb_bernoulli_fit work", {
+  skip_if_not_installed("naivebayes")
+  fit <- nb_bernoulli_fit(X > 0, Y_bin)
+  pred <- predict.nb_bernoulli_fit(fit, X > 0, Y_bin, X > 0)
+  expect_true(is.matrix(pred) || is.data.frame(pred))
+})
+
+test_that("xgboost_prop_fit and predict.xgboost_prop_fit work", {
+  skip_if_not_installed("xgboost")
+  fit <- xgboost_prop_fit(X, Y_bin)
+  pred <- predict.xgboost_prop_fit(fit, X, Y_bin, X)
+  expect_true(is.data.frame(pred) || is.matrix(pred))
+})
+
+test_that("svm_fit and predict.svm_fit work", {
+  skip_if_not_installed("e1071")
+  fit <- svm_fit(X, Y_bin)
+  pred <- predict.svm_fit(fit, X, Y_bin, X)
+  expect_true(is.matrix(pred) || is.data.frame(pred))
+})
+
+test_that("prob_forest_fit and predict.prob_forest_fit work", {
+  skip_if_not_installed("grf")
+  fit <- prob_forest_fit(X, Y_bin)
+  pred <- predict.prob_forest_fit(fit, X, Y_bin, X)
+  expect_true(is.matrix(pred) || is.data.frame(pred))
+})
+
+test_that("knn_prop_fit and predict.knn_prop_fit work", {
+  skip_if_not_installed("kknn")
+  fit <- knn_prop_fit(X, Y_multi)
+  pred <- predict.knn_prop_fit(fit, X, Y_multi, X)
+  expect_true(is.matrix(pred) || is.data.frame(pred))
+})
+
+test_that("ranger_fit and predict.ranger_fit work", {
+  skip_if_not_installed("ranger")
+  fit <- ranger_fit(X, Y_multi)
+  pred <- predict.ranger_fit(fit, X, Y_multi, X)
+  expect_true(is.matrix(pred) || is.data.frame(pred))
+})
+

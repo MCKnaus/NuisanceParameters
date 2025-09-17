@@ -36,16 +36,18 @@ The Notebook builds on the dataset that is provided in the `hdm` package. The da
 The sample is drawn from the 1991 Survey of Income and Program Participation (SIPP) and consists of 9,915 observations.
 
 ```{r}
-if (!require("hdm")) install.packages("hdm", dependencies = TRUE); library(hdm)
-if (!require("OutcomeWeights")) install.packages("OutcomeWeights", dependencies = TRUE); library(OutcomeWeights)
-
-devtools::document()
+library(hdm)
+library(OutcomeWeights)
+library(NuisanceParameters)
 ```
 
 Import the data:
 
 ```{r}
-data(pension)
+
+# load the pension dataset
+data("pension", package = "hdm")
+
 set.seed(123)
 
 # D <- pension$p401
@@ -83,7 +85,7 @@ Next step is to specify a list of base learners to be used in ensemble estimatio
 # For tree methods, restrict to original features
 cols <- colnames(X) %in% colnames(X_raw)
 
-method = list(
+methods = list(
  "ridge" = create_method("ridge"),
  "plasso" = create_method("plasso"),
  "forest_grf" = create_method("forest_grf", arguments = c("tune_full_sample"), x_select=cols),
@@ -102,7 +104,7 @@ In the following, we use 5-fold cross-fitting (`cf=5`) and preserve the treatmen
 ```{r}
 np <- nuisance_parameters(NuPa = c("Y.hat","Y.hat.d","D.hat","Z.hat"),
                           X = X, Y = Y, D = D, Z = Z,
-                          method = method, cf = 2, stacking = "short",
+                          methods = methods, cf = 2, stacking = "short",
                           cluster = NULL, stratify = TRUE,
                           storeModels = "No", path = NULL, quiet = FALSE)
 ```
@@ -130,20 +132,12 @@ summary(TargetParam)
 plot(TargetParam)
 ```
 
-Observe that the results are very close to those from the 5-fold `dml_with_smoother` routine:
-
-```{r}
-dml_5f = dml_with_smoother(Y,D,X,Z, n_cf_folds = 5, estimators = c("PLR","PLR_IV","AIPW_ATE"))
-results_dml_5f = summary(dml_5f)
-plot(dml_5f)
-```
-
 ## Adding nuisance parameters ex-post
 
 Nuisance parameters (and the respective saved models) can be easily replaced/added in a NuisanceParameter object. For example, one might want to her estimation strategy and use a different set of base learners:
 
 ```{r}
-method_2 = list(
+methods_2 = list(
  "ols" = create_method("ols"),
  "xgboost" = create_method("xgboost", arguments = c("tune_on_fold"))
  )
@@ -154,7 +148,7 @@ The only important detail is keep using the same cross-fit indicator matrix from
 ```{r}
 np_2 <- nuisance_parameters(NuPa = c("Y.hat","Z.hat"),
                             X = X, Y = Y, D = D, Z = Z, cf_mat = np$numbers$cf_mat,
-                            method = method_2, cf = 2, stacking = "short",
+                            methods = methods_2, cf = 2, stacking = "short",
                             cluster = NULL, stratify = TRUE,
                             storeModels = "Memory", path = NULL, quiet = TRUE)
 

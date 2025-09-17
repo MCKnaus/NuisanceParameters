@@ -11,11 +11,11 @@ plasso_fit(X, Y, arguments = list())
 
 \item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{arguments}{List of arguments passed to \code{\link[plasso]{cv.plasso}}.}
+\item{arguments}{List of arguments passed to \code{cv.plasso}.}
 }
 \value{
 An object of class \code{plasso_fit} containing the fitted
-  \code{\link[plasso]{cv.plasso}} model.
+  \code{cv.plasso} model.
 }
 \description{
 Estimates cross-validated post-lasso regression using the \code{plasso} package.

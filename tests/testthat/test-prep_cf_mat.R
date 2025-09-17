@@ -74,7 +74,7 @@ test_that("prep_cf_mat returns warning if both treatment matrix and cluster vect
   d_mat = prep_indicator_mat(sample(x = 1:3, size = n, replace = TRUE))
   cl = sample(x = c("b", "d", "o", "k", "u", "r"), size = n, replace = TRUE)
 
-  expect_warning(prep_cf_mat(n, cf, d_mat = d_mat, cl = cl), "only cluster vector is considered")
+  expect_warning(prep_cf_mat(n, cf, d_mat = d_mat, cl = cl), "Only the cluster vector will be used")
 
 })
 

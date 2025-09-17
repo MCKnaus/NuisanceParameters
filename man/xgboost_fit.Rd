@@ -11,11 +11,11 @@ xgboost_fit(X, Y, arguments = list())
 
 \item{Y}{Numeric vector of outcomes for training sample.}
 
-\item{arguments}{List of arguments passed to \code{\link[xgboost]{xgb.train}}.}
+\item{arguments}{List of arguments passed to \code{xgb.train}.}
 }
 \value{
 An object of class \code{xgboost_fit} containing the fitted
-  \code{\link[xgboost]{xgb.Booster}} model.
+  \code{xgb.Booster} model.
 }
 \description{
 Fits an XGBoost model using the \code{xgboost} package.

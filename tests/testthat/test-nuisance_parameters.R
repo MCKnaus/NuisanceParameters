@@ -14,7 +14,7 @@ test_that("check nuisance_parameters for Y.hat estimation", {
   
   cf = 3
 
-  method = list("ols" = create_method("ols"),
+  methods = list("ols" = create_method("ols"),
             "forest_drf" = create_method("forest_drf"),
             "mean" = create_method("mean"))
 
@@ -22,22 +22,22 @@ test_that("check nuisance_parameters for Y.hat estimation", {
   unlink(paste0(dirname(path), "/*"))
 
   t = Sys.time()
-  np_standard <- nuisance_parameters(NuPa="Y.hat", X, Y, method = method, cf = cf, stacking = 5, storeModels = "No", path = path)
+  np_standard <- nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = 5, storeModels = "No", path = path)
   t_standard = (Sys.time() - t) %>% as.numeric(units = "secs")
   unlink(paste0(dirname(path), "/*"))
 
 
   t = Sys.time()
-  np_short <- nuisance_parameters(NuPa="Y.hat", X, Y, method = method, cf = cf, stacking = "short", storeModels = "No", path = path)
+  np_short <- nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = "short", storeModels = "No", path = path)
   t_short = (Sys.time() - t) %>% as.numeric(units = "secs")
   unlink(paste0(dirname(path), "/*"))
 
 
   t = Sys.time()
-  np_standard_w = nuisance_parameters(NuPa="Y.hat", X, Y, method = method, cf = cf, stacking = 5, storeModels = "Disk", path = path)
+  np_standard_w = nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = 5, storeModels = "Disk", path = path)
   t_standard_w = (Sys.time() - t) %>% as.numeric(units = "secs")
   expect_true(file.exists(path))
-  w = get_outcome_weights(np_object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat")$Y.hat
+  w = get_outcome_weights(object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat")$Y.hat
   fold = np_standard_w$numbers$cf_mat[, 1]
   expect_identical(as.vector(w[fold, fold]), rep(0, sum(fold)^2))
   expect_equal(np_standard_w[["nuisance_parameters"]][["Y.hat"]], as.vector(w %*% Y), tolerance = 1e-5)
@@ -45,10 +45,10 @@ test_that("check nuisance_parameters for Y.hat estimation", {
 
 
   t = Sys.time()
-  np_short_w = nuisance_parameters(NuPa="Y.hat", X, Y, method = method, cf = cf, stacking = "short", storeModels = "Disk", path = path)
+  np_short_w = nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = "short", storeModels = "Disk", path = path)
   t_short_w = (Sys.time() - t) %>% as.numeric(units = "secs")
   expect_true(file.exists(path))
-  w = get_outcome_weights(np_object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat")$Y.hat
+  w = get_outcome_weights(object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat")$Y.hat
   fold = np_short_w$numbers$cf_mat[, 1]
   expect_identical(as.vector(w[fold, fold]), rep(0, sum(fold)^2))
   expect_equal(np_short_w[["nuisance_parameters"]][["Y.hat"]], as.vector(w %*% Y), tolerance = 1e-5)
@@ -103,7 +103,7 @@ test_that("check nuisance_parameters for D.hat", {
 
   D = apply(prob_classes, 1, function(p) sample(1:3, 1, prob = p))
 
-  method = list(
+  methods = list(
     "logit" = create_method("logit", multinomial = "one-vs-one"),
     "ranger" = create_method("ranger", multinomial = "one-vs-rest"),
     "logit_nnet" = create_method("logit_nnet", multinomial = "multiclass"),
@@ -115,7 +115,7 @@ test_that("check nuisance_parameters for D.hat", {
 
 
   ### Short-Stacking ###
-  expect_message(np_e_short <- nuisance_parameters(NuPa="D.hat", X = X, D = D, method = method, cf = 5, stacking = "short", 
+  expect_message(np_e_short <- nuisance_parameters(NuPa="D.hat", X = X, D = D, methods = methods, cf = 5, stacking = "short", 
                                                    storeModels = "No", path = path, quiet = FALSE), "Short-stacking is used.")
   
   ## Saving models for non-outcome NuPas is disabled
@@ -131,8 +131,8 @@ test_that("check nuisance_parameters for D.hat", {
   # ens = readRDS(files[1])
   # expect_length(ens, 2)
   # expect_named(ens$nnls_w)
-  # expect_equal(dim(ens$fit_cv), c(n, length(method)))
-  # expect_true(all(substr(colnames(ens$fit_cv), 1, 1) == "t"))
+  # expect_equal(dim(ens$cf_preds), c(n, length(methods)))
+  # expect_true(all(substr(colnames(ens$cf_preds), 1, 1) == "t"))
   # unlink(paste0(path, "/*"))
 
   # check for correct dimension
@@ -150,7 +150,7 @@ test_that("check nuisance_parameters for D.hat", {
 
 
   ### Standard-Stacking ###
-  expect_message(np_e_standard <- nuisance_parameters(NuPa="D.hat", X = X, D = D, method = method, cf = 5, stacking = 3, 
+  expect_message(np_e_standard <- nuisance_parameters(NuPa="D.hat", X = X, D = D, methods = methods, cf = 5, stacking = 3, 
                                                       storeModels = "No", path = path, quiet = FALSE), "Standard-stacking is used.")
 
   ## Saving models for non-outcome NuPas is disabled
@@ -166,8 +166,8 @@ test_that("check nuisance_parameters for D.hat", {
   # ens = readRDS(files[1])
   # expect_length(ens, ncol(cf_mat))
   # expect_named(ens[[1]]$nnls_w)
-  # expect_equal(dim(ens[[1]]$fit_cv), c(sum(cf_mat[, 1]), length(method)))
-  # expect_true(all(substr(colnames(ens[[1]]$fit_cv), 1, 1) == "t"))
+  # expect_equal(dim(ens[[1]]$cf_preds), c(sum(cf_mat[, 1]), length(methods)))
+  # expect_true(all(substr(colnames(ens[[1]]$cf_preds), 1, 1) == "t"))
   # unlink(paste0(path, "/*"))
   
 
@@ -186,7 +186,6 @@ test_that("check nuisance_parameters for D.hat", {
 
 test_that("check nuisance_parameters for Y.hat.d estimation", {
   
- library(mvtnorm)
   set.seed(79)
 
   n = 1000
@@ -203,7 +202,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   D = sample(1:d_mods, n, replace = TRUE)
 
 
-  method = list("ridge" = create_method("ridge"),
+  methods = list("ridge" = create_method("ridge"),
                 "forest_grf" = create_method("forest_grf"),
                 "rlasso" = create_method("rlasso"),
                 "xgboost" = create_method("xgboost"))
@@ -213,7 +212,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
 
   
   ### Short-Stacking ###
-  expect_message(np_m_short <- nuisance_parameters(NuPa=c("Y.hat.d"), X = X, D = D, Y = Y, method = method, cf = 4, stacking = "short", 
+  expect_message(np_m_short <- nuisance_parameters(NuPa=c("Y.hat.d"), X = X, D = D, Y = Y, methods = methods, cf = 4, stacking = "short", 
                                                    storeModels = "Disk", stratify = TRUE, path = path, quiet = FALSE), "Short-stacking is used.")
 
 
@@ -225,7 +224,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   ens = complete_file[["models"]][["Y.hat.d_m"]][[1]]             # select saved model for Y.hat.d[[1]] only
   expect_length(ens, 2)
   expect_named(ens$nnls_w)
-  expect_equal(dim(ens[["ens_object"]][["fit_cv"]]), c(n, length(method)))
+  expect_equal(dim(ens[["ens_object"]][["cf_preds"]]), c(n, length(methods)))
 
   # check for correct dimension
   expect_identical(dim(np_m_short$nuisance_parameters$Y.hat.d), dim(np_m_short$numbers$d_mat))
@@ -234,7 +233,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
 
 
   ### Short-Stacking with Smoother Weights ###
-  expect_message(np_m_short_w <- nuisance_parameters(NuPa=c("Y.hat.d"), X = X, D = D, Y = Y, method = method, cf = 4, stacking = "short", 
+  expect_message(np_m_short_w <- nuisance_parameters(NuPa=c("Y.hat.d"), X = X, D = D, Y = Y, methods = methods, cf = 4, stacking = "short", 
                                                      storeModels = "Disk", stratify = TRUE, path = path, quiet = FALSE), "Short-stacking is used.")
 
 
@@ -246,13 +245,13 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   ens = complete_file[["models"]][["Y.hat.d_m"]][[1]]             # select saved model for Y.hat.d[[1]] only
   expect_length(ens, 2)
   expect_named(ens$nnls_w)
-  expect_equal(dim(ens[["ens_object"]][["fit_cv"]]), c(n, length(method)))
+  expect_equal(dim(ens[["ens_object"]][["cf_preds"]]), c(n, length(methods)))
 
   # check for correct dimension
   expect_identical(dim(np_m_short_w$nuisance_parameters$Y.hat.d), dim(np_m_short_w$numbers$d_mat))
 
   # check smoother weights
-  w = get_outcome_weights(np_object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat.d")$Y.hat.d[[1]]
+  w = get_outcome_weights(object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat.d")$Y.hat.d[[1]]
   expect_equal(np_m_short_w[["nuisance_parameters"]][["Y.hat.d"]][, 1], as.vector(w %*% Y), tolerance = 1e-3)
 
   unlink(paste0(path, "/*"))
@@ -260,7 +259,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
 
   
   ### Standard-Stacking ###
-  expect_message(np_m_standard <- nuisance_parameters(NuPa=c("Y.hat.d"), X = X, D = D, Y = Y, method = method, cf = 4, stacking = 3, 
+  expect_message(np_m_standard <- nuisance_parameters(NuPa=c("Y.hat.d"), X = X, D = D, Y = Y, methods = methods, cf = 4, stacking = 3, 
                                                       storeModels = "Disk", stratify = TRUE, path = path, quiet = FALSE), "Standard-stacking is used.")
   
   # check if ensemble output is stored in files
@@ -271,8 +270,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   ens = complete_file[["models"]][["Y.hat.d_m"]][[1]]             # select saved model for Y.hat.d[1] only
   expect_length(ens, 4) # cf = 4
   expect_named(ens[[1]]$nnls_w)
-  expect_equal(dim(ens[[1]][["ens_object"]][["fit_cv"]]), c(sum(np_m_standard[["numbers"]][["cv_mat"]][["Y.hat.d0"]][[1]]), length(method)))
-  
+
   # check for correct dimension
   expect_identical(dim(np_m_standard$nuisance_parameters$Y.hat.d), dim(np_m_standard$numbers$d_mat))
   
@@ -281,7 +279,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
 
   
   ### Standard-Stacking with Smoother Weights ###
-  expect_message(np_m_standard_w <- nuisance_parameters(NuPa=c("Y.hat.d"), X = X, D = D, Y = Y, method = method, cf = 4, stacking = 3, 
+  expect_message(np_m_standard_w <- nuisance_parameters(NuPa=c("Y.hat.d"), X = X, D = D, Y = Y, methods = methods, cf = 4, stacking = 3, 
                                                       storeModels = "Disk", stratify = TRUE, path = path, quiet = FALSE), "Standard-stacking is used.")
   
   # check if ensemble output is stored in files
@@ -292,13 +290,12 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   ens = complete_file[["models"]][["Y.hat.d_m"]][[1]]             # select saved model for Y.hat.d[[1]] only
   expect_length(ens, 4) # cf = 4
   expect_named(ens[[1]]$nnls_w)
-  expect_equal(dim(ens[[1]][["ens_object"]][["fit_cv"]]), c(sum(np_m_standard_w[["numbers"]][["cv_mat"]][["Y.hat.d0"]][[1]]), length(method)))
-  
+
   # check for correct dimension
   expect_identical(dim(np_m_standard_w$nuisance_parameters$Y.hat.d), dim(np_m_standard_w$numbers$d_mat))
 
   # check smoother weights
-  w = get_outcome_weights(np_object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat.d")$Y.hat.d[[1]]
+  w = get_outcome_weights(object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat.d")$Y.hat.d[[1]]
   expect_equal(np_m_standard_w[["nuisance_parameters"]][["Y.hat.d"]][, 1], as.vector(w %*% Y), tolerance = 1e-3)
   
   unlink(paste0(path, "/*"))
@@ -310,25 +307,25 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   # ### S-Learner ###
   # 
   # expect_error(
-  #   nuisance_m(method = method, Y = Y, w_mat = w_mat, X = X, cf_mat = cf_mat,
+  #   nuisance_m(methods = methods, Y = Y, w_mat = w_mat, X = X, cf_mat = cf_mat,
   #              cv = 3, path = path, quiet = FALSE, weights = TRUE,
   #              learner = "s"),
   #   "S-Learner cannot be combined")
   # 
   # expect_error(
-  #   nuisance_m(method = method, Y = Y, w_mat = w_mat, X = X, cf_mat = cf_mat,
+  #   nuisance_m(methods = methods, Y = Y, w_mat = w_mat, X = X, cf_mat = cf_mat,
   #              cv = 1, path = path, quiet = FALSE, weights = FALSE,
   #              learner = "s"),
   #   "S-Learner cannot be combined")
   # 
   # expect_error(
-  #   nuisance_m(method = method, Y = Y, w_mat = w_mat, X = X, cf_mat = cf_mat,
+  #   nuisance_m(methods = methods, Y = Y, w_mat = w_mat, X = X, cf_mat = cf_mat,
   #              cv = 5, path = path, quiet = FALSE, weights = TRUE,
   #              learner = "both"),
   #   "S-Learner cannot be combined")
   # 
   # expect_error(
-  #   nuisance_m(method = method, Y = Y, w_mat = w_mat, X = X, cf_mat = cf_mat,
+  #   nuisance_m(methods = methods, Y = Y, w_mat = w_mat, X = X, cf_mat = cf_mat,
   #              cv = 2, path = path, quiet = FALSE, weights = FALSE,
   #              learner = "both"),
   #   "S-Learner cannot be combined")
