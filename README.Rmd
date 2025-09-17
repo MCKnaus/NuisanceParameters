@@ -21,8 +21,8 @@ A defining feature of the package is its use of supervised machine learning ("gr
 
 This package is part of an envisaged trilogy, where each package can be seamlessly integrated with the previous one but can also be used as a stand-alone unit:
 
-1.  `NuisanceParameters` – flexibly estimates $m(X):=\mathbb{E}[Y \mid X]$, $m_w(w,X):=\mathbb{E}[Y \mid W = w, X]$, $e(X) := \mathbb{P}[W \mid X]$ and other user-specified nuisance parameters.
-2.  `MLeffects` – combines estimated nuisance parameters ($\hat{m}(X)$, $\hat{m}_w(w,X)$, $\hat{e}(X)$..) in the doubly robust (DR) score to obtain a target parameter $\tau$.
+1.  `NuisanceParameters` – flexibly estimates $m(X):=\mathbb{E}[Y \mid X]$, $m_d(d,X):=\mathbb{E}[Y \mid D = d, X]$, $e(X) := \mathbb{P}[D \mid X]$ and other user-specified nuisance parameters.
+2.  `MLeffects` – combines estimated nuisance parameters ($\hat{m}(X)$, $\hat{m}_d(d,X)$, $\hat{e}(X)$..) in the doubly robust (DR) score to obtain a target parameter $\tau$.
 3.  `OutcomeWeights` – lets you extract the smoother matrices $\omega$ behind the nuisance and target parameters. The weights can be used to access the estimator properties or to check the covariate balance (see [Knaus, 2024](https://arxiv.org/abs/2411.11559)).
 
 Among other features, `NuisanceParameters` offers ensemble estimation (using short and standard stacking), works with binary and multivalued treatments and allows for a rich selection of base learners.

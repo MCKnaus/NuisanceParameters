@@ -32,11 +32,11 @@ stand-alone unit:
 
 1.  `NuisanceParameters` – flexibly estimates
     $m(X):=\mathbb{E}[Y \mid X]$,
-    $m_w(w,X):=\mathbb{E}[Y \mid W = w, X]$,
-    $e(X) := \mathbb{P}[W \mid X]$ and other user-specified nuisance
+    $m_d(d,X):=\mathbb{E}[Y \mid D = d, X]$,
+    $e(X) := \mathbb{P}[D \mid X]$ and other user-specified nuisance
     parameters.
 2.  `MLeffects` – combines estimated nuisance parameters ($\hat{m}(X)$,
-    $\hat{m}_w(w,X)$, $\hat{e}(X)$..) in the doubly robust (DR) score to
+    $\hat{m}_d(d,X)$, $\hat{e}(X)$..) in the doubly robust (DR) score to
     obtain a target parameter $\tau$.
 3.  `OutcomeWeights` – lets you extract the smoother matrices $\omega$
     behind the nuisance and target parameters. The weights can be used
