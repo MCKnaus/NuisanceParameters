@@ -50,12 +50,16 @@ The code below shows how desired nuisance parameters can be flexibly estimated. 
 library(NuisanceParameters)
 library(hdm)
 
+set.seed(123)
+idx <- sample(nrow(pension), size = round(0.5 * nrow(pension)))
+sub <- pension[idx, ]
+
 # Find dataset description if you type ?pension in console
-Y <- pension$net_tfa
-D <- pension$p401
-Z <- pension$e401
-X <- model.matrix(~ age + db + educ + fsize + hown + inc + male 
-                  + marr + pira + twoearn, data = pension)
+Y <- sub$net_tfa
+D <- sub$p401
+Z <- sub$e401
+X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc 
+                  + male + marr + pira + twoearn, data = sub)
 
 methods = list(
  "ols" = create_method("ols"),
@@ -80,11 +84,11 @@ plot(np$numbers$ens_weights)
 
 ### Learn More about `NuisanceParameters`
 
-See our vignettes to learn more: (to be filled)
+See our vignettes to learn more:
 
 -   `vignette("quick_start")` is a more detailed introduction to `NuisanceParameters`
--   `vignette("Estimation")` is a discussion of estimation schemes
--   `vignette("Multivalued")` is a discussion of multivalued treatments
+-   `vignette("estimation")` shows available estimation options to better suit the task at hand
+-   `vignette("multivalued")` illustrates support of multivalued treatments
 
 ### Bug reports & support
 

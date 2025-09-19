@@ -1,5 +1,5 @@
 
-# NuisanceParameters <img src="assets/temp_logo.png" align="right" height="139" />
+# NuisanceParameters <img src="assets/temp_logo.png" align="right" height="139"/>
 
 <!-- # NuisanceParameters <img src='assets/NuisanceParameters.png' align="right" height="139" /> -->
 
@@ -15,9 +15,9 @@
 <!-- badges: end -->
 
 `NuisanceParameters` lets you estimate conditional expectations that can
-later be used to estimate target causal parameters of interest. Among
-others, it is an implementation of double/debiased machine learning
-framework as proposed by Chernozhukov et al. (2018).
+later be used to estimate target causal parameters of interest. It
+implements the double/debiased machine learning framework of
+Chernozhukov et al. (2018).
 
 A defining feature of the package is its use of supervised machine
 learning (“grey box”) algorithms, which — following a general framework
@@ -27,25 +27,25 @@ $\hat{\tau} = \sum_{i=1}^N \omega_i Y_i$. These weights can be extracted
 and used in established routines for classic weighting estimators.
 
 This package is part of an envisaged trilogy, where each package can be
-seamlessly integrated with the previous one but can also be used as a
+seamlessly integrated with the previous one, but also used as a
 stand-alone unit:
 
 1.  `NuisanceParameters` – flexibly estimates
     $m(X):=\mathbb{E}[Y \mid X]$,
     $m_d(d,X):=\mathbb{E}[Y \mid D = d, X]$,
-    $e(X) := \mathbb{P}[D \mid X]$ and other user-specified nuisance
+    $e(X) := \mathbb{P}[D \mid X]$, and other user-specified nuisance
     parameters.
 2.  `MLeffects` – combines estimated nuisance parameters ($\hat{m}(X)$,
-    $\hat{m}_d(d,X)$, $\hat{e}(X)$..) in the doubly robust (DR) score to
-    obtain a target parameter $\tau$.
-3.  `OutcomeWeights` – lets you extract the smoother matrices $\omega$
-    behind the nuisance and target parameters. The weights can be used
-    to access the estimator properties or to check the covariate balance
-    (see [Knaus, 2024](https://arxiv.org/abs/2411.11559)).
+    $\hat{m}_d(d,X)$, $\hat{e}(X)$, …) in the doubly robust (DR) score
+    to estimate a target parameter $\tau$.
+3.  `OutcomeWeights` – extracts the smoother matrices $\omega$ behind
+    the nuisance and target parameters. The weights can be used to study
+    estimator properties or to check covariate balance (see [Knaus,
+    2024](https://arxiv.org/abs/2411.11559)).
 
 Among other features, `NuisanceParameters` offers ensemble estimation
 (using short and standard stacking), works with binary and multivalued
-treatments and allows for a rich selection of base learners.
+treatments, and allows for a rich selection of base learners.
 
 ### In progress
 
@@ -70,9 +70,9 @@ The package is work in progress. Find here the current state
   - [x] Multivalued
   - [ ] Continuous
 
-### Example: financial wealth and 401(k) plan participation
+### Example: Nuisance Parameters with Short-Stacking
 
-The following code shows how desired nuisance parameters can be flexibly
+The code below shows how desired nuisance parameters can be flexibly
 estimated. The data was used in [Chernozhukov and Hansen
 (2004)](https://econpapers.repec.org/article/tprrestat/v_3a86_3ay_3a2004_3ai_3a3_3ap_3a735-751.htm),
 who investigated the effect of participation in the employer-sponsored
@@ -93,7 +93,6 @@ Z <- sub$e401
 X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc 
                   + male + marr + pira + twoearn, data = sub)
 
-
 methods = list(
  "ols" = create_method("ols"),
  "plasso" = create_method("plasso"),
@@ -101,7 +100,6 @@ methods = list(
  "forest_grf" = create_method("forest_grf")
  )
 
-# Core functionality 
 np <- nuisance_parameters(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat"),
                           X = X, Y = Y, D = D, Z = Z,
                           methods = methods, cf = 5, stacking = "short",
@@ -152,12 +150,14 @@ plot(np$numbers$ens_weights)
 
 ### Learn More about `NuisanceParameters`
 
-See our vignettes to learn more: (to be filled)
+See our vignettes to learn more:
 
 - `vignette("quick_start")` is a more detailed introduction to
   `NuisanceParameters`
-- `vignette("Estimation")` is a discussion of estimation schemes
-- `vignette("Multivalued")` is a discussion of multivalued treatments
+- `vignette("estimation")` shows available estimation options to better
+  suit the task at hand
+- `vignette("multivalued")` illustrates support of multivalued
+  treatments
 
 ### Bug reports & support
 
