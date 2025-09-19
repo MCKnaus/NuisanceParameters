@@ -47,14 +47,14 @@ ensemble_short <- function(methods,
     X_te <- X[fold, ]
     
     # On-the-fold hyperparameter tuning
-    methods_tuned <- tune_learners(type = "tune_on_fold", methods = methods, X = X_tr, Y = Y_tr)
+    mtd_tuned <- tune_learners(type = "tune_on_fold", methods = methods, X = X_tr, Y = Y_tr)
     
     fits <- ensemble_core(
-      methods = methods_tuned, X_tr = X_tr, Y_tr = Y_tr, quiet = quiet, 
+      methods = mtd_tuned, X_tr = X_tr, Y_tr = Y_tr, quiet = quiet, 
       pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np
       )
     preds <- predict.ensemble_core(
-      object = fits, methods = methods_tuned, X_tr = X_tr, Y_tr = Y_tr, X_te = X_te, 
+      object = fits, methods = mtd_tuned, X_tr = X_tr, Y_tr = Y_tr, X_te = X_te, 
       quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np
       )
     
@@ -280,7 +280,8 @@ ensemble_core <- function(methods,
       # Multiclass treatment case
       m_fit <- switch(methods[[i]]$multinomial,
         "one-vs-one" = {
-          do.call(ovo_fit, list(X = X_tr_sel, Y = Y_tr, method = methods[[i]]$method, parallel = methods[[i]]$parallel))
+          do.call(ovo_fit, list(X = X_tr_sel, Y = Y_tr, method = methods[[i]]$method, 
+                                parallel = methods[[i]]$parallel, quiet = quiet))
         },
         "one-vs-rest" = {
           do.call(ovr_fit, list(X = X_tr_sel, Y = Y_tr, method = methods[[i]]$method))
@@ -344,7 +345,7 @@ predict.ensemble_core <- function(object, methods,
       # Multiclass treatment case
       m_pred <- switch(methods[[i]]$multinomial,
         "one-vs-one" = {
-          do.call(predict.ovo_fit, list(object[[i]], X = X_tr_sel, Y = Y_tr, Xnew = X_te_sel, 
+          do.call(predict.ovo_fit, list(object[[i]], X = X_tr_sel, Y = Y_tr, Xnew = X_te_sel, quiet = quiet,
                                         method = methods[[i]]$method, parallel = methods[[i]]$parallel))
         },
         "one-vs-rest" = {

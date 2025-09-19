@@ -4,7 +4,7 @@
 \alias{ovo_fit}
 \title{Fits One-Vs-One (OvO) binary classifiers}
 \usage{
-ovo_fit(X, Y, method, parallel = FALSE, verbose = TRUE)
+ovo_fit(X, Y, method, parallel = FALSE, quiet = TRUE)
 }
 \arguments{
 \item{X}{Covariate matrix of training sample.}
@@ -16,7 +16,7 @@ ovo_fit(X, Y, method, parallel = FALSE, verbose = TRUE)
 \item{parallel}{Logical. Tries to run in parallel if \code{foreach} and 
 \code{doParallel} are available. Defaults to FALSE.}
 
-\item{verbose}{Logical. If TRUE, messages about parallel/sequential choice are printed.}
+\item{quiet}{Logical. If FALSE, messages about parallel/sequential choice are printed.}
 }
 \value{
 List of fitted OvO binary classifiers.

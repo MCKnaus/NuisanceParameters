@@ -15,18 +15,14 @@ vignette: >
 
 ## Introduction
 
-This notebook provides a gentle, general introduction to the package. Topics discussed below include:
+This notebook offers a general introduction to the package. It covers:
 
-1.  Data preprocessing and base learner creation
-
+1.  Data preprocessing and base learner setup
 2.  Estimation with multiple machine learners using short-stacking
+3.  Adding nuisance parameters ex post
+4.  Target parameter estimation and smoother matrix extraction (will be delegated to other packages in the trilogy)
 
-3.  Adding nuisance parameters ex-post
-
-4.  Target parameter estimation and smoother matrix extraction\
-    (to be outsourced to other packages in the pipeline)
-
-More advanced topics are discussed in the "*Estimation*" and "*Multivalued Treatments*" vignettes.
+More advanced topics are presented in the *Estimation* and *Multivalued Treatments* vignettes.
 
 ## Data
 
@@ -36,15 +32,15 @@ The sample is drawn from the 1991 Survey of Income and Program Participation (SI
 
 ```{r}
 library(conflicted)
-lapply(c("create_method", "design_matrix", "get_outcome_weights"), 
-       function(x) conflict_prefer(x, "NuisanceParameters", quiet = TRUE))
+invisible(lapply(c("create_method", "design_matrix", "get_outcome_weights"), 
+                 function(x) conflict_prefer(x, "NuisanceParameters", quiet = TRUE)))
 
 library(hdm)
 library(OutcomeWeights)
 library(NuisanceParameters)
 ```
 
-To speed up the running time, we will use a 20% subset of the data.
+To speed up the running time, we will use a 25% subset of the data.
 
 ```{r}
 # Find dataset description if you type ?pension in console
@@ -54,7 +50,6 @@ set.seed(123)
 idx <- sample(nrow(pension), size = round(0.25 * nrow(pension)))
 sub <- pension[idx, ]
 
-# subset
 D <- sub$p401
 Z <- sub$e401
 Y <- sub$net_tfa
@@ -62,7 +57,7 @@ X_raw <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc
                       + male + marr + pira + twoearn, data = sub)
 ```
 
-The package offers pre-processing for the covariate matrix. `design_matrix` constructs an expanded design matrix by creating interaction terms, polynomial expansions, and logarithmic transformations:
+The package provides preprocessing tools for the covariate matrix. The function `design_matrix` constructs an expanded matrix by adding interaction terms, polynomial expansions, and logarithmic transformations:
 
 ```{r}
 # see ?design_matrix
@@ -70,16 +65,16 @@ X_big <- design_matrix(data = X_raw, int = "all", int_d = 2, poly = "all", poly_
 dim(X_big)
 ```
 
-This expansion creates highly correlated covariates. Use `data_screen` to clean the data and improve its performance for prediction algorithms:
+Since this expansion can create highly correlated covariates, the function `data_screen` helps clean the data and improve performance in prediction algorithms.
 
 ```{r}
 # see ?data_screen
 X <- data_screen(X_big, treat = D, bin_cut = 0.02, corr_cut = 0.9, quiet = FALSE)
 ```
 
-Next step is to specify a list of base learners to be used in ensemble estimation. The package offers a great variety of choice, the full list of learners and their default settings can be found in `?create_method` and in the Estimation Notebook. Mmore details on hyperparameter tuning and stacking types can be also found there.
+Next, we will specify a list of base learners for the ensemble. The package offers a great variety of choices—you can find the full list of available learners and their default settings by typing `?create_method` in the console. In the *Estimation* Notebook you will find more details on hyperparameter tuning and the different types of stacking.
 
-Next, we will specify a list of base learners for the ensemble. The package offers a wide variety of choices—you can find the full list of available learners and their default settings in `?create_method` and in the Estimation Notebook. You will also find more details there on hyperparameter tuning and the different types of stacking.
+The logic is simple: choose a base learner from the available methods, add optional arguments (for example, `num_trees` for GRF’s forest), and, if desired, specify a subset of covariates to use for estimation.
 
 ```{r}
 # For tree methods, restrict to original features
@@ -91,17 +86,18 @@ methods = list(
  "forest_grf_tuned" = create_method(
    "forest_grf", arguments = c("tune_full_sample"), x_select = cols),
  "xgboost" = create_method(
-   "xgboost", arguments = list("nrounds" = 100), x_select = cols)
+   "xgboost", arguments = list("nrounds" = 150), x_select = cols)
  )
 ```
 
 ## Main Function
 
-We are now ready to run the main function.\
-The function `nuisance_parameters` carries out cross-fitted estimation of nuisance parameters.\
-If more than one method is provided, it will stack them together, creating an ensemble learner.
+We are now ready to run the main function.
 
-In this example, we use 5-fold cross-fitting (4/5 of the observations are used to train the machine learner in each cross-fitting sample fold) and keep treatment ratios balanced within the folds (`stratify = TRUE`).\
+`nuisance_parameters` carries out cross-fitted estimation of nuisance parameters. If more than one method is provided, it will stack them together, creating an ensemble learner.
+
+In this example, we use 5-fold cross-fitting (4/5 of the observations are used to train the machine learner in each cross-fitting sample fold) and keep treatment ratios balanced within the folds (`stratify = TRUE`).
+
 Short stacking is applied:
 
 ```{r}
@@ -125,8 +121,7 @@ plot(np$numbers$ens_weights)
 
 Now let’s estimate some target parameters using the early `MLeffect` function (to be outsourced).
 
-Note: the Wald AIPW estimator is skipped here because the conditional variance of the instrument given the treatment is very low.\
-This makes cross-validation in lasso/ridge unstable.
+Note: the Wald AIPW estimator is skipped here because the conditional variance of the instrument given the treatment is very low. This makes cross-validation in lasso/ridge unstable.
 
 ```{r}
 TargetParam <- MLeffect(Y, D, X, Z, 
@@ -139,11 +134,9 @@ plot(TargetParam)
 
 ## Adding nuisance parameters ex-post
 
-Nuisance parameters (and their trained models) can be easily replaced or added\
-to a `NuisanceParameter` object.
+Nuisance parameters (and their trained models) can be easily replaced or added to a `NuisanceParameter` object.
 
-For example, you might want to adjust your estimation strategy\
-and use a different set of base learners:
+For example, you might want to adjust your estimation strategy and use a different set of base learners:
 
 ```{r}
 methods_2 = list(
@@ -153,8 +146,7 @@ methods_2 = list(
  )
 ```
 
-The only important detail is to keep using the same cross-fit indicator matrix\
-from the original call:
+The only important detail is to keep using the same cross-fit indicator matrix from the original call:
 
 ```{r}
 np_2 <- nuisance_parameters(NuPa = c("Y.hat","Z.hat"),
@@ -165,8 +157,7 @@ np_2 <- nuisance_parameters(NuPa = c("Y.hat","Z.hat"),
 plot(np_2$numbers$ens_weights)
 ```
 
-Combining or replacing different `NuisanceParameter` objects\
-can be easily done with the `add_nupa` function:
+Use `add_nupa` to combine or replace different `NuisanceParameters` objects:
 
 ```{r}
 np_new <- add_nupa(np = np, np_new = np_2, NuPa = c("Y.hat","Z.hat"), replace = TRUE)
@@ -175,13 +166,13 @@ plot(np_new$numbers$ens_weights)
 
 ## Extracting smoother matrices
 
-A key feature of this package pipeline (`NuisanceParameters → MLeffects → OutcomeWeights`) is the ability to extract smoother matrices from the trained models.
+A key feature of this package pipeline (`NuisanceParameters → MLeffects → OutcomeWeights`) is the ability to extract smoothers from the underlying trained models.
 
-Smoother matrices are $N \times N$ objects that show how each observed outcome contributes to predicting each fitted outcome. The entry $s_{i \leftarrow j}$ tells us how much $Y_j$ influences $\hat Y_i$. Multiplying the smoother matrix $S$ by the outcome vector $Y$ gives the predictions: $SY = \hat Y$. A classic example is the OLS projection matrix.
+Smoother matrices are $N \times N$ objects that generate outcome predictions by weighting observed outcomes: $\hat{Y}_i = \sum^N_{j=1} s_{i \leftarrow j} Y_j$. Each entry $s_{i \leftarrow j}$ shows how much unit $j$’s outcome contributes to predicting unit $i$. A familiar example of a smoother is the OLS projection matrix.
 
-Smoothers let us express predictions as linear transformations of outcomes: this makes it possible to define outcome weights $\omega$ for complex estimators (like causal forests) and connect them to familiar diagnostic tools such as covariate balance checks. For details, see [Knaus (2024)](https://arxiv.org/abs/2411.11559).
+Smoothers let us express predictions as linear transformations of outcomes: this makes it possible to define outcome weights $\omega$ for complex machine learning estimators (like causal forests) and connect them to familiar diagnostic tools such as covariate balance checks. For details, see [Knaus (2024)](https://arxiv.org/abs/2411.11559).
 
-The function `get_outcome_weights` extracts outcome smoother matrices using the trained models saved in the previous step (to be outsourced to the `OutcomeWeights` package).
+Use `get_outcome_weights` to extract outcome smoother matrices using the trained models saved in the previous step (will be handled by the `OutcomeWeights` package):
 
 ```{r}
 # Delivers smoother matrices for each outcome nuisance parameter

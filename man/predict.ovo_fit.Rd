@@ -4,7 +4,7 @@
 \alias{predict.ovo_fit}
 \title{Predicts class probabilities using One-Vs-One (OvO) routine}
 \usage{
-\method{predict}{ovo_fit}(ovo_fit, X, Y, Xnew = NULL, method, parallel = FALSE, verbose = TRUE)
+\method{predict}{ovo_fit}(ovo_fit, X, Y, Xnew = NULL, method, parallel = FALSE, quiet = TRUE)
 }
 \arguments{
 \item{ovo_fit}{Output list of \code{\link{ovo_fit}}.}
@@ -20,7 +20,7 @@
 \item{parallel}{Logical. Tries to run in parallel if \code{foreach} and 
 \code{doParallel} packages are available. Defaults to FALSE.}
 
-\item{verbose}{Logical. If TRUE, messages about parallel/sequential choice are printed.}
+\item{quiet}{Logical. If FALSE, messages about parallel/sequential choice are printed.}
 }
 \value{
 Matrix of class probability predictions for \code{Xnew}

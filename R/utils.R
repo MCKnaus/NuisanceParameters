@@ -702,8 +702,8 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, methods) {
 #'     \code{alpha}, and \code{imbalance.penalty}.
 #'
 #'     \item If \code{arguments = "tune_on_fold"}, tuning is performed on the
-#'     estimation part of the cross-fitting split (K–1 folds), which is roughly
-#'     K times more computationally demanding.
+#'     estimation part of the cross-fitting split (F–1 folds), which is roughly
+#'     F times more computationally demanding.
 #'   }
 #'
 #'   \item \code{"xgboost"}: Gradient boosting via \code{xgboost}, using 100 
@@ -1189,7 +1189,7 @@ tune_xgb_hyperband <- function(X, Y,
   }
 
   configs <- replicate(n_configs, sample_params(), simplify = FALSE)
-  budgets <- c(10, 30, max_rounds)
+  budgets <- c(15, 35, max_rounds)
 
   best_score <- Inf
   best_params <- NULL

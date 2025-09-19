@@ -8,12 +8,12 @@
 #' @param method Method to use for fitting binary classifiers (e.g., "logit" or "xgboost").
 #' @param parallel Logical. Tries to run in parallel if \code{foreach} and 
 #'  \code{doParallel} are available. Defaults to FALSE.
-#' @param verbose Logical. If TRUE, messages about parallel/sequential choice are printed.
+#' @param quiet Logical. If FALSE, messages about parallel/sequential choice are printed.
 #'
 #' @return List of fitted OvO binary classifiers.
 #'
 #' @keywords internal
-ovo_fit <- function(X, Y, method, parallel = FALSE, verbose = TRUE) {
+ovo_fit <- function(X, Y, method, parallel = FALSE, quiet = TRUE) {
   if (min(Y) == 0) Y <- Y + 1
 
   class_labels <- sort(unique(Y))
@@ -27,13 +27,13 @@ ovo_fit <- function(X, Y, method, parallel = FALSE, verbose = TRUE) {
       n_cores <- max(1, parallel::detectCores() - 1)
       cl <- parallel::makeCluster(n_cores)
       doParallel::registerDoParallel(cl)
-      if (verbose) message("Registered parallel backend with ", n_cores, " cores.")
+      message("Registered parallel backend with ", n_cores, " cores.")
     }
     use_parallel <- foreach::getDoParWorkers() > 1
   }
 
   if (use_parallel) {
-    if (verbose) message("[OvO Par]")
+    if (!quiet) message("[OvO Par]")
     `%dopar%` <- foreach::`%dopar%`
 
     ovo_classifiers <- foreach::foreach(i = 1:(num_classes - 1), .combine = "c", 
@@ -55,7 +55,7 @@ ovo_fit <- function(X, Y, method, parallel = FALSE, verbose = TRUE) {
       classifiers
     }
   } else {
-    if (parallel && verbose) message("Parallel backend not available. Falling back to sequential OvO fitting.")
+    if (parallel) message("Parallel backend not available. Falling back to sequential OvO fitting.")
 
     ovo_classifiers <- list()
     for (i in 1:(num_classes - 1)) {
@@ -92,13 +92,13 @@ ovo_fit <- function(X, Y, method, parallel = FALSE, verbose = TRUE) {
 #' @param method Method used for fitting the binary classifiers (e.g., "logit").
 #' @param parallel Logical. Tries to run in parallel if \code{foreach} and 
 #'  \code{doParallel} packages are available. Defaults to FALSE.
-#' @param verbose Logical. If TRUE, messages about parallel/sequential choice are printed.
+#' @param quiet Logical. If FALSE, messages about parallel/sequential choice are printed.
 #'
 #' @return Matrix of class probability predictions for \code{Xnew}
 #'
 #' @keywords internal
 predict.ovo_fit <- function(ovo_fit, X, Y, Xnew = NULL, method,
-                            parallel = FALSE, verbose = TRUE) {
+                            parallel = FALSE, quiet = TRUE) {
   if (is.null(Xnew)) Xnew <- X
   use_parallel <- FALSE
 
@@ -143,14 +143,14 @@ predict.ovo_fit <- function(ovo_fit, X, Y, Xnew = NULL, method,
       n_cores <- max(1, parallel::detectCores() - 1)
       cl <- parallel::makeCluster(n_cores)
       doParallel::registerDoParallel(cl)
-      if (verbose) message("Registered parallel backend with ", n_cores, " cores.")
+      message("Registered parallel backend with ", n_cores, " cores.")
     }
     use_parallel <- foreach::getDoParWorkers() > 1
   }
 
   # ---- Optimization ----
   if (use_parallel) {
-    if (verbose) message("[OvO Par]")
+    if (!quiet) message("[OvO Par]")
     `%dopar%` <- foreach::`%dopar%`
     
     opt_results <- foreach::foreach(row = 1:n_samples, .combine = "rbind", .export = "kl_convergence") %dopar% {
@@ -164,7 +164,7 @@ predict.ovo_fit <- function(ovo_fit, X, Y, Xnew = NULL, method,
     }
     fit <- opt_results
   } else {
-    if (parallel && verbose) message("Parallel backend not available. Falling back to sequential prediction.")
+    if (parallel) message("Parallel backend not available. Falling back to sequential prediction.")
 
     opt_results <- apply(q_matrix_tensor, MARGIN = 1, function(q_matrix_row) {
       opt_result <- stats::optim(rep(1 / n_classes, n_classes),
