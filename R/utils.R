@@ -172,7 +172,7 @@ prep_cf_mat <- function(N,
 #' @param is_mult Logical. Indicates whether the outcome is multinomial
 #'   (\code{TRUE}) or binary/continuous (\code{FALSE}).
 #' @param do_bfgs Logical. If \code{TRUE} and the outcome is multinomial,
-#'   estimates weights by BFGS optimization with a softmax constraint.
+#'   estimates ensemble weights by BFGS optimization with a softmax constraint.
 #'   If \code{FALSE}, estimates weights via stacked NNLS from the \code{nnls} package.
 #'
 #' @return A numeric vector of ensemble weights, normalized to sum to 1.
@@ -190,7 +190,7 @@ nnls_weights <- function(X, Y,
                          do_bfgs = FALSE) {
   if (is.null(subset)) subset <- rep(TRUE, length(Y))
   
-  ## Multinomial + BFGS optimization
+  ## Multinomial - BFGS optimization
   if (is_mult && do_bfgs) {
     softmax <- function(z) { z <- z - max(z); exp(z) / sum(exp(z)) }
     one_hot_Y <- one_hot(Y = Y)
@@ -210,17 +210,14 @@ nnls_weights <- function(X, Y,
     nnls_w <- softmax(bfgs$par)
     
   } else if (is_mult && !do_bfgs) {
-    ## Multinomial + stacked NNLS
-    # Stack outcomes (K*N vector) + flatten predictions (K*N × M matrix)
-    Y <- Y[subset]
-    X <- X[subset, ,]
-    Y_stack <- as.vector(one_hot(Y = Y))
-    X_stack <- sapply(dimnames(X)[[3]], function(m) as.vector(X[, , m]))
-    nnls_w <- nnls::nnls(A = X_stack, b = Y_stack)$x
+    ## Multinomial - NNLS - stack Y (K*N vector) and flatten X (K*N × M matrix)
+    Y_stack <- as.vector(one_hot(Y[subset]))
+    X_stack <- apply(X[subset, , , drop = FALSE], 3, as.vector)
+    nnls_w <- nnls::nnls(A = as.matrix(X_stack), b = Y_stack)$x
     
   } else {
     ## Binary/continuous outcome
-    nnls_w <- nnls::nnls(A = X[subset, ], b = Y[subset])$x
+    nnls_w <- nnls::nnls(A = as.matrix(X[subset, ]), b = Y[subset])$x
   }
   
   # Handle degenerate all-zero weights
@@ -654,30 +651,105 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, methods) {
 
 #' Method creation for ensemble
 #'
-#' Creates the methods to be used in the subsequent \code{\link{ensemble}} model.
+#' Creates methods to be used in the subsequent \code{\link{ensemble}} model.
 #'
 #' @param method Choose method from available options. See details for supported methods.
-#' @param x_select Optional logical vector of length equal to the number of
-#'   columns of the covariate matrix indicating which variables should be used by
-#'   this method. E.g., tree-based methods usually should not be provided with
-#'   interactions that Lasso is using.
-#' @param arguments Optional list containing additional arguments that should be
-#'   passed to the underlying method, or a character string specifying tuning
-#'   mode. See details.
-#' @param multinomial Optional character specifying multiclass handling approach.
-#'   One of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.
-#' @param parallel Optional logical. If TRUE, attempts parallelization for the One-Vs-One (OvO)
-#'   multiclass routine. Requires \code{foreach} and \code{doParallel} packages to be installed.
-#' @param name Optional string naming the method.
+#' @param x_select Optional logical vector (length = number of covariates) indicating which
+#'  variables to use. For example, tree-based methods typically exclude the
+#'  interactions used by Lasso.
+#' @param arguments Optional list of additional arguments passed to the underlying
+#'   method, or a character string specifying tuning mode. See details.
+#' @param multinomial Optional character specifying multiclass handling approach:
+#'   one of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.
+#' @param parallel Optional logical. If \code{TRUE}, enables parallelization for
+#'   the One-Vs-One (OvO) multiclass routine. Requires \code{foreach} and
+#'   \code{doParallel}.
 #'
-#' @return List object that can be passed as input to \code{\link{ensemble}}
+#' @return A list object that can be passed as input to \code{\link{ensemble}}.
 #'
 #' @details
-#' Supported methods: \code{"mean"}, \code{"ols"}, \code{"ridge"}, \code{"plasso"},
-#' \code{"forest_grf"}, \code{"lasso"}, \code{"knn"}, \code{"forest_drf"},
-#' \code{"xgboost"}, \code{"rlasso"}, \code{"logit"}, \code{"logit_nnet"},
-#' \code{"nb_gaussian"}, \code{"nb_bernoulli"}, \code{"xgboost_prop"}, \code{"svm"},
-#' \code{"prob_forest"}, \code{"ranger"}, \code{"knn_prop"}.
+#' Supported methods include:
+#'
+#' \itemize{
+#'   \item \code{"mean"}: Mean difference.
+#'
+#'   \item \code{"ols"}: Ordinary Least Squares.
+#'
+#'   \item \code{"ridge"}: Ridge regression via \code{glmnet}. Uses 10-fold
+#'   cross-validation (over 100 log-spaced values by default) to select the
+#'   regularization strength \eqn{\lambda}. Users may supply a custom
+#'   \eqn{\lambda} sequence, choose the CV loss, and set the number of folds.
+#'
+#'   \item \code{"plasso"}: Post-Lasso estimator via \code{glmnet}, with tuning
+#'   settings identical to Ridge.
+#'
+#'   \item \code{"lasso"}: Standard Lasso via \code{glmnet}, with tuning settings
+#'   identical to Ridge.
+#'
+#'   \item \code{"rlasso"}: Lasso via \code{hdm} with a theory-driven,
+#'   data-dependent penalty robust to heteroskedastic and non-Gaussian errors.
+#'   By default, \code{rlasso()} includes sets the penalty with theoretical choices 
+#'   (\eqn{c = 1.1}, \eqn{\gamma = 0.1 / \log(n)}).
+#'
+#'   \item \code{"forest_grf"}: Regression forest via \code{grf}, with defaults
+#'   \code{num.trees = 2000}, \code{min.node.size = 5},
+#'   \code{sample.fraction = 0.5}, and \code{honesty = TRUE}.
+#'
+#'   \itemize{
+#'     \item If \code{arguments = "tune_full_sample"}, tuning is performed on the
+#'     full sample \eqn{(X,Y)} over \code{sample.fraction}, \code{mtry},
+#'     \code{min.node.size}, \code{honesty.fraction}, \code{honesty.prune.leaves},
+#'     \code{alpha}, and \code{imbalance.penalty}.
+#'
+#'     \item If \code{arguments = "tune_on_fold"}, tuning is performed on the
+#'     estimation part of the cross-fitting split (K–1 folds), which is roughly
+#'     K times more computationally demanding.
+#'   }
+#'
+#'   \item \code{"xgboost"}: Gradient boosting via \code{xgboost}, using 100 
+#'   boosting rounds by default. Supports the same tuning logic as regression
+#'   forests. The Hyperband-like tuning routine and tunable hyperparameters are
+#'   described in \code{?tune_xgb_hyperband}.
+#'
+#'   \item \code{"knn"}: k-Nearest Neighbors via \code{FastKNN}, with
+#'   \eqn{k = 10} neighbors by default.
+#'
+#'   \item \code{"forest_drf"}: Distributional random forest via \code{drf}, with
+#'   defaults \code{min.node.size = 15}, \code{num.trees = 2000},
+#'   \code{splitting.rule = "FourierMMD"}.
+#'
+#'   \item \code{"logit"}: Logistic regression via \code{glmnet}. Uses
+#'   \code{family = "binomial"} for binary outcomes and
+#'   \code{family = "multinomial"} for multiclass outcomes.
+#'
+#'   \item \code{"logit_nnet"}: Multinomial logistic regression via
+#'   \code{nnet::multinom()}.
+#'
+#'   \item \code{"nb_gaussian"}: Gaussian Naive Bayes via
+#'   \code{naivebayes::gaussian_naive_bayes()}.
+#'
+#'   \item \code{"nb_bernoulli"}: Bernoulli Naive Bayes via
+#'   \code{naivebayes::naive_bayes()} with Bernoulli likelihood.
+#'
+#'   \item \code{"xgboost_prop"}: Gradient boosting via \code{xgboost} for
+#'   classification or propensity score estimation. Uses
+#'   \code{objective = "binary:logistic"} for binary outcomes and
+#'   \code{objective = "multi:softprob"} for multiclass outcomes. Defaults to
+#'   100 boosting rounds unless \code{nrounds} is specified.
+#'
+#'   \item \code{"svm"}: Support Vector Machine via \code{e1071::svm()}.
+#'   Defaults to \code{kernel = "radial"}, \code{type = "C-classification"},
+#'   and enables probability estimates (\code{probability = TRUE}).
+#'   
+#'   \item \code{"prob_forest"}: Probability forest via
+#'   \code{grf::probability_forest()}. Grows 2000 trees by default.
+#'
+#'   \item \code{"ranger"}: Random forest classifier via \code{ranger}.
+#'   Grows 500 trees by default.
+#'
+#'   \item \code{"knn_prop"}: k-Nearest Neighbors classifier via
+#'   \code{kknn::train.kknn()}.
+#' }
 #'
 #' For the \code{arguments} parameter, if a character string is provided, it must
 #' be one of \code{c("tune_on_fold", "tune_full_sample")} to specify tuning mode.
@@ -693,21 +765,18 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, methods) {
 #'   "logit_ovo" = create_method("logit", multinomial = "one-vs-one", parallel = TRUE),
 #'   "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
 #' )
-create_method <- function(
-    method = c(
-      "mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf",
-      "xgboost", "rlasso", "logit", "logit_nnet", "nb_gaussian", "nb_bernoulli",
-      "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop"
-    ),
-    x_select = NULL,
-    multinomial = NULL,
-    parallel = FALSE,
-    arguments = list(),
-    name = NULL) {
+create_method <- function(method = c("mean", "ols", "ridge", "plasso", "forest_grf", 
+                                     "lasso", "knn", "forest_drf", "xgboost", "rlasso", 
+                                     "logit", "logit_nnet", "nb_gaussian", "nb_bernoulli",
+                                     "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop"
+                                     ),
+                          x_select = NULL,
+                          multinomial = NULL,
+                          parallel = FALSE,
+                          arguments = list()) {
   # Sanity checks
   method <- match.arg(method)
 
-  # Check if other inputs are valid
   if (!(is.null(arguments) || is.list(arguments) || is.character(arguments))) {
     stop("Provide either NULL, a list, or a character string for arguments.")
   }
@@ -720,10 +789,6 @@ create_method <- function(
 
   if (!(is.null(x_select) || is.logical(x_select))) {
     stop("Provide either NULL or logical for x_select.")
-  }
-
-  if (!((is.character(name) && length(name) == 1) || is.null(name))) {
-    stop("Provide single string to name method.")
   }
 
   if (!is.logical(parallel) || length(parallel) != 1) {
@@ -740,14 +805,12 @@ create_method <- function(
     }
   }
 
-  # Return method specification
   return(list(
     method = method,
     multinomial = multinomial,
     parallel = parallel,
     arguments = arguments,
-    x_select = x_select,
-    name = name
+    x_select = x_select
   ))
 }
 
@@ -1200,17 +1263,17 @@ tune_learners <- function(type = c("tune_full_sample", "tune_on_fold"),
 
   # Process each method in the list
   for (i in seq_along(methods)) {
-    current_method <- methods[[i]]
+    mtd <- methods[[i]]
 
-    if (!is.null(current_method$arguments) && identical(current_method$arguments, type)) {
-      if (is.null(current_method$x_select)) {
+    if (!is.null(mtd$arguments) && identical(mtd$arguments, type)) {
+      if (is.null(mtd$x_select)) {
         X_sub <- X
       } else {
-        X_sub <- X[, current_method$x_select, drop = FALSE]
+        X_sub <- X[, mtd$x_select, drop = FALSE]
       }
 
       # GRF forest tuning
-      if (identical(current_method$method, "forest_grf")) {
+      if (identical(mtd$method, "forest_grf")) {
         tuned_forest <- grf::regression_forest(
           X = X_sub,
           Y = Y,
@@ -1222,7 +1285,7 @@ tune_learners <- function(type = c("tune_full_sample", "tune_on_fold"),
       }
 
       # XGBoost tuning using hyperband
-      else if (identical(current_method$method, "xgboost")) {
+      else if (identical(mtd$method, "xgboost")) {
         tuned_xgb <- tune_xgb_hyperband(X = X_sub, Y = Y)
 
         methods[[i]][["arguments"]] <- tuned_xgb[["params"]]

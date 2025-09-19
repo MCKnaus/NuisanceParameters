@@ -346,7 +346,6 @@ weights.ensemble_core <- function(object,
   for (i in 1:length(object)) {
     if (isFALSE(quiet)) print(paste0("Smoother weights: ", methods[[i]]$method))
     wrapper <- paste0(methods[[i]]$method, "_fit")
-    
     x_select <- methods[[i]]$x_select
     X_tr_sel <- if (is.null(x_select)) X_tr else X_tr[, x_select]
     X_te_sel <- if (is.null(x_select)) X_te else X_te[, x_select]
@@ -618,7 +617,7 @@ weights.forest_drf_fit <- function(forest_drf_fit, Xnew = NULL, ...) {
 #' a given model element from \code{np_models$Y.hat.d_m} or \code{np_models$Y.hat.z_m}.
 #'
 #' @param sub_element A model element (e.g., from \code{np_models$Y.hat.d_m} or \code{np_models$Y.hat.z_m}).
-#' @param np_models A list containing ensemble models with components \code{Y.hat.d_m} and \code{Y.hat.z_m}.
+#' @param models A list containing ensemble models with components \code{Y.hat.d_m} and \code{Y.hat.z_m}.
 #' @param d_mat Logical matrix of treatment indicators.
 #' @param z_mat Logical matrix of instrument indicators.
 #'
@@ -626,18 +625,14 @@ weights.forest_drf_fit <- function(forest_drf_fit, Xnew = NULL, ...) {
 #'   otherwise, \code{NULL}.
 #'
 #' @keywords internal
-get_subset <- function(sub_element, np_models, d_mat, z_mat) {
+get_subset <- function(sub_element, models, d_mat, z_mat) {
   # Check for matches in Y.hat.d_m
-  for (i in seq_along(np_models$Y.hat.d_m)) {
-    if (identical(sub_element, np_models$Y.hat.d_m[[i]])) {
-      return(d_mat[, i])
-    }
-  }
+  idx <- which(vapply(models$Y.hat.d_m, identical, logical(1), sub_element))
+  if (length(idx)) return(d_mat[, idx])
+  
   # Check for matches in Y.hat.z_m
-  for (i in seq_along(np_models$Y.hat.z_m)) {
-    if (identical(sub_element, np_models$Y.hat.z_m[[i]])) {
-      return(z_mat[, i])
-    }
-  }
+  idx <- which(vapply(models$Y.hat.z_m, identical, logical(1), sub_element))
+  if (length(idx)) return(z_mat[, idx])
+  
   NULL
 }

@@ -22,7 +22,7 @@ a factor or integer vector of class labels.}
 (\code{TRUE}) or binary/continuous (\code{FALSE}).}
 
 \item{do_bfgs}{Logical. If \code{TRUE} and the outcome is multinomial,
-estimates weights by BFGS optimization with a softmax constraint.
+estimates ensemble weights by BFGS optimization with a softmax constraint.
 If \code{FALSE}, estimates weights via stacked NNLS from the \code{nnls} package.}
 }
 \value{

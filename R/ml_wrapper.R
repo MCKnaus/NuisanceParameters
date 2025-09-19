@@ -351,12 +351,12 @@ xgboost_fit <- function(X, Y, arguments = list()) {
   if (is.null(arguments$lambda)) arguments$lambda <- 1
   if (is.null(arguments$eta)) arguments$eta <- 0.3
 
-  nrounds <- if (is.null(arguments[["nrounds"]])) 100 else nrounds
+  nrounds <- if (is.null(arguments[["nrounds"]])) 100 else arguments[["nrounds"]]
   arguments[["nrounds"]] <- NULL
   
   dtrain <- xgboost::xgb.DMatrix(data = as.matrix(X), label = Y)
   xgb <- do.call(xgboost::xgb.train, c(list(data = dtrain, nrounds = nrounds, params = arguments)))
-  #browser()
+
   class(xgb) = c(class(xgb), "xgboost_fit")
   return(xgb)
 }

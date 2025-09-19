@@ -32,7 +32,9 @@ Suggests:
     ranger, 
     hdm,
     glmnet,
-    OutcomeWeights
+    OutcomeWeights,
+    causalDML, 
+    conflicted
 Imports:
     stats,
     Matrix,
@@ -40,3 +42,5 @@ Imports:
     progress,
     ggplot2
 Config/testthat/edition: 3
+Depends: 
+    R (>= 3.5)

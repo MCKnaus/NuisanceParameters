@@ -154,6 +154,11 @@ plot(np$numbers$ens_weights)
 
 See our vignettes to learn more: (to be filled)
 
+- `vignette("quick_start")` is a more detailed introduction to
+  `NuisanceParameters`
+- `vignette("Estimation")` is a discussion of estimation schemes
+- `vignette("Multivalued")` is a discussion of multivalued treatments
+
 ### Bug reports & support
 
 The development version will soon be available using the `devtools`

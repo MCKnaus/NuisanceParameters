@@ -12,6 +12,7 @@ nuisance_cf(
   cv = 5,
   subset = NULL,
   storeModels = c("No", "Memory", "Disk"),
+  do_bfgs = FALSE,
   quiet = TRUE,
   pb = NULL,
   pb_np = NULL
@@ -31,6 +32,11 @@ nuisance_cf(
 \item{subset}{Optional logical vector if only subset of data should be used for prediction.}
 
 \item{storeModels}{Vector of characters indicating where to save individual models for future processing.}
+
+\item{do_bfgs}{Logical. If \code{TRUE} and the outcome is multinomial,
+estimates ensemble weights by BFGS optimization with a softmax 
+constraint. If \code{FALSE}, estimates weights via stacked NNLS 
+from the \code{nnls} package.}
 
 \item{quiet}{If FALSE, progress output is printed into console.}
 

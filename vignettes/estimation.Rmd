@@ -13,102 +13,120 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
 ---
 
-*The package is work in progress (suggestions welcome).*
+```{r}
+library(NuisanceParameters)
+library(hdm)
+```
 
-This Notebook provides additional details on different estimation mechanisms carries by the `NuisanceParameters` package.
+## Introduction
 
-## Supported Methods / Base Learners
+This vignette provides additional details on the estimation capabilities of the `NuisanceParameters` package.
 
-### Outcome, instrument, binary treatment
+Specifically, it covers:
 
--   **Mean difference.**
+-   flexible method creation
+-   short and standard stacking
+-   hyperparameter tuning for selected learners
 
--   **OLS.**
+## Registering base learners
 
--   **Ridge** ([glmnet](https://glmnet.stanford.edu/index.html)). Uses glmnet’s default 10-fold cross-validation to select the regularization strength λ (by default over 100 log-spaced values). You may also supply a custom λ sequence, choose the CV loss, and set the number of folds.
+The package offers a rich set of base learners. A detailed description of available learners and their default settings can be found in `?create_method`.
 
--   **Post-Lasso (plasso)** ([glmnet](https://glmnet.stanford.edu/index.html)). Post-Lasso estimator; tuning follows the same settings as Ridge.
+You can register a list of methods in two main ways.
 
--   **Lasso** ([glmnet](https://glmnet.stanford.edu/index.html)). Standard Lasso; tuning follows the same settings as Ridge.
+A minimal working definition of methods can be specified as:
 
--   **rlasso** ([hdm](https://github.com/MartinSpindler/hdm)). Lasso with a theory-driven, data-dependent penalty robust to heteroskedastic and non-Gaussian errors. By default, `rlasso()` includes an unpenalized intercept and sets the penalty via theoretical choices (`c = 1.1`, `gamma = 0.1/log(n)`), assuming heteroskedasticity.
+```{r}
+methods = list(
+ "xgboost" = create_method("xgboost"),
+ "rlasso" = create_method("rlasso"),
+ "logit" = create_method("logit"),
+ "logit_nnet" = create_method("logit_nnet")
+ )
+```
 
--   **Regression forest** ([grf](https://grf-labs.github.io/grf/)). Uses the default regression forest with `num.trees = 2000`, `min.node.size = 5`, `sample.fraction = 0.5`, and `honesty = TRUE`. Optional hyperparameter tuning follows the theoretical guidance of [Bach et al. (2024)](https://arxiv.org/abs/2402.04674).
+The estimation routine of `nuisance_parameters` automatically checks the defined methods and excludes those that are not suitable for a given nuisance parameter. For example, a logit specification will not be applied when estimating the outcome nuisance parameter, $E[Y \mid X = x]$.
 
-    -   If `create_method()` is called with `arguments = "tune_full_sample"`, the forest runs grf’s built-in tuning on the full sample $(X,Y)$ over `sample.fraction`, `mtry`, `min.node.size`, `honesty.fraction`, `honesty.prune.leaves`, `alpha`, and `imbalance.penalty`, setting `num.trees = 10` for speed.
+When a multivalued propensity score is estimated, users must explicitly specify the estimation technique by choosing among `"one-vs-one"`, `"one-vs-rest"`, or `"multiclass"`.
 
-    -   With `arguments = "tune_on_fold"`, the same tuning occurs on the estimation part of the cross-fitting split (K–1 folds), which requires roughly K times more computation than the former.
+```{r}
+methods = list(
+ "xgboost" = create_method("xgboost"),
+ "rlasso" = create_method("rlasso"),
+ "logit" = create_method("logit", multinomial = "one-vs-one"),
+ "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
+ )
+```
 
--   **XGBoost** ([xgboost](https://xgboost.readthedocs.io/en/stable/)). Fixes the number of boosting rounds to 100 and keeps certain hyperparameters at defaults to enable correct smoother-matrix extraction (specifically, `subsample = 1` and `alpha = 0`). It supports the same tuning logic as for the regression forest. The Hyperband-like routine draws 50 random configurations (`n_configs = 50`), evaluates them via 5-fold CV (`nfold = 5`) across increasing budgets of 10, 30, and 100 boosting rounds, retains the best one-third after each stage (`eta_downfactor = 3`), and uses early stopping with 10 rounds (`early_stopping_rounds = 10`); the default metric is RMSE (`metrics = "rmse"`). Tunable hyperparameters include `eta`, `max_depth`, `min_child_weight`, `colsample_bytree`, `colsample_bylevel` and `lambda`.
+More details on these routines are given in the vignette on multivalued treatments.
 
--   **KNN** ([FastKNN](https://cran.r-project.org/web/packages/FastKNN/FastKNN.pdf)) with $k = 10$ neighbors by default.
+Base learners can also be defined in a more flexible way, allowing finer control over the learner selection process:
 
--   **Distributional Random Forest (**[drf](https://github.com/lorismichel/drf)**).** Fits a distributional random forest using the drf package with defaults `min.node.size = 15`, `num.trees = 2000`, and `splitting.rule = "FourierMMD"`.
+```{r}
+methods = list(
+  "Y.hat" = list(
+    "forest_grf" = create_method("forest_grf"),
+    "rlasso" = create_method("rlasso")
+    ),
+  "D.hat" = list(
+    "logit_ovo" = create_method("logit", multinomial = "one-vs-one"),
+    "logit_nnet_ovr" = create_method("logit_nnet", multinomial = "one-vs-rest")
+    ), 
+  "D.hat.z" = list(
+    "prob_forest" = create_method("prob_forest", multinomial = "multiclass"),
+    "xgboost_prop_ovr" = create_method("xgboost_prop", multinomial = "multiclass")
+    ), 
+  "Y.hat.d" = list(
+    "ols" = create_method("ols"),
+    "forest_grf" = create_method("forest_grf", arguments = list("num.trees" = 1000)),
+    "knn" = create_method("knn", arguments = list("k" = 3))
+    )
+  )
+```
 
-For the list of methods used for multi-class treatments, consider a separate vignette.
-
-<br>
+A logical vector (`x_select`) can be supplied to indicate which variables to use in the estimation. For instance, tree-based methods typically exclude the interaction terms used by Lasso.
 
 ## Short- and Standard-Stacking
 
-We follow Ahrens et al. (2024) approach to stack individual base learners into an ensemble. The package supports two types of stacking. For the complete treatment, see Ahrens et al. (2024).
+Learners can be combined into an ensemble through stacking. Following Ahrens et al. (2024), the package implements two variants: standard stacking and short stacking.
 
-### Standard-Stacking
+#### Standard stacking
 
-Combining DDML with conventional stacking involves two layers of re-sampling as can be seen in Figure (borrowed from Ahrens et al., 2024). The cross-fitting layer divides the sample into $K$ cross-fitting folds, denoted by $I_1,\ldots,I_K$. In each cross-fitting step $k\in\{1,\ldots,K\}$, the stacking learner is trained on the training sample which excludes fold $I_k$ and which we label $T_k\equiv I\setminus I_k$. Fitting the stacking learner, in turn, requires sub-dividing the training sample $T_k$ further into $V$ cross-validation folds. This second sample split constitutes the cross-validation layer. We denote the cross-validation folds in cross-fitting step $k$ by $T_{k,1},\ldots,T_{k,V}$. Each candidate learner $j\in\{1,\ldots,J\}$ is cross-validated on these folds, yielding cross-validated predicted values for each learner.
+In standard stacking, each learner is trained and validated within the folds of the cross-fitting procedure. A second layer of cross-validation is used to determine ensemble weights, which are estimated with non-negative least squares. This method is statistically solid but can be very computationally expensive: with $K$ folds, $V$ validation splits, and $M$ learners, complexity grows roughly with $K \times V \times M$.
 
-The final learner fits the outcome $Y_i$ against the cross-validated predicted values of each candidate learner. The approach purpued in this package (which is also the most common choice) is to construct a convex combination via constrained least squares (CLS), with weights restricted to be non-negative and summing to one. This is done using non-negative least squares (`nnls` package). The resulting $\hat{w}_{k,j}$ are then the stacking weights. The stacking predictions are obtained as $\sum_j \hat{w}_{k,j} \hat{\ell}_{T_k}^{(j)}(X_i)$ where each learner $j$ is re-fit on $T_k$.
+#### Short stacking
 
-```{r ahrens-stacking, echo=FALSE, out.width="100%", fig.cap="Standard stacking - borrowed from Ahrens et al. (2024)"}
-knitr::include_graphics("images/stacking_diagram.pdf")
-```
+Short stacking avoids the extra validation step. Instead of re-splitting the data, it uses the cross-fitted predictions directly to estimate ensemble weights. This keeps the key benefit of cross-fitting (avoiding own-observation bias) while cutting complexity down to about $K \times M$.
 
-A drawback of DDML with stacking is its computational complexity. As pointed in Ahrens et al. (2024), DDML with stacking heuristically has a computational cost proportional to $K\times V \times J$ (considering the estimation of a single candidate learner as the unit of complexity). For example, when considering DDML with $K=5$ cross-fitting folds and $J=10$ candidate learners that are combined based on $V=5$ fold cross-validation, more than 250 candidate learners need to be individually estimated. Another potential concern is that DDML with stacking might not perform well in small samples, given that candidate learners are effectively trained on approximately $\frac{(K-1)(V-1)}{KV}$% of the full sample. These two concerns motivate short-stacking.
+Ahrens et al. (2024) suggest short stacking for most applications, especially when the number of learners $M$ is small relative to the sample size.
 
-### Short-stacking
+In the package, switching between the two forms of stacking is straightforward: adjust the `stacking` argument by either providing the string `"short"` or by supplying the number of folds to be used for cross-validating ensemble weights within each cross-fitting fold.
 
-Ahrens et al. (2024) propose to take a short-cut: Instead of fitting the final learner on the cross-validated fitted values in each step $k$ of the cross-fitting process, one can directly train the final learner on the cross-fitted values using the full sample; see Figure (borrowed from Ahrens et al., 2024). Cross-fitting thus serves a double purpose: First, it avoids the own-observation bias by avoiding overlap between the samples used for estimating high-dimensional nuisance functions and the samples used for estimating structural parameters. Second, it yields out-of-sample predicted values which we leverage for constructing the final stacking learner. As a consequence, the computational cost of DDML with short stacking is heuristically only proportional to $K\times J$ in units of estimated candidate learners.
+## Hyperparameter tuning
 
-![Short stacking - borrowed from Ahrens et al. (2024)](images/short_diagram.pdf)
+Selected learners (`grf`'s regression forest and `xgboost`) support hyperparameter tuning. See details in `?tune_learners` and `?tune_xgb_hyperband`.
 
-### Which one to choose?
+Tuning can be run on the full sample or within each fold. Note that fold-level tuning is computationally more demanding. See [Bach et al. (2024)](https://arxiv.org/abs/2402.04674) for a discussion of hyperparameter tuning in Double Machine Learning.
 
-Ahrens et al. (2024) recommend DDML with short-stacking in settings where the number of candidate learners is small relative to the sample size, i.e., $J\ll n$. They believe this setting provides a good approximation to current applications of machine learning in economics and other social sciences where it is rare to consider more than a few candidate learners. If instead the number of considered learners is very large relative to the sample size --- i.e., settings in which inference for standard linear regression on $J$ variables is invalid --- pairing DDML with short-stacking may introduce bias.
+## Example using hdm's pension dataset
 
-<br>
+We use pension dataset that is provided in the `hdm` package. The data was used in [Chernozhukov and Hansen (2004)](#0) and Belloni et al. (2014) where further details can be found. They investigate the effect of participation in the employer-sponsored 401(k) retirement savings plan on net assets (`net_tfa`), using 401(k) eligibility (`e401`) as an instrument for 401(k) participation (`p401`).
 
-## Tuning
+The sample is drawn from the 1991 Survey of Income and Program Participation (SIPP) and contains 9,915 observations. We use a subset to speed up computation:
 
 ```{r}
-library(hdm)
-library(NuisanceParameters)
-```
-
-Define out-of-sample MSE:
-
-```{r}
-calculate_rmse <- function(Y.hat, Y) {
-  sqrt(mean((Y - Y.hat)^2))
-}
-```
-
-```{r}
-# load the pension dataset
+# see ?pension for details
 data("pension", package = "hdm")
-# D <- pension$p401
-# Z <- pension$e401
-# Y <- pension$net_tfa
-# X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc
-#                   + male + marr + pira + twoearn, data = pension)
-
-idx <- sample(nrow(pension), size = round(0.45 * nrow(pension)))
-sub <- pension[idx, ]
 
 # subset
+idx <- sample(nrow(pension), size = round(0.25 * nrow(pension)))
+sub <- pension[idx, ]
+
 D <- sub$p401
 Z <- sub$e401
 Y <- sub$net_tfa
-X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc + male + marr + pira + twoearn, data = sub)
+X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc 
+                  + male + marr + pira + twoearn, data = sub)
 
 methods = list(
  "ols" = create_method("ols"),
@@ -123,62 +141,95 @@ methods_tune = list(
  )
 ```
 
-Estimate both:
+Define the out-of-sample root mean-squared error (RMSE) to compare performance across specifications:
 
 ```{r}
-np <- nuisance_parameters(NuPa = c("Y.hat"),
-                          X = X, Y = Y,
-                          methods = methods, cf = 5, stacking = "short",
-                          storeModels = "Memory", quiet = FALSE)
+calculate_rmse <- function(Y.hat, Y) {
+  sqrt(mean((Y - Y.hat)^2))
+}
+```
 
-np_tune <- nuisance_parameters(NuPa = c("Y.hat"),
-                               X = X, Y = Y,
-                               methods = methods_tune, cf = 5, stacking = "short",
-                               storeModels = "Memory", quiet = FALSE)
+And estimate the specified nuisance parameters:
+
+```{r}
+time_short <- system.time({
+  np <- nuisance_parameters(
+    NuPa = c("Y.hat", "D.hat"), X = X, Y = Y, D = D, 
+    methods = methods, cf = 5, stacking = "short", storeModels = "Memory")
+  })
+
+time_short_tune <- system.time({
+  np_tune <- nuisance_parameters(
+    NuPa = c("Y.hat", "D.hat"), X = X, Y = Y, D = D, 
+    methods = methods_tune, cf = 5, stacking = "short", storeModels = "Memory")
+  })
 
 plot(np$numbers$ens_weights)
 plot(np_tune$numbers$ens_weights)
 ```
 
-And compute MSE:
+We can also compute the RMSE of the ensemble predictions as well as of the individual learners:
 
 ```{r}
-rmse <- calculate_rmse(np$nuisance_parameters$Y.hat, Y)
-rmse
+ens_rmse <- c(Default = calculate_rmse(np$nuisance_parameters$Y.hat, Y),
+              Tuned = calculate_rmse(np_tune$nuisance_parameters$Y.hat, Y))
 
-rmse <- calculate_rmse(np_tune$nuisance_parameters$Y.hat, Y)
-rmse
+learner_rmse   <- apply(np$models$Y.hat_m$ens_object$cf_preds, 2, calculate_rmse, Y)
+learner_rmse_t <- apply(np_tune$models$Y.hat_m$ens_object$cf_preds, 2, calculate_rmse, Y)
+
+cat("Ensemble:\n"); print(round(ens_rmse, 4))
+cat("\nDefault learners:\n"); print(round(learner_rmse, 4))
+cat("\nTuned learner:\n"); print(round(learner_rmse_t, 4))
 ```
 
-We can also check the individual models in terms of rmse:
+We now turn to standard stacking, using 3-fold cross-validation. Note that standard stacking produces a set of ensemble weights for each cross-fitting fold.
 
 ```{r}
-rmse <- apply(np[["models"]][["Y.hat_m"]][["ens_object"]][["cf_preds"]], 
-              2, calculate_rmse, Y = Y)
-rmse
+time_stand <- system.time({
+  np <- nuisance_parameters(
+    NuPa = c("Y.hat", "D.hat"), X = X, Y = Y, D = D, 
+    methods = methods, cf = 5, stacking = 3, storeModels = "No")
+  })
 
-rmse <- apply(np_tune[["models"]][["Y.hat_m"]][["ens_object"]][["cf_preds"]], 
-              2, calculate_rmse, Y = Y)
-rmse
+time_stand_tune <- system.time({
+  np_tune <- nuisance_parameters(
+    NuPa = c("Y.hat", "D.hat"), X = X, Y = Y, D = D, 
+    methods = methods_tune, cf = 5, stacking = 3, storeModels = "No")
+  })
+
+plot(np$numbers$ens_weights)
+plot(np_tune$numbers$ens_weights)
 ```
+
+Finally, we perform on-the-fold hyperparameter tuning, which is expected to be the most resource-intensive:
 
 ```{r}
-forest <- grf::regression_forest(X = X, Y = Y)
-forest_t <- grf::regression_forest(X = X, Y = Y, tune.parameters = "all", num.trees = 100)
+methods_tune = list(
+ "ols" = create_method("ols"),
+ "forest_grf" = create_method("forest_grf", arguments = c("tune_on_fold")),
+ "xgboost" = create_method("xgboost", arguments = c("tune_on_fold"))
+ )
 
-arguments <- forest_t$tunable.params
-rf <- do.call(grf::regression_forest, c(list(X = X, Y = Y), arguments))
+time_short_fold_tune <- system.time({
+  np <- nuisance_parameters(
+    NuPa = c("Y.hat", "D.hat"), X = X, Y = Y, D = D, 
+    methods = methods_tune, cf = 5, stacking = "short", storeModels = "No")
+  })
+
+time_stand_fold_tune <- system.time({
+  np_tune <- nuisance_parameters(
+    NuPa = c("Y.hat", "D.hat"), X = X, Y = Y, D = D, 
+    methods = methods_tune, cf = 5, stacking = 3, storeModels = "No")
+  })
+
+# Display the runtime
+time_df <- data.frame(
+  Method = c("Short", "Short (sample tuned)", "Short (fold tuned)",
+             "Standard", "Standard (sample tuned)", "Standard (fold tuned)"),
+  Time = c(time_short[1], time_short_tune[1], time_short_fold_tune[1],
+           time_stand[1], time_stand_tune[1], time_stand_fold_tune[1]))
+
+print(time_df)
 ```
 
-```{r}
-rmse <- apply(forest$predictions, 2, calculate_rmse, Y = Y)
-rmse
-
-rmse <- apply(forest_t$predictions, 2, calculate_rmse, Y = Y)
-rmse
-
-rmse <- apply(rf$predictions, 2, calculate_rmse, Y = Y)
-rmse
-```
-
-Something is off.....
+### 

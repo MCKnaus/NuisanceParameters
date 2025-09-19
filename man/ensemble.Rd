@@ -9,6 +9,7 @@ ensemble(
   X,
   Y,
   nfolds = 5,
+  do_bfgs = FALSE,
   quiet = TRUE,
   pb = NULL,
   pb_np = NULL,
@@ -26,6 +27,11 @@ used in the ensemble model.}
 
 \item{nfolds}{Integer. Number of folds used in cross-validation of 
 ensemble weights. Default is 5.}
+
+\item{do_bfgs}{Logical. If \code{TRUE} and the outcome is multinomial,
+estimates ensemble weights by BFGS optimization with a softmax 
+constraint. If \code{FALSE}, estimates weights via stacked NNLS 
+from the \code{nnls} package.}
 
 \item{quiet}{Logical. If \code{FALSE}, progress output is printed to the console.}
 

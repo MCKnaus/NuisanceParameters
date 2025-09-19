@@ -11,42 +11,115 @@ create_method(
   x_select = NULL,
   multinomial = NULL,
   parallel = FALSE,
-  arguments = list(),
-  name = NULL
+  arguments = list()
 )
 }
 \arguments{
 \item{method}{Choose method from available options. See details for supported methods.}
 
-\item{x_select}{Optional logical vector of length equal to the number of
-columns of the covariate matrix indicating which variables should be used by
-this method. E.g., tree-based methods usually should not be provided with
-interactions that Lasso is using.}
+\item{x_select}{Optional logical vector (length = number of covariates) indicating which
+variables to use. For example, tree-based methods typically exclude the
+interactions used by Lasso.}
 
-\item{multinomial}{Optional character specifying multiclass handling approach.
-One of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.}
+\item{multinomial}{Optional character specifying multiclass handling approach:
+one of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.}
 
-\item{parallel}{Optional logical. If TRUE, attempts parallelization for the One-Vs-One (OvO)
-multiclass routine. Requires \code{foreach} and \code{doParallel} packages to be installed.}
+\item{parallel}{Optional logical. If \code{TRUE}, enables parallelization for
+the One-Vs-One (OvO) multiclass routine. Requires \code{foreach} and
+\code{doParallel}.}
 
-\item{arguments}{Optional list containing additional arguments that should be
-passed to the underlying method, or a character string specifying tuning
-mode. See details.}
-
-\item{name}{Optional string naming the method.}
+\item{arguments}{Optional list of additional arguments passed to the underlying
+method, or a character string specifying tuning mode. See details.}
 }
 \value{
-List object that can be passed as input to \code{\link{ensemble}}
+A list object that can be passed as input to \code{\link{ensemble}}.
 }
 \description{
-Creates the methods to be used in the subsequent \code{\link{ensemble}} model.
+Creates methods to be used in the subsequent \code{\link{ensemble}} model.
 }
 \details{
-Supported methods: \code{"mean"}, \code{"ols"}, \code{"ridge"}, \code{"plasso"},
-\code{"forest_grf"}, \code{"lasso"}, \code{"knn"}, \code{"forest_drf"},
-\code{"xgboost"}, \code{"rlasso"}, \code{"logit"}, \code{"logit_nnet"},
-\code{"nb_gaussian"}, \code{"nb_bernoulli"}, \code{"xgboost_prop"}, \code{"svm"},
-\code{"prob_forest"}, \code{"ranger"}, \code{"knn_prop"}.
+Supported methods include:
+
+\itemize{
+  \item \code{"mean"}: Mean difference.
+
+  \item \code{"ols"}: Ordinary Least Squares.
+
+  \item \code{"ridge"}: Ridge regression via \code{glmnet}. Uses 10-fold
+  cross-validation (over 100 log-spaced values by default) to select the
+  regularization strength \eqn{\lambda}. Users may supply a custom
+  \eqn{\lambda} sequence, choose the CV loss, and set the number of folds.
+
+  \item \code{"plasso"}: Post-Lasso estimator via \code{glmnet}, with tuning
+  settings identical to Ridge.
+
+  \item \code{"lasso"}: Standard Lasso via \code{glmnet}, with tuning settings
+  identical to Ridge.
+
+  \item \code{"rlasso"}: Lasso via \code{hdm} with a theory-driven,
+  data-dependent penalty robust to heteroskedastic and non-Gaussian errors.
+  By default, \code{rlasso()} includes sets the penalty with theoretical choices 
+  (\eqn{c = 1.1}, \eqn{\gamma = 0.1 / \log(n)}).
+
+  \item \code{"forest_grf"}: Regression forest via \code{grf}, with defaults
+  \code{num.trees = 2000}, \code{min.node.size = 5},
+  \code{sample.fraction = 0.5}, and \code{honesty = TRUE}.
+
+  \itemize{
+    \item If \code{arguments = "tune_full_sample"}, tuning is performed on the
+    full sample \eqn{(X,Y)} over \code{sample.fraction}, \code{mtry},
+    \code{min.node.size}, \code{honesty.fraction}, \code{honesty.prune.leaves},
+    \code{alpha}, and \code{imbalance.penalty}.
+
+    \item If \code{arguments = "tune_on_fold"}, tuning is performed on the
+    estimation part of the cross-fitting split (K–1 folds), which is roughly
+    K times more computationally demanding.
+  }
+
+  \item \code{"xgboost"}: Gradient boosting via \code{xgboost}, using 100 
+  boosting rounds by default. Supports the same tuning logic as regression
+  forests. The Hyperband-like tuning routine and tunable hyperparameters are
+  described in \code{?tune_xgb_hyperband}.
+
+  \item \code{"knn"}: k-Nearest Neighbors via \code{FastKNN}, with
+  \eqn{k = 10} neighbors by default.
+
+  \item \code{"forest_drf"}: Distributional random forest via \code{drf}, with
+  defaults \code{min.node.size = 15}, \code{num.trees = 2000},
+  \code{splitting.rule = "FourierMMD"}.
+
+  \item \code{"logit"}: Logistic regression via \code{glmnet}. Uses
+  \code{family = "binomial"} for binary outcomes and
+  \code{family = "multinomial"} for multiclass outcomes.
+
+  \item \code{"logit_nnet"}: Multinomial logistic regression via
+  \code{nnet::multinom()}.
+
+  \item \code{"nb_gaussian"}: Gaussian Naive Bayes via
+  \code{naivebayes::gaussian_naive_bayes()}.
+
+  \item \code{"nb_bernoulli"}: Bernoulli Naive Bayes via
+  \code{naivebayes::naive_bayes()} with Bernoulli likelihood.
+
+  \item \code{"xgboost_prop"}: Gradient boosting via \code{xgboost} for
+  classification or propensity score estimation. Uses
+  \code{objective = "binary:logistic"} for binary outcomes and
+  \code{objective = "multi:softprob"} for multiclass outcomes. Defaults to
+  100 boosting rounds unless \code{nrounds} is specified.
+
+  \item \code{"svm"}: Support Vector Machine via \code{e1071::svm()}.
+  Defaults to \code{kernel = "radial"}, \code{type = "C-classification"},
+  and enables probability estimates (\code{probability = TRUE}).
+  
+  \item \code{"prob_forest"}: Probability forest via
+  \code{grf::probability_forest()}. Grows 2000 trees by default.
+
+  \item \code{"ranger"}: Random forest classifier via \code{ranger}.
+  Grows 500 trees by default.
+
+  \item \code{"knn_prop"}: k-Nearest Neighbors classifier via
+  \code{kknn::train.kknn()}.
+}
 
 For the \code{arguments} parameter, if a character string is provided, it must
 be one of \code{c("tune_on_fold", "tune_full_sample")} to specify tuning mode.

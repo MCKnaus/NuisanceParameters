@@ -80,6 +80,10 @@ ensemble_short <- function(methods,
 #' @param Y Vector of outcomes of the training sample.
 #' @param nfolds Integer. Number of folds used in cross-validation of 
 #'  ensemble weights. Default is 5.
+#' @param do_bfgs Logical. If \code{TRUE} and the outcome is multinomial,
+#'                estimates ensemble weights by BFGS optimization with a softmax 
+#'                constraint. If \code{FALSE}, estimates weights via stacked NNLS 
+#'                from the \code{nnls} package.
 #' @param quiet Logical. If \code{FALSE}, progress output is printed to the console.
 #' @param pb A progress bar object to track overall computation progress.
 #' @param pb_np String indicating the current nuisance parameter being 
@@ -102,6 +106,7 @@ ensemble_short <- function(methods,
 ensemble <- function(methods,
                      X, Y,
                      nfolds = 5,
+                     do_bfgs = FALSE,
                      quiet = TRUE,
                      pb = NULL, pb_np = NULL, pb_cf = NULL, pb_cv = NULL) {
   
@@ -131,7 +136,7 @@ ensemble <- function(methods,
     # Is multivalued propensity score being estimated?
     is_mult <- !is.null(methods[[1]]$multinomial)
     
-    nnls_w <- nnls_weights(X = cf_preds, Y = Y, is_mult = is_mult, do_bfgs = FALSE)
+    nnls_w <- nnls_weights(X = cf_preds, Y = Y, is_mult = is_mult, do_bfgs = do_bfgs)
 
     # Re-run all methods on the full sample (fs)
     fits_fs <- ensemble_core(
@@ -336,7 +341,6 @@ predict.ensemble_core <- function(object, methods,
     if (is.null(methods[[i]]$multinomial)) {
       m_pred <- do.call(paste0("predict.", wrapper), list(object[[i]], X = X_tr_sel, Y = Y_tr, Xnew = X_te_sel))
     } else {
-
       # Multiclass treatment case
       m_pred <- switch(methods[[i]]$multinomial,
         "one-vs-one" = {
@@ -369,7 +373,7 @@ predict.ensemble_core <- function(object, methods,
     if (is_vec) {
       preds[, i] <- m_pred
     } else {
-      preds[, , i] <- as.matrix(m_pred)
+      preds[, , i] <- as.matrix(m_pred) 
     }
   }
   

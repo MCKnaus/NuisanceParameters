@@ -1,0 +1,129 @@
+---
+title: "Multivalued Treatments"
+subtitle: ""
+author:
+  - Michael Knaus
+  - Stefan Glaisner
+  - Roman Rakov
+date: "09/25"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{Estimation}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+```{r}
+library(conflicted)
+lapply(c("create_method", "design_matrix", "data_screen"), 
+       function(x) conflict_prefer(x, "NuisanceParameters", quiet = TRUE))
+
+library(causalDML)
+library(NuisanceParameters)
+```
+
+## Introduction
+
+This notebook presents methods for estimating nuisance parameters in the presence of multivalued treatments.\
+It covers three main components:
+
+-   approaches to estimate generalized propensity scores: multiclass, One-vs-Rest (OvR), and One-vs-One (OvO)
+-   ensembling techniques: stacked non-negative least squares and the BFGS algorithm
+-   an application to the Pennsylvania re-employment bonus experiment
+
+## Estimating propensity scores for multivalued treatments
+
+When propensity scores must be estimated for treatments with more than two values, algorithms designed for binary tasks can often be extended using specific strategies. Two common approaches are One-vs-Rest (OvR) and One-vs-One (OvO).
+
+**One-vs-Rest (OvR)** reduces a multi-class problem to a series of binary tasks. For example, with categories A, B, and C, one model distinguishes A from (B and C), another B from (A and C), and a third C from (A and B). Each model is trained on the full dataset, with outcomes recoded as “this class” versus “the rest.” Predictions from all models are then normalized to yield class probabilities.
+
+**One-vs-One (OvO)** instead builds a separate classifier for every pair of classes. With A, B, and C, one model distinguishes A from B, another A from C, and a third B from C. In general, $T(T-1)/2$ models are trained, each using only the relevant subset of data. Final predictions are obtained by combining the pairwise probabilities, often through Kullback–Leibler (KL) distance minimization. Note that the number of models grows quickly as $T$ increases—for instance, 13 classes require 78 classifiers.
+
+## Approaches to obtain ensemble weights
+
+With multivalued treatments, each learner produces an array of size $N \times K \times M$, where $K$ is the number of treatments and $M$ the number of models. Each row sums to one across treatment states.
+
+This structure rules out standard ensembling methods such as OLS, since they would break the probability constraint. Two alternatives are implemented in this package. The first is stacked NNLS: all treatment-specific estimates are stacked across $K$, a single outcome vector is formed, and $X$ is flattened into a $(KN \times M)$ matrix, on which `nnls` is run. The second, activated by setting `do_bfgs = TRUE`, uses a quasi-Newton optimization (BFGS) to approximate the Hessian and locate local minima of smooth, unconstrained nonlinear functions. For multinomial outcomes, BFGS estimates ensemble weights under a softmax constraint, with mean squared error (i.e. the Brier score) as the loss function.
+
+## Pennsylvania re-employment bonus experiment
+
+We analyze the Pennsylvania re-employment bonus experiment (Bilias, 2000).
+
+These experiments were conducted in the 1980s by the U.S. Department of Labor to test the incentive effects of alternative compensation schemes for unemployment insurance (UI): UI claimants were randomly assigned either to a control group or one of six treatment groups.
+
+All treatments offered a cash bonus for finding a job quickly, but varied three factors: the bonus size (low = 3x or high = 6x the weekly benefit amount), the time limit to qualify (short = 6 weeks or long = 12 weeks), and whether a job search workshop was offered. The control group received the standard unemployment benefits with no bonus or workshop.
+
+The matrix of covariates, $X$, consists of age group dummies, gender, race, the number of dependents, quarter of enrollment, location within the state, existence of recall expectations and type of occupation. The outcome $Y$ is the duration of the first unemployment spell (weeks).
+
+```{r}
+data(pa_reemployment)
+Penn <- pa_reemployment
+
+Y <- log(Penn$inuidur1)
+D <- Penn$tg
+X_raw <- model.matrix(~0 + female + black + hispanic + othrace + dep + q2 
+                  + q3 + q4 + q5 + q6 + recall + agelt35 + agegt54 
+                  + durable + nondurable + lusd + husd + muld, data = Penn)
+
+X <- data_screen(data = X_raw, treat = D, bin_cut = 0.02, corr_cut = 0.9, quiet = FALSE)
+```
+
+We define a flexible set of base learners. For propensity score estimation, all available multiclass strategies are tried, and the One-vs-One specification is parallelized. See `?create_method` for details on parallelization.
+
+We also set `stratify = TRUE` so that cross-fitting folds will preserve the treatment ratios from the full sample.
+
+```{r}
+methods = list(
+ "ols" = create_method("ols"),
+ "plasso" = create_method("plasso"),
+ "forest_grf" = create_method("forest_grf"),
+ "logit" = create_method("logit", multinomial = "multiclass"),
+ "logit_nnet" = create_method("logit_nnet", multinomial = "one-vs-rest"),
+ "prob_forest" = create_method("prob_forest", multinomial = "multiclass"),
+ "ranger" = create_method("ranger", multinomial = "one-vs-one", parallel = TRUE)
+ )
+
+np <- nuisance_parameters(NuPa = c("Y.hat.d", "D.hat"), X = X, Y = Y, D = D,
+                          methods = methods, cf = 3, stacking = "short", 
+                          stratify = TRUE, storeModels = "No")
+
+plot(np$numbers$ens_weights)
+```
+
+The default method for estimating ensemble weights with multivalued treatments is non-negative least squares from the `nnls` package applied to stacked predictions. Alternatively, ensemble weights can be estimated by BFGS optimization:
+
+```{r}
+np <- nuisance_parameters(NuPa = c("Y.hat.d", "D.hat"), X = X, Y = Y, D = D,
+                          methods = methods, cf = 3, stacking = "short",
+                          stratify = TRUE, storeModels = "No", do_bfgs = TRUE)
+
+plot(np$numbers$ens_weights)
+```
+
+As an illustration, we use the estimated nuisance parameters in the AIPW double-robust score to estimate the target parameter: the average treatment effect of receiving any of the six effective treatments.
+
+For this, we rely on the infrastructure of the [causalDML](https://github.com/MCKnaus/causalDML) package. The function `DML_aipw` allows us to pass already estimated outcome and treatment nuisance parameters.
+
+```{r}
+# see ?causalDML::DML_aipw
+DML = DML_aipw(y = Y, w = D, x = X, 
+                e_mat = np$nuisance_parameters$D.hat, 
+                m_mat = np$nuisance_parameters$Y.hat.d
+                )
+
+d_label <- c("Control",
+             "Low_Short_WS",
+             "Low_Long_WS",
+             "High_Short_WS",
+             "High_Long_WS",
+             "InitHigh_Long_WS",
+             "High_Long_NoWS")
+
+plot(DML$APO, label = d_label)
+```
+
+We find results consistent with the study’s conclusion that reemployment bonuses had limited overall effects on accelerating job finding or reducing UI duration:
+
+```{r}
+DML$ATE$results[1:6,]
+```

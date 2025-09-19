@@ -26,6 +26,10 @@
 #' @param storeModels Character vector indicating whether to save individual
 #'                    models for future processing (default: "No").
 #'                    Supported options: \code{c("No", "Memory", "Disk")}
+#' @param do_bfgs Logical. If \code{TRUE} and the treatment is multinomial,
+#'                estimates ensemble weights by BFGS optimization with a softmax 
+#'                constraint. If \code{FALSE}, estimates weights via stacked NNLS 
+#'                from the \code{nnls} package.
 #' @param path Optional path to save the \code{\link{ensemble}} objects for
 #'             later processing (saved as a list of models).
 #' @param quiet Logical. If \code{FALSE}, progress output is printed to the console.
@@ -75,6 +79,7 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
                                 stratify = FALSE,
                                 cf, cf_mat = NULL,
                                 storeModels = c("No", "Memory", "Disk"),
+                                do_bfgs = FALSE,
                                 path = NULL,
                                 quiet = TRUE) {
   ## Checks
@@ -312,6 +317,10 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
 #' @param cv Number of cross-validation folds when estimating ensemble model (default: 1).
 #' @param subset Optional logical vector if only subset of data should be used for prediction.
 #' @param storeModels Vector of characters indicating where to save individual models for future processing.
+#' @param do_bfgs Logical. If \code{TRUE} and the outcome is multinomial,
+#'                estimates ensemble weights by BFGS optimization with a softmax 
+#'                constraint. If \code{FALSE}, estimates weights via stacked NNLS 
+#'                from the \code{nnls} package.
 #' @param quiet If FALSE, progress output is printed into console.
 #' @param pb A progress bar object to track overall computation progress.
 #' @param pb_np String indicating the current nuisance parameter being
@@ -331,6 +340,7 @@ nuisance_cf <- function(methods,
                         cv = 5,
                         subset = NULL,
                         storeModels = c("No", "Memory", "Disk"),
+                        do_bfgs = FALSE,
                         quiet = TRUE,
                         pb = NULL, pb_np = NULL) {
   ## Checks
@@ -343,15 +353,15 @@ nuisance_cf <- function(methods,
   } else { np <- rep(NA, length(Y)) }
   
   # Full-sample hyperparameter tuning
-  methods_tuned <- tune_learners(type = "tune_full_sample", methods = methods, X = X[subset, ], Y = Y[subset])
+  mtd_tuned <- tune_learners(type = "tune_full_sample", methods = methods, X = X[subset, ], Y = Y[subset])
 
   ### Short-Stacking ###
   if (cv == 1) {
     ens <- ensemble_short(
-      methods = methods_tuned, X = X, Y = Y, subset = subset, cf_mat = cf_mat,
+      methods = mtd_tuned, X = X, Y = Y, subset = subset, cf_mat = cf_mat,
       storeModels = storeModels, quiet = quiet, pb = pb, pb_np = pb_np)
     
-    nnls_w <- nnls_weights(X = ens$cf_preds, Y = Y, subset = subset, is_mult = is_mult, do_bfgs = FALSE)
+    nnls_w <- nnls_weights(X = ens$cf_preds, Y = Y, subset = subset, is_mult = is_mult, do_bfgs = do_bfgs)
     np <- if (is_mult) agg_array(a = ens$cf_preds, w = nnls_w) else predict(ens, w = nnls_w)
     
     models_nupa <- list("ens_object" = ens, "nnls_w" = nnls_w)
@@ -368,14 +378,14 @@ nuisance_cf <- function(methods,
       X_te <- X[fold, ]
 
       # On-the-fold hyperparameter tuning
-      methods_tuned <- tune_learners(type = "tune_on_fold", methods = methods, X = X_tr, Y = Y_tr)
+      mtd_tuned_fold <- tune_learners(type = "tune_on_fold", methods = mtd_tuned, X = X_tr, Y = Y_tr)
 
       ens <- ensemble(
-        methods = methods_tuned, X = X_tr, Y = Y_tr, nfolds = cv,
-        quiet = quiet, pb = pb, pb_np = pb_np, pb_cf = i)
+        methods = mtd_tuned_fold, X = X_tr, Y = Y_tr, nfolds = cv,
+        do_bfgs = do_bfgs, quiet = quiet, pb = pb, pb_np = pb_np, pb_cf = i)
       
       ens_pred <- predict(
-        object = ens, methods = methods_tuned, X = X_tr, Y = Y_tr, Xnew = X_te, 
+        object = ens, methods = mtd_tuned_fold, X = X_tr, Y = Y_tr, Xnew = X_te, 
         quiet = quiet, pb = pb, pb_np = pb_np, pb_cf = i)
         np[fold] <- ens_pred$np
         

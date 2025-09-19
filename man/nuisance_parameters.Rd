@@ -17,6 +17,7 @@ nuisance_parameters(
   cf,
   cf_mat = NULL,
   storeModels = c("No", "Memory", "Disk"),
+  do_bfgs = FALSE,
   path = NULL,
   quiet = TRUE
 )
@@ -57,6 +58,11 @@ cross-fitting folds, possibly from already estimated \code{NuisanceParameters} o
 \item{storeModels}{Character vector indicating whether to save individual
 models for future processing (default: "No").
 Supported options: \code{c("No", "Memory", "Disk")}}
+
+\item{do_bfgs}{Logical. If \code{TRUE} and the treatment is multinomial,
+estimates ensemble weights by BFGS optimization with a softmax 
+constraint. If \code{FALSE}, estimates weights via stacked NNLS 
+from the \code{nnls} package.}
 
 \item{path}{Optional path to save the \code{\link{ensemble}} objects for
 later processing (saved as a list of models).}

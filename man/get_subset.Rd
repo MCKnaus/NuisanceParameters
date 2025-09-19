@@ -4,12 +4,12 @@
 \alias{get_subset}
 \title{Determine the Corresponding Data Subset for a Model Element}
 \usage{
-get_subset(sub_element, np_models, d_mat, z_mat)
+get_subset(sub_element, models, d_mat, z_mat)
 }
 \arguments{
 \item{sub_element}{A model element (e.g., from \code{np_models$Y.hat.d_m} or \code{np_models$Y.hat.z_m}).}
 
-\item{np_models}{A list containing ensemble models with components \code{Y.hat.d_m} and \code{Y.hat.z_m}.}
+\item{models}{A list containing ensemble models with components \code{Y.hat.d_m} and \code{Y.hat.z_m}.}
 
 \item{d_mat}{Logical matrix of treatment indicators.}
 
