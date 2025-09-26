@@ -107,11 +107,14 @@ ridge_fit <- function(X, Y, arguments = list()) {
     stop("The 'glmnet' package is not installed. 'Ridge' learner is optional (in Suggests).\n",
          "Install it with: install.packages('glmnet')", call. = FALSE)
   }
-
-  x_means <- colMeans(X, na.rm = TRUE)
-  x_sds <- apply(X, 2, stats::sd, na.rm = TRUE)
+  
+  x_means <- colMeans(X)
+  x_sds <- sqrt(apply(X, 2, stats::var))
   x_std <- scale(X, x_means, x_sds)
-  ridge <- do.call(glmnet::cv.glmnet, c(list(x = x_std, y = Y, alpha = 0, standardize = FALSE, intercept = TRUE), arguments))
+  
+  ridge <- do.call(glmnet::cv.glmnet, c(list(x = x_std, y = Y, alpha = 0, 
+                                             standardize = FALSE, intercept = TRUE, 
+                                             thresh = 1e-20), arguments))
   ridge[["x_means"]] <- x_means
   ridge[["x_sds"]] <- x_sds
 

@@ -426,10 +426,12 @@ weights.ridge_fit <- function(ridge_fit, X, Y, Xnew = NULL, ...) {
   X <- scale(X, ridge_fit$x_means, ridge_fit$x_sds)
   X <- add_intercept(X)
   p <- ncol(X) - 1
+  
   Xnew <- scale(Xnew, ridge_fit$x_means, ridge_fit$x_sds)
   Xnew <- add_intercept(Xnew)
 
   sd_y <- sqrt(stats::var(Y) * ((N - 1) / N))
+
   lambda <- (1 / sd_y) * ridge_fit$lambda.min * N
 
   # Hat matrix. Reference: https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat
