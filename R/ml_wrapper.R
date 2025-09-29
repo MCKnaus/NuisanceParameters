@@ -33,6 +33,7 @@ mean_fit <- function(X, Y, ...) {
 #'
 #' @method predict mean_fit
 #' @keywords internal
+#' @exportS3Method
 predict.mean_fit <- function(mean_fit, Xnew = NULL, ...) {
   if (is.null(Xnew)) {
     fit <- rep(mean_fit$mean, mean_fit$N)
@@ -78,6 +79,7 @@ ols_fit <- function(X, Y, ...) {
 #'
 #' @method predict ols_fit
 #' @keywords internal
+#' @exportS3Method
 predict.ols_fit <- function(ols_fit, Xnew = NULL, ...) {
   Xnew <- add_intercept(Xnew)
   Xnew <- Xnew[, !is.na(ols_fit)]
@@ -136,9 +138,26 @@ ridge_fit <- function(X, Y, arguments = list()) {
 #'
 #' @method predict ridge_fit
 #' @keywords internal
+#' @exportS3Method
 predict.ridge_fit <- function(ridge_fit, Xnew, ...) {
+  X <- ridge_fit[["call"]][["x"]]
+  X <- add_intercept(X)
+
+  Y <- ridge_fit[["call"]][["y"]]
+  N <- nrow(X)
+  p <- ncol(X) - 1
+  
   Xnew <- scale(Xnew, ridge_fit$x_means, ridge_fit$x_sds)
-  fit <- as.vector(predict(ridge_fit, newx = Xnew, s = "lambda.min"))
+  Xnew <- add_intercept(Xnew)
+  
+  sd_y <- sqrt(stats::var(Y) * ((N - 1) / N))
+  lambda <- (1 / sd_y) * ridge_fit$lambda.min * N
+  
+  # Reference: https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat
+  hat_mat <- Xnew %*% solve(crossprod(X) + lambda * diag(x = c(0, rep(1, p)))) %*% t(X)
+  
+  # fit <- as.vector(predict(ridge_fit, newx = Xnew, s = "lambda.min"))
+  fit <- as.vector(hat_mat %*% Y)
 
   return(fit)
 }
@@ -160,7 +179,7 @@ predict.ridge_fit <- function(ridge_fit, Xnew, ...) {
 plasso_fit <- function(X, Y, arguments = list()) {
   if (!requireNamespace("plasso", quietly = TRUE)) {
     stop("The 'plasso' package is not installed. This learner is optional (in Suggests).\n",
-         "Install it with: install.packages('plasso')", call. = FALSE)
+         "Install it with: devtools::install_github('stefan-1997/plasso')", call. = FALSE)
   }
 
   plasso <- do.call(plasso::cv.plasso, c(list(x = X, y = Y), arguments))
@@ -184,6 +203,7 @@ plasso_fit <- function(X, Y, arguments = list()) {
 #'
 #' @method predict plasso_fit
 #' @keywords internal
+#' @exportS3Method
 predict.plasso_fit <- function(plasso_fit, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- plasso_fit$x
   fit <- as.vector(predict(plasso_fit, newx = Xnew, type = "response", s = "optimal", se_rule = 0)$plasso)
@@ -232,6 +252,7 @@ rlasso_fit <- function(X, Y, arguments = list()) {
 #'
 #' @method predict rlasso_fit
 #' @keywords internal
+#' @exportS3Method
 predict.rlasso_fit <- function(rlasso_fit, Xnew = NULL, ...) {
   fit <- as.vector(predict(rlasso_fit, newdata = Xnew))
 
@@ -279,6 +300,7 @@ forest_grf_fit <- function(X, Y, arguments = list()) {
 #'
 #' @method predict forest_grf_fit
 #' @keywords internal
+#' @exportS3Method
 predict.forest_grf_fit <- function(forest_grf_fit, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- forest_grf_fit$X.orig
   fit <- predict(forest_grf_fit, newdata = Xnew)$prediction
@@ -378,6 +400,7 @@ xgboost_fit <- function(X, Y, arguments = list()) {
 #'
 #' @method predict xgboost_fit
 #' @keywords internal
+#' @exportS3Method
 predict.xgboost_fit <- function(xgboost_fit, Xnew = NULL, ...) {
   dtest <- xgboost::xgb.DMatrix(data = as.matrix(Xnew))
   fit <- predict(xgboost_fit, newdata = dtest)
@@ -426,6 +449,7 @@ lasso_fit <- function(X, Y, arguments = list()) {
 #'
 #' @method predict lasso_fit
 #' @keywords internal
+#' @exportS3Method
 predict.lasso_fit <- function(lasso_fit, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- lasso_fit$X
   fit <- predict(lasso_fit, newx = Xnew, type = "response", s = "lambda.min")
@@ -478,6 +502,7 @@ forest_drf_fit <- function(X, Y, arguments = list()) {
 #'
 #' @method predict forest_drf_fit
 #' @keywords internal
+#' @exportS3Method
 predict.forest_drf_fit <- function(forest_drf_fit, Xnew = NULL, functional = "mean", ...) {
   if (is.null(Xnew)) Xnew <- forest_drf_fit$X.orig
 
@@ -525,6 +550,7 @@ knn_fit <- function(arguments = list(), ...) {
 #'
 #' @method predict knn_fit
 #' @keywords internal
+#' @exportS3Method
 predict.knn_fit <- function(arguments, X, Y, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew = X
   k <- if (is.null(arguments$k)) 10 else arguments$k
@@ -596,16 +622,10 @@ logit_fit <- function(X, Y, arguments = list()) {
 #' @keywords internal
 predict.logit_fit <- function(logit_fit, X, Y, Xnew = NULL) {
   if (is.null(Xnew)) Xnew <- X
-  
   lambda <- min(logit_fit$lambda)
-  fit <- as.data.frame(predict(logit_fit, newx = as.matrix(Xnew), s = lambda, type = "response"))
   
-  if (length(logit_fit$classnames) == 2) {
-    fit[, 2] <- 1 - fit[, 1]
-    colnames(fit) <- rev(logit_fit$glmnet.fit$classnames)
-  } else {
-    colnames(fit) <- logit_fit$classnames
-  }
+  fit <- predict(logit_fit, newx = as.matrix(Xnew), s = lambda, type = "response")
+  if (ncol(fit) == 1) fit <- as.vector(fit)
   
   return(fit)
 }
@@ -655,15 +675,11 @@ logit_nnet_fit <- function(X, Y, arguments = list()) {
 #' @keywords internal
 predict.logit_nnet_fit <- function(logit_nnet_fit, X, Y, Xnew = NULL) {
   if (is.null(Xnew)) Xnew <- X
+  
   data <- as.data.frame(Xnew)
   data$Y <- as.factor(0)
   
-  fit <- as.data.frame(predict(logit_nnet_fit, newdata = Xnew, type = "probs"))
-  
-  if (length(unique(Y)) == 2) {
-    fit[, 2] <- 1 - fit[, 1]
-    colnames(fit) <- rev(sort(unique(Y)))
-  }
+  fit <- predict(logit_nnet_fit, newdata = Xnew, type = "probs")
   
   return(fit)
 }
@@ -711,7 +727,9 @@ nb_gaussian_fit <- function(X, Y, arguments = list()) {
 #' @keywords internal
 predict.nb_gaussian_fit <- function(nb_gaussian_fit, X, Y, Xnew = NULL) {
   if (is.null(Xnew)) Xnew <- X
+  
   fit <- predict(nb_gaussian_fit, newdata = Xnew, type = "prob")
+  if (ncol(fit) == 2) fit <- fit[, 2, drop = TRUE]
   
   return(fit)
 }
@@ -759,7 +777,9 @@ nb_bernoulli_fit <- function(X, Y, arguments = list()) {
 #' @keywords internal
 predict.nb_bernoulli_fit <- function(nb_bernoulli_fit, X, Y, Xnew = NULL) {
   if (is.null(Xnew)) Xnew <- X
+  
   fit <- predict(nb_bernoulli_fit, newdata = Xnew, type = "prob")
+  if (ncol(fit) == 2) fit <- fit[, 2, drop = TRUE]
   
   return(fit)
 }
@@ -785,7 +805,7 @@ xgboost_prop_fit <- function(X, Y, arguments = list()) {
   }
   
   K <- length(unique(Y))
-  if (is.null(arguments$nrounds)) { arguments$nrounds <- 100 }
+  if (is.null(arguments$nrounds)) arguments$nrounds <- 100
   
   if (K == 2) {
     model <- do.call(xgboost::xgboost, c(list(
@@ -822,11 +842,7 @@ predict.xgboost_prop_fit <- function(xgboost_fit, X, Y, Xnew = NULL) {
   if (is.null(Xnew)) Xnew <- X
   fit <- predict(xgboost_fit, newdata = Xnew, type = "prob")
   
-  if (length(unique(Y)) == 2) {
-    fit <- as.data.frame(fit)
-    fit[, 2] <- 1 - fit[, 1]
-    colnames(fit) <- rev(sort(unique(Y)))
-  } else {
+  if (length(unique(Y)) > 2) {
     fit <- matrix(fit, nrow = nrow(Xnew), ncol = length(unique(Y)), byrow = TRUE)
     colnames(fit) <- sort(unique(Y))
   }
@@ -874,9 +890,10 @@ svm_fit <- function(X, Y, arguments = list()) {
 #' @keywords internal
 predict.svm_fit <- function(svm_fit, X, Y, Xnew = NULL) {
   if (is.null(Xnew)) Xnew <- X
-  
   pred <- predict(svm_fit, newdata = Xnew, probability = TRUE)
+  
   fit <- attr(pred, "probabilities")
+  if (ncol(fit) == 2) fit <- fit[, 2, drop = TRUE]
   
   return(fit)
 }
@@ -919,7 +936,9 @@ prob_forest_fit <- function(X, Y, arguments = list()) {
 #' @keywords internal
 predict.prob_forest_fit <- function(prob_forest_fit, X, Y, Xnew = NULL) {
   if (is.null(Xnew)) Xnew <- X
+  
   fit <- predict(prob_forest_fit, newdata = Xnew)$predictions
+  if (ncol(fit) == 2) fit <- fit[, 2, drop = TRUE]
   
   return(fit)
 }
@@ -963,8 +982,10 @@ knn_prop_fit <- function(X, Y, arguments = list()) {
 #' @keywords internal
 predict.knn_prop_fit <- function(knn_fit, X, Y, Xnew = NULL) {
   if (is.null(Xnew)) Xnew <- X
-  Xnew <- as.data.frame(Xnew)
+  Xnew = as.data.frame(Xnew)
+
   fit <- predict(knn_fit, newdata = Xnew, type = "prob")
+  if (ncol(fit) == 2) fit <- fit[, 2, drop = TRUE]
   
   return(fit)
 }
@@ -1010,7 +1031,9 @@ predict.ranger_fit <- function(ranger_fit, X, Y, Xnew = NULL) {
   if (is.null(Xnew)) Xnew <- X
   data <- as.data.frame(Xnew)
   data$Y <- as.factor(0)
+  
   fit <- predict(ranger_fit, data = data)$predictions
+  if (ncol(fit) == 2) fit <- fit[, 2, drop = TRUE]
   
   return(fit)
 }

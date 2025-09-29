@@ -146,7 +146,7 @@ lapply(np$nuisance_parameters, head)
 plot(np$numbers$ens_weights)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
+![](man/figures/README-unnamed-chunk-1-1.png)<!-- -->
 
 ### Learn More about `NuisanceParameters`
 
@@ -154,10 +154,12 @@ See our vignettes to learn more:
 
 - `vignette("quick_start")` is a more detailed introduction to
   `NuisanceParameters`
-- `vignette("estimation")` shows available estimation options to better
-  suit the task at hand
+- `vignette("stacking")` discusses short- and standard-stacking
 - `vignette("multivalued")` illustrates support of multivalued
   treatments
+- `vignette("saving_models")` reviews three options for saving the
+  trained models
+- `vignette("hyperparameter_tuning")` covers hyperparameter tuning
 
 ### Bug reports & support
 

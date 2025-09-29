@@ -1,0 +1,189 @@
+---
+title: "Short- and Standard-Stacking"
+subtitle: ""
+author:
+  - Michael Knaus
+  - Stefan Glaisner
+  - Roman Rakov
+date: "09/25"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{Short- and Standard-Stacking}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+```{r}
+library(NuisanceParameters)
+library(hdm)
+```
+
+## Introduction
+
+This vignette provides additional details on the estimation capabilities of `NuisanceParameters`.
+
+It covers:
+
+-   flexible method creation
+-   short- and standard-stacking
+
+You can learn about hyperparameter tuning in the *Tuning* notebook.
+
+## Registering base learners
+
+The package provides a wide range of base learners. You can see a detailed description of the available learners and their default settings by typing `?create_method` in the console.
+
+There are two ways to register a method.
+
+The direct approach is to choose a base learner from the available options, add any optional arguments (e.g., `min.node.size` for *grf*), and, possibly, select a subset of covariates to use for estimation. For example, tree-based methods typically exclude the interaction terms used by Lasso.
+
+A minimal working definition of methods can be specified as:
+
+```{r}
+methods = list(
+ "logit" = create_method("logit"),
+ "rlasso" = create_method("rlasso"),
+ "xgboost" = create_method("xgboost"),
+ "prob_forest" = create_method("prob_forest")
+ )
+```
+
+The estimation routine of `nuisance_parameters` automatically checks the defined methods and excludes those that are not suitable for a given nuisance parameter. For example, a logit will not be applied when estimating the outcome nuisance parameter, $E[Y \mid X = x]$.
+
+When the treatment variable is multivalued, users must choose the estimation technique from `"one-vs-one"`, `"one-vs-rest"`, or `"multiclass"`.
+
+```{r}
+methods = list(
+ "rlasso" = create_method("rlasso"),
+ "xgboost" = create_method("xgboost"),
+ "logit" = create_method("logit", multinomial = "one-vs-one"),
+ "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
+ )
+```
+
+More details are provided in the vignette on multivalued treatments.
+
+Methods can also be defined in a more flexible way, allowing finer control over the learner selection:
+
+```{r}
+methods = list(
+  "Y.hat" = list(
+    "rlasso" = create_method("rlasso"),
+    "forest_grf" = create_method("forest_grf"),
+    "xgboost" = create_method("xgboost", arguments = list("eta" = 0.1, "max_depth" = 5))
+    ),
+  "D.hat" = list(
+    "logit_ovo" = create_method("logit", multinomial = "one-vs-one"),
+    "logit_nnet_ovr" = create_method("logit_nnet", multinomial = "one-vs-rest"),
+    "ranger_ovo" = create_method("ranger", multinomial = "one-vs-one", parallel = TRUE)
+    ), 
+  "D.hat.z" = list(
+    "prob_forest" = create_method("prob_forest", multinomial = "multiclass"),
+    "xgboost_prop_ovr" = create_method("xgboost_prop", multinomial = "multiclass")
+    ), 
+  "Y.hat.d" = list(
+    "ols" = create_method("ols"),
+    "knn" = create_method("knn", arguments = list("k" = 3)),
+    "forest_grf" = create_method("forest_grf", arguments = list("num.trees" = 1000))
+    )
+  )
+```
+
+## Short- and standard-stacking
+
+Learners can be combined into an ensemble through stacking. Following [Ahrens et al. (2024)](https://arxiv.org/abs/2401.01645), we implement two variants: standard- and short-stacking.
+
+For illustration, we use the pension dataset provided in the *hdm* package. The data was used in [Chernozhukov and Hansen (2004)](#0) and Belloni et al. (2014) to study the effect of participation in the employer-sponsored 401(k) retirement savings plan on net assets (`net_tfa`), using 401(k) eligibility (`e401`) as an instrument for 401(k) participation (`p401`).
+
+The sample contains 9,915 observations. We use a 25% subset to speed up computation:
+
+```{r}
+# see ?pension for details
+data("pension", package = "hdm")
+
+# subset
+idx <- sample(nrow(pension), size = round(0.25 * nrow(pension)))
+sub <- pension[idx, ]
+
+D <- sub$p401
+Z <- sub$e401
+Y <- sub$net_tfa
+X_raw <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc
+                      + male + marr + pira + twoearn, data = sub)
+```
+
+The covariate matrix can be expanded with interaction terms, polynomial terms, and logarithmic transformations using the `design_matrix()` function:
+
+```{r}
+# see ?design_matrix
+X_big <- design_matrix(data = X_raw, int = "all", int_d = 2, poly = "all", poly_d = 2)
+```
+
+Since this expansion can create highly correlated covariates, we use `data_screen()` to clean the data and improve prediction performance.
+
+```{r}
+# see ?data_screen
+X <- data_screen(X_big, treat = D, bin_cut = 0.02, corr_cut = 0.9, quiet = FALSE)
+```
+
+To capture potential nonlinearities in the data, we specify a flexible set of base learners:
+
+```{r}
+# For tree methods, restrict to original features
+cols <- colnames(X) %in% colnames(X_raw)
+
+methods = list(
+ "ridge" = create_method("ridge"),
+ "logit" = create_method("logit"),
+ "plasso" = create_method("plasso"),
+ "xgboost" = create_method("xgboost", x_select = cols),
+ "forest_grf" = create_method("forest_grf", x_select = cols),
+ "prob_forest" = create_method("prob_forest", x_select = cols)
+ )
+```
+
+With all preparations complete, we are ready to estimate the base learners and stack them into an ensemble.
+
+In `NuisanceParameters`, switching between the two forms of stacking is straightforward: adjust the `stacking` argument by either providing the string `"short"` or by supplying the number of folds to be used for cross-validating ensemble weights within each cross-fitting fold.
+
+#### Standard stacking
+
+In standard stacking, each learner is trained and validated within the folds of the cross-fitting procedure. A second layer of cross-validation is used to determine ensemble weights, which are estimated with non-negative least squares. This method is statistically solid but can be very computationally expensive: with $F$ folds, $V$ validation splits, and $M$ learners, complexity grows roughly with $F \times V \times M$.
+
+In this example, we use 5-fold cross-fitting (4/5 of the observations are used to train the machine learner in each cross-fitting split) and 3-fold cross-validation.
+
+Note that standard stacking produces a set of ensemble weights for each cross-fitting fold.
+
+```{r}
+time_stand <- system.time({
+  np <- nuisance_parameters(
+    NuPa = c("Y.hat", "D.hat"), X = X, Y = Y, D = D,
+    methods = methods, cf = 5, stacking = 3, storeModels = "No")
+  })
+
+plot(np$numbers$ens_weights)
+```
+
+#### Short stacking
+
+Short stacking avoids the extra validation step. Instead of re-splitting the data, it uses the cross-fitted predictions directly to estimate ensemble weights. This keeps the key benefit of cross-fitting (avoiding own-observation bias) while cutting complexity down to about $F \times M$.
+
+[Ahrens et al. (2024)](https://arxiv.org/abs/2401.01645) suggest short stacking for most applications, especially when the number of learners $M$ is small relative to the sample size.
+
+```{r}
+time_short <- system.time({
+  np <- nuisance_parameters(
+    NuPa = c("Y.hat", "D.hat"), X = X, Y = Y, D = D, 
+    methods = methods, cf = 5, stacking = "short", storeModels = "Memory")
+  })
+
+plot(np$numbers$ens_weights)
+```
+
+As expected, standard stacking is more resource-intensive:
+
+```{r}
+time_df <- data.frame(Method = c("Short", "Standard"),
+                      Time = c(time_short[1], time_stand[1]))
+print(time_df)
+```

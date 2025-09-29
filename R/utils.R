@@ -181,13 +181,13 @@ prep_cf_mat <- function(N,
 #' \dontrun{
 #' X <- matrix(c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7), ncol = 2)
 #' Y <- c(0.25, 0.45, 0.65)
-#' nnls_w <- nnls_weights(X = X, Y = Y)
+#' ens_w <- ens_weights_maker(X = X, Y = Y)
 #' }
 #' @keywords internal
-nnls_weights <- function(X, Y, 
-                         subset = NULL, 
-                         is_mult = FALSE, 
-                         do_bfgs = FALSE) {
+ens_weights_maker <- function(X, Y, 
+                              subset = NULL, 
+                              is_mult = FALSE, 
+                              do_bfgs = FALSE) {
   if (is.null(subset)) subset <- rep(TRUE, length(Y))
   
   ## Multinomial - BFGS optimization
@@ -207,26 +207,26 @@ nnls_weights <- function(X, Y,
       method = "BFGS",
       control = list(reltol = 1e-8)
     )
-    nnls_w <- softmax(bfgs$par)
+    ens_w <- softmax(bfgs$par)
     
   } else if (is_mult && !do_bfgs) {
     ## Multinomial - NNLS - stack Y (K*N vector) and flatten X (K*N × M matrix)
     Y_stack <- as.vector(one_hot(Y[subset]))
     X_stack <- apply(X[subset, , , drop = FALSE], 3, as.vector)
-    nnls_w <- nnls::nnls(A = as.matrix(X_stack), b = Y_stack)$x
+    ens_w <- nnls::nnls(A = as.matrix(X_stack), b = Y_stack)$x
     
   } else {
     ## Binary/continuous outcome
-    nnls_w <- nnls::nnls(A = as.matrix(X[subset, ]), b = Y[subset])$x
+    ens_w <- nnls::nnls(A = as.matrix(X[subset, ]), b = Y[subset])$x
   }
   
   # Handle degenerate all-zero weights
-  if (sum(nnls_w) == 0) nnls_w <- rep(1 / length(nnls_w), length(nnls_w))
+  if (sum(ens_w) == 0) ens_w <- rep(1 / length(ens_w), length(ens_w))
   
-  nnls_w <- nnls_w / sum(nnls_w)
-  names(nnls_w) <- if (length(dim(X)) == 3) dimnames(X)[[3]] else colnames(X)
+  ens_w <- ens_w / sum(ens_w)
+  names(ens_w) <- if (length(dim(X)) == 3) dimnames(X)[[3]] else colnames(X)
 
-  return(nnls_w)
+  return(ens_w)
 }
 
 
@@ -366,22 +366,22 @@ update_progress <- function(pb, pb_np, pb_cf, pb_cv, task, method) {
 #' @param np_cf A cross-fitted nuisance parameters object containing ensemble models.
 #'   The object can have two possible structures:
 #'   \enumerate{
-#'     \item List of sublists, each containing \code{nnls_w} elements
-#'     \item Top-level \code{nnls_w} element directly accessible
+#'     \item List of sublists, each containing \code{ens_w} elements
+#'     \item Top-level \code{ens_w} element directly accessible
 #'   }
 #'
 #' @return Ensemble weights as named numeric vectors. Returns a list of weights
-#'   if multiple sublists are present, or a single named vector if \code{nnls_w}
+#'   if multiple sublists are present, or a single named vector if \code{ens_w}
 #'   is directly accessible.
 #'
 #' @keywords internal
 extract_w <- function(np_cf) {
-  if ("nnls_w" %in% names(np_cf$models_nupa)) {
-    # Structure 2: nnls_w is top-level element
-    np_cf$models_nupa$nnls_w
+  if ("ens_w" %in% names(np_cf$models_nupa)) {
+    # Structure 2: ens_w is top-level element
+    np_cf$models_nupa$ens_w
   } else {
-    # Structure 1: nnls_w is within each sublist
-    lapply(np_cf$models_nupa, function(x) x$nnls_w)
+    # Structure 1: ens_w is within each sublist
+    lapply(np_cf$models_nupa, function(x) x$ens_w)
   }
 }
 
@@ -657,8 +657,7 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, methods) {
 #' @param x_select Optional logical vector (length = number of covariates) indicating which
 #'  variables to use. For example, tree-based methods typically exclude the
 #'  interactions used by Lasso.
-#' @param arguments Optional list of additional arguments passed to the underlying
-#'   method, or a character string specifying tuning mode. See details.
+#' @param arguments Optional list of additional arguments passed to the underlying method.
 #' @param multinomial Optional character specifying multiclass handling approach:
 #'   one of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.
 #' @param parallel Optional logical. If \code{TRUE}, enables parallelization for
@@ -680,8 +679,8 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, methods) {
 #'   regularization strength \eqn{\lambda}. Users may supply a custom
 #'   \eqn{\lambda} sequence, choose the CV loss, and set the number of folds.
 #'
-#'   \item \code{"plasso"}: Post-Lasso estimator via \code{glmnet}, with tuning
-#'   settings identical to Ridge.
+#'   \item \code{"plasso"}: Post-Lasso estimator via \code{plasso} built on top of the 
+#'   \code{glmnet} package, with tuning settings identical to Ridge.
 #'
 #'   \item \code{"lasso"}: Standard Lasso via \code{glmnet}, with tuning settings
 #'   identical to Ridge.
@@ -696,14 +695,14 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, methods) {
 #'   \code{sample.fraction = 0.5}, and \code{honesty = TRUE}.
 #'
 #'   \itemize{
-#'     \item If \code{arguments = "tune_full_sample"}, tuning is performed on the
+#'     \item If \code{tuneLearners = "full_sample"}, tuning is performed on the
 #'     full sample \eqn{(X,Y)} over \code{sample.fraction}, \code{mtry},
 #'     \code{min.node.size}, \code{honesty.fraction}, \code{honesty.prune.leaves},
 #'     \code{alpha}, and \code{imbalance.penalty}.
 #'
-#'     \item If \code{arguments = "tune_on_fold"}, tuning is performed on the
-#'     estimation part of the cross-fitting split (F–1 folds), which is roughly
-#'     F times more computationally demanding.
+#'     \item If \code{tuneLearners = "fold"}, tuning is performed on the
+#'     estimation part of the cross-fitting split (\eqn{F–1} folds), which is roughly
+#'     \eqn{F} times more computationally demanding.
 #'   }
 #'
 #'   \item \code{"xgboost"}: Gradient boosting via \code{xgboost}, using 100 
@@ -751,9 +750,6 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, methods) {
 #'   \code{kknn::train.kknn()}.
 #' }
 #'
-#' For the \code{arguments} parameter, if a character string is provided, it must
-#' be one of \code{c("tune_on_fold", "tune_full_sample")} to specify tuning mode.
-#'
 #' @export
 #'
 #' @examples
@@ -761,7 +757,7 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, methods) {
 #' methods <- list(
 #'   "ols" = create_method("ols"),
 #'   "knn" = create_method("knn", arguments = list("k" = 3)),
-#'   "forest_grf" = create_method("forest_grf", arguments = c("tune_full_sample")),
+#'   "forest_grf" = create_method("forest_grf"),
 #'   "logit_ovo" = create_method("logit", multinomial = "one-vs-one", parallel = TRUE),
 #'   "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
 #' )
@@ -777,14 +773,8 @@ create_method <- function(method = c("mean", "ols", "ridge", "plasso", "forest_g
   # Sanity checks
   method <- match.arg(method)
 
-  if (!(is.null(arguments) || is.list(arguments) || is.character(arguments))) {
-    stop("Provide either NULL, a list, or a character string for arguments.")
-  }
-
-  if (is.character(arguments) && length(arguments) == 1) {
-    if (!arguments %in% c("tune_on_fold", "tune_full_sample")) {
-      stop("If arguments is a character string, it must be one of: 'tune_on_fold', 'tune_full_sample'")
-    }
+  if (!(is.null(arguments) || is.list(arguments))) {
+    stop("Provide either NULL or a list for arguments.")
   }
 
   if (!(is.null(x_select) || is.logical(x_select))) {
@@ -1245,10 +1235,18 @@ tune_xgb_hyperband <- function(X, Y,
 
 #' Tune learner hyperparameters
 #'
-#' Automatically tunes hyperparameters for specified learners in a methods list
+#' Tunes hyperparameters for specified learners in a \code{methods} list
 #'
+#' @param type Tuning type, either "\code{full_sample}" or "\code{fold}".
+#' @param tuneLearners Optional hyperparameter tuning for selected learners (see \code{\link{create_method}} 
+#'                     for details). Either \code{NULL} (default) for no tuning, or one of:
+#'   \describe{
+#'     \item{\code{"full_sample" }}{Tune hyperparameters using full sample.}
+#'     \item{\code{"fold" }}{Tuning is performed on the estimation part of the 
+#'                          cross-fitting split, which is roughly
+#'                          \eqn{F} times more computationally demanding.}
+#'   }
 #' @param methods List of methods for ensemble estimation.
-#' @param type Tuning type, either "\code{tune_full_sample}" or "\code{tune_on_fold}".
 #' @param X Covariate matrix.
 #' @param Y Numeric vector containing the outcome variable.
 #'
@@ -1256,30 +1254,34 @@ tune_xgb_hyperband <- function(X, Y,
 #'
 #' @keywords internal
 #'
-tune_learners <- function(type = c("tune_full_sample", "tune_on_fold"),
+tune_learners <- function(type = c("full_sample", "fold"),
+                          tuneLearners = NULL,
                           methods,
                           X, Y) {
   type <- match.arg(type)
+  
+  if (is.null(tuneLearners) || !identical(type, tuneLearners)) {
+    return(methods)
+  }
 
   # Process each method in the list
   for (i in seq_along(methods)) {
     mtd <- methods[[i]]
 
-    if (!is.null(mtd$arguments) && identical(mtd$arguments, type)) {
-      if (is.null(mtd$x_select)) {
-        X_sub <- X
-      } else {
-        X_sub <- X[, mtd$x_select, drop = FALSE]
-      }
+    if (is.null(mtd$x_select)) {
+      X_sub <- X
+    } else {
+      X_sub <- X[, mtd$x_select, drop = FALSE]
+    }
 
-      # GRF forest tuning
-      if (identical(mtd$method, "forest_grf")) {
-        tuned_forest <- grf::regression_forest(
-          X = X_sub,
-          Y = Y,
-          tune.parameters = "all",
-          num.trees = 50
-        )
+    # grf's random forest tuning
+    if (identical(mtd$method, "forest_grf")) {
+      tuned_forest <- grf::regression_forest(
+        X = X_sub,
+        Y = Y,
+        tune.parameters = "all",
+        num.trees = 50
+      )
 
         methods[[i]][["arguments"]] <- tuned_forest[["tuning.output"]][["params"]]
       }
@@ -1291,7 +1293,6 @@ tune_learners <- function(type = c("tune_full_sample", "tune_on_fold"),
         methods[[i]][["arguments"]] <- tuned_xgb[["params"]]
       }
     }
-  }
 
   return(methods)
 }

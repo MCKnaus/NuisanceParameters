@@ -15,7 +15,7 @@ vignette: >
 
 ```{r}
 library(conflicted)
-invisible(lapply(c("create_method", "design_matrix", "data_screen"), 
+invisible(lapply(c("create_method", "design_matrix", "data_screen", "prep_cf_mat"), 
        function(x) conflict_prefer(x, "NuisanceParameters", quiet = TRUE)))
 
 library(causalDML)
@@ -26,17 +26,17 @@ library(NuisanceParameters)
 
 This notebook introduces methods for estimating nuisance parameters with multivalued treatments, focusing on:
 
--   estimating generalized propensity scores: multiclass, One-vs-Rest (OvR), and One-vs-One (OvO)\
--   ensembling techniques: stacked non-negative least squares and the BFGS algorithm\
+-   estimating generalized propensity scores: multiclass, One-vs-Rest (OvR), and One-vs-One (OvO)
+-   ensembling techniques: stacked non-negative least squares and the BFGS algorithm
 -   an application to the Pennsylvania re-employment bonus experiment
 
 ## Estimating propensity scores for multivalued treatments
 
 When propensity scores need to be estimated for treatments with more than two values, algorithms originally designed for binary tasks can still be applied. Two common approaches are One-vs-Rest (OvR) and One-vs-One (OvO).
 
-**One-vs-Rest (OvR)** reduces a multi-class problem to a series of binary tasks. For example, with categories A, B, and C, one model distinguishes A from (B and C), another B from (A and C), and a third C from (A and B). Each model is trained on the full dataset, with outcomes recoded as “this class” versus “the rest.” Predictions from all models are then normalized to yield class probabilities.
+*One-vs-Rest (OvR)* reduces a multi-class problem to a series of binary tasks. For example, with categories A, B, and C, one model distinguishes A from (B and C), another B from (A and C), and a third C from (A and B). Each model is trained on the full dataset, with outcomes recoded as “this class” versus “the rest.” Predictions from all models are then normalized to yield class probabilities.
 
-**One-vs-One (OvO)** instead builds a separate classifier for every pair of classes. With A, B, and C, one model distinguishes A from B, another A from C, and a third B from C. In general, $K(K-1)/2$ models are trained, each using only the relevant subset of data. Final predictions are obtained by combining the pairwise probabilities, often through Kullback–Leibler (KL) distance minimization. Note that the number of models grows quickly as $K$ increases—for instance, 13 classes require 78 classifiers.
+*One-vs-One (OvO)* instead builds a separate classifier for every pair of classes. With A, B, and C, one model distinguishes A from B, another A from C, and a third B from C. In general, $K(K-1)/2$ models are trained, each using only the relevant subset of data. Final predictions are obtained by combining the pairwise probabilities, often through Kullback–Leibler (KL) distance minimization. Note that the number of models grows quickly as $K$ increases—for instance, 13 classes require 78 classifiers.
 
 Another, and often preferred, approach is to use algorithms that natively support multivalued treatments. This can be done by setting `multinomial = "multiclass"`.
 
@@ -46,7 +46,7 @@ With multivalued treatments, each learner produces an array of size $N \times K 
 
 This setup rules out standard ensembling methods like OLS, since they would violate the probability constraint. The package provides two alternatives.
 
-The first is stacked NNLS: all treatment-specific estimates are stacked across $K$, a single outcome vector is formed, and $X$ is flattened into a $(KN \times M)$ matrix, on which `nnls` is applied.
+The first is stacked non-negative least squares (NNLS): all treatment-specific estimates are stacked across $K$, a single outcome vector is formed, and $X$ is flattened into a $(KN \times M)$ matrix, on which `nnls::nnls` is applied.
 
 The second, enabled by setting `do_bfgs = TRUE`, uses a quasi-Newton optimization (BFGS) to approximate the Hessian and find local minima of smooth, unconstrained nonlinear functions. For multinomial outcomes, BFGS estimates ensemble weights under a softmax constraint, using mean squared error (the Brier score) as the loss function.
 
@@ -73,7 +73,7 @@ X_raw <- model.matrix(~0 + female + black + hispanic + othrace + dep + q2
 X <- data_screen(data = X_raw, treat = D, bin_cut = 0.02, corr_cut = 0.9, quiet = FALSE)
 ```
 
-We define a flexible set of base learners. For propensity score estimation, we explore all available multiclass strategies, and the One-vs-One specification is parallelized. See `?create_method` for details on parallelization.
+We define a flexible set of base learners. For propensity score estimation, we explore all available multiclass strategies ("one-vs-one", "one-vs-rest" and "multiclass").
 
 We also set `stratify = TRUE` so that cross-fitting folds preserve the treatment ratios from the full sample.
 
@@ -83,9 +83,9 @@ methods = list(
  "plasso" = create_method("plasso"),
  "forest_grf" = create_method("forest_grf"),
  "logit" = create_method("logit", multinomial = "multiclass"),
+ "ranger" = create_method("ranger", multinomial = "one-vs-one"),
  "logit_nnet" = create_method("logit_nnet", multinomial = "one-vs-rest"),
- "prob_forest" = create_method("prob_forest", multinomial = "multiclass"),
- "ranger" = create_method("ranger", multinomial = "one-vs-one", parallel = TRUE)
+ "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
  )
 
 np <- nuisance_parameters(NuPa = c("Y.hat.d", "D.hat"), X = X, Y = Y, D = D,
@@ -107,7 +107,7 @@ plot(np$numbers$ens_weights)
 
 We plug the estimated nuisance parameters in the doubly-robust AIPW score to estimate the target parameter: the average treatment effect of receiving any of the six effective treatments.
 
-[causalDML](https://github.com/MCKnaus/causalDML) package conveniently provides all the necessary infrastructure to achieve this: `DML_aipw` allows us to pass already estimated outcome and treatment nuisance parameters.
+The [`causalDML`](https://github.com/MCKnaus/causalDML) package provides all the necessary infrastructure for this: `DML_aipw` allows supplying pre-estimated outcome and treatment nuisance parameters.
 
 ```{r}
 # see ?causalDML::DML_aipw
@@ -127,7 +127,7 @@ d_label <- c("Control",
 plot(DML$APO, label = d_label)
 ```
 
-The ATEs represent the percentage decrease in unemployment spells resulting from program participation:
+The ATEs show the percentage decrease in unemployment spells resulting from program participation:
 
 ```{r}
 DML$ATE$results[1:6,]

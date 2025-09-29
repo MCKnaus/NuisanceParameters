@@ -12,6 +12,14 @@
 #'  the different folds.
 #' @param storeModels Character string specifying whether to store the models. 
 #'  Must be one of \code{c("No", "Memory", "Disk")} with "No" as the default.
+#' @param tuneLearners Optional hyperparameter tuning for selected learners (see \code{\link{create_method}} 
+#'                     for details). Either \code{NULL} (default) for no tuning, or one of:
+#'   \describe{
+#'     \item{\code{"full_sample" }}{Tune hyperparameters using full sample.}
+#'     \item{\code{"fold" }}{Tuning is performed on the estimation part of the 
+#'                          cross-fitting split, which is roughly
+#'                          \eqn{F} times more computationally demanding.}
+#'   }
 #' @param quiet Logical. If \code{FALSE}, progress output is printed to the console.
 #' @param pb A progress bar object to track overall computation progress.
 #' @param pb_np String indicating the current nuisance parameter being 
@@ -31,6 +39,7 @@ ensemble_short <- function(methods,
                            cf_mat,
                            subset = NULL,
                            storeModels = c("No", "Memory", "Disk"),
+                           tuneLearners = NULL,
                            quiet = TRUE, pb = NULL, pb_np = NULL) {
   # Checks
   if (is.null(subset)) subset <- rep(TRUE, nrow(X))
@@ -47,7 +56,8 @@ ensemble_short <- function(methods,
     X_te <- X[fold, ]
     
     # On-the-fold hyperparameter tuning
-    mtd_tuned <- tune_learners(type = "tune_on_fold", methods = methods, X = X_tr, Y = Y_tr)
+    mtd_tuned <- tune_learners(type = "fold", X = X_tr, Y = Y_tr,
+                               methods = methods, tuneLearners = tuneLearners)
     
     fits <- ensemble_core(
       methods = mtd_tuned, X_tr = X_tr, Y_tr = Y_tr, quiet = quiet, 
@@ -97,7 +107,7 @@ ensemble_short <- function(methods,
 #' \describe{
 #'   \item{cf_preds}{A matrix of dimension \code{nrow(X)} x \code{length(methods)} 
 #'    containing the cross-fitted predictions of the machine learning methods from the ensemble.}
-#'   \item{nnls_w}{A numeric vector of weights that each machine learning 
+#'   \item{ens_w}{A numeric vector of weights that each machine learning 
 #'    method receives in the ensemble.}
 #'   \item{ens_models}{A list of fitted machine learning models from the full sample.}
 #' }
@@ -136,7 +146,7 @@ ensemble <- function(methods,
     # Is multivalued propensity score being estimated?
     is_mult <- !is.null(methods[[1]]$multinomial)
     
-    nnls_w <- nnls_weights(X = cf_preds, Y = Y, is_mult = is_mult, do_bfgs = do_bfgs)
+    ens_w <- ens_weights_maker(X = cf_preds, Y = Y, is_mult = is_mult, do_bfgs = do_bfgs)
 
     # Re-run all methods on the full sample (fs)
     fits_fs <- ensemble_core(
@@ -151,11 +161,11 @@ ensemble <- function(methods,
       methods = methods, X_tr = X, Y_tr = Y, quiet = quiet, 
       pb = pb, pb_cf = pb_cf, pb_cv = ".", pb_np = pb_np
       )
-    nnls_w <- stats::setNames(1, names(methods))
+    ens_w <- stats::setNames(1, names(methods))
   }
   # "cf_preds" left unsaved due to standard stacking
   output <- list(
-    "nnls_w" = nnls_w,
+    "ens_w" = ens_w,
     "ens_models" = fits_fs
   )
   
@@ -179,6 +189,7 @@ ensemble <- function(methods,
 #'
 #' @keywords internal
 #' @method predict ensemble_short
+#' @exportS3Method
 predict.ensemble_short <- function(object, w = NULL, ...) {
   if (is.null(w)) w <- rep(1 / ncol(object$cf_preds), ncol(object$cf_preds))
   np <- as.vector(object$cf_preds %*% w)
@@ -213,6 +224,7 @@ predict.ensemble_short <- function(object, w = NULL, ...) {
 #'
 #' @keywords internal
 #' @method predict ensemble
+#' @exportS3Method
 predict.ensemble <- function(object,
                              methods,
                              X, Y, Xnew,
@@ -228,9 +240,9 @@ predict.ensemble <- function(object,
   is_mult <- !is.null(methods[[1]]$multinomial)
   
   if (is_mult) {
-    np <- agg_array(a = cf_preds, w = object$nnls_w)
+    np <- agg_array(a = cf_preds, w = object$ens_w)
   } else {
-    np <- as.vector(cf_preds %*% (if (length(object$ens_models) > 1) object$nnls_w else 1))
+    np <- as.vector(cf_preds %*% (if (length(object$ens_models) > 1) object$ens_w else 1))
     }
   
   return(list("cf_preds" = cf_preds, "np" = np))
@@ -325,9 +337,15 @@ ensemble_core <- function(methods,
 #'
 #' @keywords internal
 #' @method predict ensemble_core
-predict.ensemble_core <- function(object, methods,
+#' @exportS3Method
+predict.ensemble_core <- function(object, 
+                                  methods,
                                   X_tr, Y_tr, X_te,
-                                  quiet = TRUE, pb = NULL, pb_cf = NULL, pb_cv = NULL, pb_np = NULL,
+                                  quiet = TRUE, 
+                                  pb = NULL, 
+                                  pb_cf = NULL, 
+                                  pb_cv = NULL, 
+                                  pb_np = NULL,
                                   ...) {
   preds <- NULL
 
@@ -357,9 +375,9 @@ predict.ensemble_core <- function(object, methods,
         }
       )
     }
-
+    
     # If prediction is vector-like or multi-column
-    is_vec <- is.vector(m_pred) || ncol(as.matrix(m_pred)) == 1
+    is_vec <- is.vector(m_pred)
 
     # Initialize
     if (is.null(preds)) {

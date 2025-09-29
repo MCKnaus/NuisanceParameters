@@ -4,7 +4,7 @@
 \alias{weights.ensemble}
 \title{Smoother weights from cross-validated ensemble learner}
 \usage{
-\method{weights}{ensemble}(object, methods, X, Y, Xnew, nnls_w = NULL, quiet = TRUE, ...)
+\method{weights}{ensemble}(object, methods, X, Y, Xnew, ens_w = NULL, quiet = TRUE, ...)
 }
 \arguments{
 \item{object}{Trained ensemble object from \code{\link{ensemble}}.}
@@ -17,7 +17,7 @@
 
 \item{Xnew}{Covariate matrix of test sample.}
 
-\item{nnls_w}{Ensemble weights to aggregate predictions from different learners. 
+\item{ens_w}{Ensemble weights to aggregate predictions from different learners. 
 Must be a vector of length \code{ncol(object$cf_preds)}. Optional.}
 
 \item{quiet}{If \code{FALSE}, the method currently computed is printed to the console.}

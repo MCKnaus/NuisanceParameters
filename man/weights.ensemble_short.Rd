@@ -11,7 +11,7 @@
   Y,
   cf_mat,
   subset = NULL,
-  nnls_w = NULL,
+  ens_w = NULL,
   quiet = TRUE,
   ...
 )
@@ -32,7 +32,7 @@ folds (for example created by \code{\link{prep_cf_mat}}).}
 \item{subset}{Logical vector indicating which observations to use for 
 determining ensemble weights. If not provided, all observations are used.}
 
-\item{nnls_w}{Ensemble weights to aggregate predictions from different learners. 
+\item{ens_w}{Ensemble weights to aggregate predictions from different learners. 
 Must be a vector of length \code{ncol(object$cf_preds)}. Optional.}
 
 \item{quiet}{If \code{FALSE}, the method currently computed is printed to the console.}

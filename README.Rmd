@@ -3,6 +3,15 @@ bibliography: vignettes/assets/NuisanceParameters_refs.bib
 output: github_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.path = "man/figures/README-"
+)
+```
+
 # NuisanceParameters <img src="assets/temp_logo.png" align="right" height="139"/>
 
 <!-- # NuisanceParameters <img src='assets/NuisanceParameters.png' align="right" height="139" /> -->
@@ -87,8 +96,10 @@ plot(np$numbers$ens_weights)
 See our vignettes to learn more:
 
 -   `vignette("quick_start")` is a more detailed introduction to `NuisanceParameters`
--   `vignette("estimation")` shows available estimation options to better suit the task at hand
+-   `vignette("stacking")` discusses short- and standard-stacking
 -   `vignette("multivalued")` illustrates support of multivalued treatments
+-   `vignette("saving_models")` reviews three options for saving the trained models
+-   `vignette("hyperparameter_tuning")` covers hyperparameter tuning
 
 ### Bug reports & support
 

@@ -181,7 +181,7 @@ get_smoother <- function(object,
   if (cv == 1) {
     smoother_w <- weights(
       object = object$ens_object, methods = methods, X = X, Y = Y, subset = subset, 
-      nnls_w = object$nnls_w, cf_mat = cf_mat, quiet = quiet
+      ens_w = object$ens_w, cf_mat = cf_mat, quiet = quiet
       )
 
     ## Standard-Stacking
@@ -195,7 +195,7 @@ get_smoother <- function(object,
       X_te <- X[fold, ]
 
       smoother_w_fold <- weights(
-        object = object[[i]]$ens_object, methods = methods, nnls_w = object[[i]]$nnls_w,
+        object = object[[i]]$ens_object, methods = methods, ens_w = object[[i]]$ens_w,
         X = X_tr, Y = Y_tr, Xnew = X_te, quiet = quiet
         )
       
@@ -219,7 +219,7 @@ get_smoother <- function(object,
 #' @param Y Vector of outcomes of training sample.
 #' @param subset Logical vector indicating which observations to use for 
 #'  determining ensemble weights. If not provided, all observations are used.
-#' @param nnls_w Ensemble weights to aggregate predictions from different learners. 
+#' @param ens_w Ensemble weights to aggregate predictions from different learners. 
 #'  Must be a vector of length \code{ncol(object$cf_preds)}. Optional.
 #' @param cf_mat Logical matrix with \code{k} columns of indicators representing 
 #'  folds (for example created by \code{\link{prep_cf_mat}}).
@@ -230,16 +230,17 @@ get_smoother <- function(object,
 #'
 #' @method weights ensemble_short
 #' @keywords internal
+#' @exportS3Method
 weights.ensemble_short <- function(object,
                                    methods,
                                    X, Y,
                                    cf_mat,
                                    subset = NULL,
-                                   nnls_w = NULL,
+                                   ens_w = NULL,
                                    quiet = TRUE,
                                    ...) {
   
-  if (is.null(nnls_w)) nnls_w <- rep(1 / ncol(object$cf_preds), ncol(object$cf_preds))
+  if (is.null(ens_w)) ens_w <- rep(1 / ncol(object$cf_preds), ncol(object$cf_preds))
   if (is.null(subset)) subset <- rep(TRUE, length(Y))
   
   ens_models <- object$ens_models
@@ -268,7 +269,7 @@ weights.ensemble_short <- function(object,
     w_padded <- array(0, dim = c(length(test_idx), length(train_idx), length(methods)))
     w_padded[, idx_mapping, ] <- w_array
     
-    smoother_w[fold, !fold] <- agg_array(a = w_padded, w = nnls_w)
+    smoother_w[fold, !fold] <- agg_array(a = w_padded, w = ens_w)
   }
   
   return(smoother_w)
@@ -285,7 +286,7 @@ weights.ensemble_short <- function(object,
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
 #' @param Xnew Covariate matrix of test sample.
-#' @param nnls_w Ensemble weights to aggregate predictions from different learners. 
+#' @param ens_w Ensemble weights to aggregate predictions from different learners. 
 #'  Must be a vector of length \code{ncol(object$cf_preds)}. Optional.
 #' @param quiet If \code{FALSE}, the method currently computed is printed to the console.
 #' @param ... Ignore unused arguments.
@@ -294,10 +295,11 @@ weights.ensemble_short <- function(object,
 #'
 #' @method weights ensemble
 #' @keywords internal
+#' @exportS3Method
 weights.ensemble <- function(object,
                              methods,
                              X, Y, Xnew,
-                             nnls_w = NULL,
+                             ens_w = NULL,
                              quiet = TRUE,
                              ...) {
   
@@ -306,7 +308,7 @@ weights.ensemble <- function(object,
     X_tr = X, Y_tr = Y, X_te = Xnew, quiet = quiet)
   
   if (length(object$ens_models) > 1) {
-    smoother_w <- agg_array(a = w_array, w = nnls_w)
+    smoother_w <- agg_array(a = w_array, w = ens_w)
   } else {
     smoother_w <- array(w_array[, , 1], dim = dim(w_array)[-3])
   }
@@ -335,6 +337,7 @@ weights.ensemble <- function(object,
 #'
 #' @method weights ensemble_core
 #' @keywords internal
+#' @exportS3Method
 weights.ensemble_core <- function(object, 
                                   methods,
                                   X_tr, Y_tr, X_te,
@@ -370,6 +373,7 @@ weights.ensemble_core <- function(object,
 #'
 #' @keywords internal
 #' @method weights mean_fit
+#' @exportS3Method
 weights.mean_fit <- function(mean_fit, Xnew, ...) {
   w <- matrix(1 / mean_fit$N, nrow = nrow(Xnew), ncol = mean_fit$N)
 
@@ -390,6 +394,7 @@ weights.mean_fit <- function(mean_fit, Xnew, ...) {
 #'
 #' @keywords internal
 #' @method weights ols_fit
+#' @exportS3Method
 weights.ols_fit <- function(ols_fit, X, Xnew, ...) {
   X <- add_intercept(X)
   Xnew <- add_intercept(Xnew)
@@ -419,6 +424,7 @@ weights.ols_fit <- function(ols_fit, X, Xnew, ...) {
 #'
 #' @keywords internal
 #' @method weights ridge_fit
+#' @exportS3Method
 weights.ridge_fit <- function(ridge_fit, X, Y, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
   N <- nrow(X)
@@ -431,10 +437,9 @@ weights.ridge_fit <- function(ridge_fit, X, Y, Xnew = NULL, ...) {
   Xnew <- add_intercept(Xnew)
 
   sd_y <- sqrt(stats::var(Y) * ((N - 1) / N))
-
   lambda <- (1 / sd_y) * ridge_fit$lambda.min * N
 
-  # Hat matrix. Reference: https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat
+  # Reference: https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat
   hat_mat <- Xnew %*% solve(crossprod(X) + lambda * diag(x = c(0, rep(1, p)))) %*% t(X)
 
   return(hat_mat)
@@ -454,6 +459,7 @@ weights.ridge_fit <- function(ridge_fit, X, Y, Xnew = NULL, ...) {
 #'
 #' @keywords internal
 #' @method weights plasso_fit
+#' @exportS3Method
 weights.plasso_fit <- function(plasso_fit, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- plasso_fit$X
 
@@ -483,6 +489,7 @@ weights.plasso_fit <- function(plasso_fit, Xnew = NULL, ...) {
 #'
 #' @method weights rlasso_fit
 #' @keywords internal
+#' @exportS3Method
 weights.rlasso_fit <- function(rlasso_fit, Xnew = NULL, ...) {
   if (!rlasso_fit$options$post) stop("Smoother matrix requires post-lasso specification.")
   if (is.null(Xnew)) Xnew <- rlasso_fit$model
@@ -518,6 +525,7 @@ weights.rlasso_fit <- function(rlasso_fit, Xnew = NULL, ...) {
 #'
 #' @method weights forest_grf_fit
 #' @keywords internal
+#' @exportS3Method
 weights.forest_grf_fit <- function(forest_grf_fit, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- forest_grf_fit$X.orig
 
@@ -542,6 +550,7 @@ weights.forest_grf_fit <- function(forest_grf_fit, Xnew = NULL, ...) {
 #'
 #' @method weights xgboost_fit
 #' @keywords internal
+#' @exportS3Method
 weights.xgboost_fit <- function(xgboost_fit, X, Y, Xnew = NULL, ...) {
   dtrain <- xgboost::xgb.DMatrix(data = as.matrix(X), label = Y)
   dtest <- xgboost::xgb.DMatrix(data = as.matrix(Xnew))
@@ -567,6 +576,7 @@ weights.xgboost_fit <- function(xgboost_fit, X, Y, Xnew = NULL, ...) {
 #'
 #' @method weights knn_fit
 #' @keywords internal
+#' @exportS3Method
 weights.knn_fit <- function(arguments, X, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
   k <- if (is.null(arguments$k)) 10 else arguments$k
@@ -604,6 +614,7 @@ weights.knn_fit <- function(arguments, X, Xnew = NULL, ...) {
 #'
 #' @method weights forest_drf_fit
 #' @keywords internal
+#' @exportS3Method
 weights.forest_drf_fit <- function(forest_drf_fit, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- forest_drf_fit$X.orig
 

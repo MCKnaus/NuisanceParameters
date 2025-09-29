@@ -8,20 +8,20 @@ Xnew <- data.frame(x1 = rnorm(10), x2 = rnorm(10))
 # --- OvO Tests ---
 
 test_that("ovo_fit returns correct number of classifiers for 3 classes", {
-  ovo <- ovo_fit(X, Y_3class, method = "logit", parallel = FALSE, verbose = FALSE)
+  ovo <- ovo_fit(X, Y_3class, method = "logit", parallel = FALSE, quiet = TRUE)
   expect_type(ovo, "list")
   expect_equal(length(ovo), choose(length(unique(Y_3class)), 2))
   expect_true(all(grepl("_", names(ovo))))
 })
 
 test_that("ovo_fit works when classes start at 0", {
-  ovo <- ovo_fit(X, Y_0_2, method = "logit", parallel = FALSE, verbose = FALSE)
+  ovo <- ovo_fit(X, Y_0_2, method = "logit", parallel = FALSE, quiet = TRUE)
   expect_equal(length(ovo), choose(length(unique(Y_0_2)), 2))
 })
 
 test_that("predict.ovo_fit returns matrix with correct dimensions and probabilities", {
-  ovo <- ovo_fit(X, Y_3class, method = "logit", parallel = FALSE, verbose = FALSE)
-  preds <- predict.ovo_fit(ovo, X, Y_3class, Xnew = Xnew, method = "logit", parallel = FALSE, verbose = FALSE)
+  ovo <- ovo_fit(X, Y_3class, method = "logit", parallel = FALSE, quiet = TRUE)
+  preds <- predict.ovo_fit(ovo, X, Y_3class, Xnew = Xnew, method = "logit", parallel = FALSE, quiet = TRUE)
   expect_type(preds, "double")
   expect_true(is.matrix(preds) | is.data.frame(preds))
   expect_equal(dim(preds), c(nrow(Xnew), length(unique(Y_3class))))
@@ -30,8 +30,8 @@ test_that("predict.ovo_fit returns matrix with correct dimensions and probabilit
 })
 
 test_that("predict.ovo_fit works with training data as Xnew=NULL", {
-  ovo <- ovo_fit(X, Y_3class, method = "logit", parallel = FALSE, verbose = FALSE)
-  preds <- predict.ovo_fit(ovo, X, Y_3class, Xnew = NULL, method = "logit", parallel = FALSE, verbose = FALSE)
+  ovo <- ovo_fit(X, Y_3class, method = "logit", parallel = FALSE, quiet = TRUE)
+  preds <- predict.ovo_fit(ovo, X, Y_3class, Xnew = NULL, method = "logit", parallel = FALSE, quiet = TRUE)
   expect_equal(nrow(preds), nrow(X))
 })
 

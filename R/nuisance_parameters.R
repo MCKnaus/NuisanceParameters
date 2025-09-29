@@ -26,6 +26,14 @@
 #' @param storeModels Character vector indicating whether to save individual
 #'                    models for future processing (default: "No").
 #'                    Supported options: \code{c("No", "Memory", "Disk")}
+#' @param tuneLearners Optional hyperparameter tuning for selected learners (see \code{\link{create_method}} 
+#'                     for details). Either \code{NULL} (default) for no tuning, or one of:
+#'   \describe{
+#'     \item{\code{"full_sample" }}{Tune hyperparameters using full sample.}
+#'     \item{\code{"fold" }}{Tuning is performed on the estimation part of the 
+#'                          cross-fitting split, which is roughly
+#'                          \eqn{F} times more computationally demanding.}
+#'   }
 #' @param do_bfgs Logical. If \code{TRUE} and the treatment is multinomial,
 #'                estimates ensemble weights by BFGS optimization with a softmax 
 #'                constraint. If \code{FALSE}, estimates weights via stacked NNLS 
@@ -77,9 +85,11 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
                                 stacking,
                                 cluster = NULL,
                                 stratify = FALSE,
-                                cf, cf_mat = NULL,
-                                storeModels = c("No", "Memory", "Disk"),
+                                cf, 
+                                cf_mat = NULL,
                                 do_bfgs = FALSE,
+                                storeModels = c("No", "Memory", "Disk"),
+                                tuneLearners = NULL,
                                 path = NULL,
                                 quiet = TRUE) {
   ## Checks
@@ -111,8 +121,12 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
     cv <- 1
     message("With a single learner provided, estimation defaults to cross-fitted predictions.")
   }
+  
+  if (!is.null(tuneLearners) && !tuneLearners %in% c("full_sample", "fold")) {
+    stop("Invalid value for 'tuneLearners'. Must be NULL, 'full_sample', or 'fold'.")
+  }
 
-
+  
   ## Preps
   N <- nrow(X)
   K <- length(unique(D))
@@ -182,8 +196,9 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
       pb_np <- paste0(nupa, i - 1)
 
       np_cf <- nuisance_cf(
-        methods = methods[[nupa]], Y = Y, X = X, cf_mat = cf_mat, cv = cv, subset = d_mat[, i],
-        storeModels = storeModels, quiet = quiet, pb = pb, pb_np = pb_np
+        methods = methods[[nupa]], Y = Y, X = X, cf_mat = cf_mat, 
+        cv = cv, subset = d_mat[, i], storeModels = storeModels, 
+        tuneLearners = tuneLearners, quiet = quiet, pb = pb, pb_np = pb_np
       )
 
       Y.hat.d[, i] <- np_cf$np
@@ -199,8 +214,9 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
       pb_np <- paste0(nupa, i - 1)
 
       np_cf <- nuisance_cf(
-        methods = methods[[nupa]], Y = Y, X = X, cf_mat = cf_mat, cv = cv, subset = z_mat[, i],
-        storeModels = storeModels, quiet = quiet, pb = pb, pb_np = pb_np
+        methods = methods[[nupa]], Y = Y, X = X, cf_mat = cf_mat, 
+        cv = cv, subset = z_mat[, i], storeModels = storeModels, 
+        tuneLearners = tuneLearners, quiet = quiet, pb = pb, pb_np = pb_np
       )
 
       Y.hat.z[, i] <- np_cf$np
@@ -213,8 +229,9 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
     nupa <- pb_np <- "Y.hat"
 
     np_cf <- nuisance_cf(
-      methods = methods[[nupa]], Y = Y, X = X, cf_mat = cf_mat, cv = cv, subset = NULL,
-      storeModels = storeModels, quiet = quiet, pb = pb, pb_np = pb_np
+      methods = methods[[nupa]], Y = Y, X = X, cf_mat = cf_mat, 
+      cv = cv, subset = NULL, storeModels = storeModels, 
+      tuneLearners = tuneLearners, quiet = quiet, pb = pb, pb_np = pb_np
     )
 
     Y.hat <- np_cf$np
@@ -231,8 +248,9 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
       pb_np <- paste0(nupa, i - 1)
 
       np_cf <- nuisance_cf(
-        methods = methods[[nupa]], Y = D, X = X, cf_mat = cf_mat, cv = cv, subset = z_mat[, i],
-        storeModels = storeModels, quiet = quiet, pb = pb, pb_np = pb_np
+        methods = methods[[nupa]], Y = D, X = X, cf_mat = cf_mat, 
+        cv = cv, subset = z_mat[, i], storeModels = storeModels, 
+        tuneLearners = tuneLearners, quiet = quiet, pb = pb, pb_np = pb_np
       )
 
       if (K > 2) { D.hat.z[, , i] <- np_cf$np } else { D.hat.z[, i] <- np_cf$np }
@@ -245,8 +263,9 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
     nupa <- pb_np <- "D.hat"
 
     np_cf <- nuisance_cf(
-      methods = methods[[nupa]], Y = D, X = X, cf_mat = cf_mat, cv = cv, subset = NULL, 
-      storeModels = storeModels, quiet = quiet, pb = pb, pb_np = pb_np
+      methods = methods[[nupa]], Y = D, X = X, cf_mat = cf_mat, 
+      cv = cv, subset = NULL, storeModels = storeModels, 
+      tuneLearners = tuneLearners, quiet = quiet, pb = pb, pb_np = pb_np
     )
 
     D.hat <- np_cf$np
@@ -260,8 +279,9 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
     nupa <- pb_np <- "Z.hat"
 
     np_cf <- nuisance_cf(
-      methods = methods[[nupa]], Y = Z, X = X, cf_mat = cf_mat, cv = cv, subset = NULL,
-      storeModels = storeModels, quiet = quiet, pb = pb, pb_np = pb_np
+      methods = methods[[nupa]], Y = Z, X = X, cf_mat = cf_mat, 
+      cv = cv, subset = NULL, storeModels = storeModels, 
+      tuneLearners = tuneLearners, quiet = quiet, pb = pb, pb_np = pb_np
     )
 
     Z.hat <- np_cf$np
@@ -317,6 +337,14 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
 #' @param cv Number of cross-validation folds when estimating ensemble model (default: 1).
 #' @param subset Optional logical vector if only subset of data should be used for prediction.
 #' @param storeModels Vector of characters indicating where to save individual models for future processing.
+#' @param tuneLearners Optional hyperparameter tuning for selected learners (see \code{\link{create_method}} 
+#'                     for details). Either \code{NULL} (default) for no tuning, or one of:
+#'   \describe{
+#'     \item{\code{"full_sample" }}{Tune hyperparameters using full sample.}
+#'     \item{\code{"fold" }}{Tuning is performed on the estimation part of the 
+#'                          cross-fitting split, which is roughly
+#'                          \eqn{F} times more computationally demanding.}
+#'   }
 #' @param do_bfgs Logical. If \code{TRUE} and the outcome is multinomial,
 #'                estimates ensemble weights by BFGS optimization with a softmax 
 #'                constraint. If \code{FALSE}, estimates weights via stacked NNLS 
@@ -340,9 +368,11 @@ nuisance_cf <- function(methods,
                         cv = 5,
                         subset = NULL,
                         storeModels = c("No", "Memory", "Disk"),
+                        tuneLearners, 
                         do_bfgs = FALSE,
                         quiet = TRUE,
-                        pb = NULL, pb_np = NULL) {
+                        pb = NULL, 
+                        pb_np = NULL) {
   ## Checks
   if (is.null(subset)) subset <- rep(TRUE, length(Y))
 
@@ -353,18 +383,20 @@ nuisance_cf <- function(methods,
   } else { np <- rep(NA, length(Y)) }
   
   # Full-sample hyperparameter tuning
-  mtd_tuned <- tune_learners(type = "tune_full_sample", methods = methods, X = X[subset, ], Y = Y[subset])
-
+  mtd_tuned <- tune_learners(type = "full_sample", X = X[subset, ], Y = Y[subset],
+                             methods = methods, tuneLearners = tuneLearners)
+  
   ### Short-Stacking ###
   if (cv == 1) {
     ens <- ensemble_short(
-      methods = mtd_tuned, X = X, Y = Y, subset = subset, cf_mat = cf_mat,
-      storeModels = storeModels, quiet = quiet, pb = pb, pb_np = pb_np)
+      methods = mtd_tuned, X = X, Y = Y, subset = subset, cf_mat = cf_mat, 
+      storeModels = storeModels, tuneLearners = tuneLearners, 
+      quiet = quiet, pb = pb, pb_np = pb_np)
     
-    nnls_w <- nnls_weights(X = ens$cf_preds, Y = Y, subset = subset, is_mult = is_mult, do_bfgs = do_bfgs)
-    np <- if (is_mult) agg_array(a = ens$cf_preds, w = nnls_w) else predict(ens, w = nnls_w)
+    ens_w <- ens_weights_maker(X = ens$cf_preds, Y = Y, subset = subset, is_mult = is_mult, do_bfgs = do_bfgs)
+    np <- if (is_mult) agg_array(a = ens$cf_preds, w = ens_w) else predict(ens, w = ens_w)
     
-    models_nupa <- list("ens_object" = ens, "nnls_w" = nnls_w)
+    models_nupa <- list("ens_object" = ens, "ens_w" = ens_w)
     class(models_nupa) <- "ens.learner"
 
     ### Standard-Stacking ###
@@ -378,7 +410,8 @@ nuisance_cf <- function(methods,
       X_te <- X[fold, ]
 
       # On-the-fold hyperparameter tuning
-      mtd_tuned_fold <- tune_learners(type = "tune_on_fold", methods = mtd_tuned, X = X_tr, Y = Y_tr)
+      mtd_tuned_fold <- tune_learners(type = "fold", X = X_tr, Y = Y_tr,
+                                      methods = mtd_tuned, tuneLearners = tuneLearners)
 
       ens <- ensemble(
         methods = mtd_tuned_fold, X = X_tr, Y = Y_tr, nfolds = cv,
@@ -394,7 +427,7 @@ nuisance_cf <- function(methods,
         
       models_nupa[[i]] <- list(
         "ens_object" = ens_object, 
-        "nnls_w" = ens$nnls_w
+        "ens_w" = ens$ens_w
         )
     }
     class(models_nupa) <- "ens.learner"

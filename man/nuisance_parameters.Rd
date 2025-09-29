@@ -16,8 +16,9 @@ nuisance_parameters(
   stratify = FALSE,
   cf,
   cf_mat = NULL,
-  storeModels = c("No", "Memory", "Disk"),
   do_bfgs = FALSE,
+  storeModels = c("No", "Memory", "Disk"),
+  tuneLearners = NULL,
   path = NULL,
   quiet = TRUE
 )
@@ -55,14 +56,23 @@ constraints and randomization feasibility issues.}
 \item{cf_mat}{Optional logical matrix of indicators representing the different
 cross-fitting folds, possibly from already estimated \code{NuisanceParameters} object.}
 
-\item{storeModels}{Character vector indicating whether to save individual
-models for future processing (default: "No").
-Supported options: \code{c("No", "Memory", "Disk")}}
-
 \item{do_bfgs}{Logical. If \code{TRUE} and the treatment is multinomial,
 estimates ensemble weights by BFGS optimization with a softmax 
 constraint. If \code{FALSE}, estimates weights via stacked NNLS 
 from the \code{nnls} package.}
+
+\item{storeModels}{Character vector indicating whether to save individual
+models for future processing (default: "No").
+Supported options: \code{c("No", "Memory", "Disk")}}
+
+\item{tuneLearners}{Optional hyperparameter tuning for selected learners (see \code{\link{create_method}} 
+                  for details). Either \code{NULL} (default) for no tuning, or one of:
+\describe{
+  \item{\code{"full_sample" }}{Tune hyperparameters using full sample.}
+  \item{\code{"fold" }}{Tuning is performed on the estimation part of the 
+                       cross-fitting split, which is roughly
+                       \eqn{F} times more computationally demanding.}
+}}
 
 \item{path}{Optional path to save the \code{\link{ensemble}} objects for
 later processing (saved as a list of models).}

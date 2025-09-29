@@ -12,6 +12,7 @@ nuisance_cf(
   cv = 5,
   subset = NULL,
   storeModels = c("No", "Memory", "Disk"),
+  tuneLearners,
   do_bfgs = FALSE,
   quiet = TRUE,
   pb = NULL,
@@ -32,6 +33,15 @@ nuisance_cf(
 \item{subset}{Optional logical vector if only subset of data should be used for prediction.}
 
 \item{storeModels}{Vector of characters indicating where to save individual models for future processing.}
+
+\item{tuneLearners}{Optional hyperparameter tuning for selected learners (see \code{\link{create_method}} 
+                  for details). Either \code{NULL} (default) for no tuning, or one of:
+\describe{
+  \item{\code{"full_sample" }}{Tune hyperparameters using full sample.}
+  \item{\code{"fold" }}{Tuning is performed on the estimation part of the 
+                       cross-fitting split, which is roughly
+                       \eqn{F} times more computationally demanding.}
+}}
 
 \item{do_bfgs}{Logical. If \code{TRUE} and the outcome is multinomial,
 estimates ensemble weights by BFGS optimization with a softmax 

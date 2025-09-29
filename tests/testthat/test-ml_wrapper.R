@@ -1,5 +1,5 @@
 test_that("smoother weights lead to correct prediction of fitted values", {
-  n = 2000
+  n = 1000
   n_test = 25
   p = 12
   p_act = 4
@@ -81,11 +81,11 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   expect_true(all(w >= 0 & w <= 1))
   expect_equal(p, p_s, tolerance = 1e-9)
   
-  ## XGBoost: does not achieve perfect equalty
+  # # XGBoost: does not achieve perfect equalty
   # # xgboost
   # m = xgboost_fit(X = X, Y = Y)
   # p = NuisanceParameters:::predict.xgboost_fit(m, Xnew = Xnew)
-  # w = NuisanceParameters:::weights.xgboost_fit(m, X = X, Xnew = Xnew)
+  # w = NuisanceParameters:::weights.xgboost_fit(m, X = X, Y = Y, Xnew = Xnew)
   # p_s = as.vector(w %*% Y)
   # expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-7)
   # expect_true(all(w >= 0 & w <= 1))
@@ -272,15 +272,14 @@ test_that("logit_fit and predict.logit_fit work for binary", {
   skip_if_not_installed("glmnet")
   fit <- logit_fit(X, Y_bin)
   pred <- predict.logit_fit(fit, X, Y_bin, X)
-  expect_true(all(dim(pred) == c(nrow(X), 2)))
-  expect_true(all(abs(rowSums(as.matrix(pred)) - 1) < 1e-6))
+  expect_true(is.vector(pred))
   })
 
 test_that("logit_fit and predict.logit_fit work for multiclass", {
   skip_if_not_installed("glmnet")
   fit <- logit_fit(X, Y_multi)
   pred <- predict.logit_fit(fit, X, Y_multi, X)
-  expect_true(all(dim(pred) == c(nrow(X), length(unique(Y_multi)))))
+  expect_true(all(dim(pred) == c(nrow(X), length(unique(Y_multi)), 1)))
 })
 
 test_that("logit_nnet_fit and predict.logit_nnet_fit work", {
@@ -294,42 +293,42 @@ test_that("nb_gaussian_fit and predict.nb_gaussian_fit work", {
   skip_if_not_installed("naivebayes")
   fit <- nb_gaussian_fit(X, Y_bin)
   pred <- predict.nb_gaussian_fit(fit, X, Y_bin, X)
-  expect_true(is.matrix(pred) || is.data.frame(pred))
+  expect_true(is.vector(pred) || is.matrix(pred))
 })
 
 test_that("nb_bernoulli_fit and predict.nb_bernoulli_fit work", {
   skip_if_not_installed("naivebayes")
   fit <- nb_bernoulli_fit(X > 0, Y_bin)
   pred <- predict.nb_bernoulli_fit(fit, X > 0, Y_bin, X > 0)
-  expect_true(is.matrix(pred) || is.data.frame(pred))
+  expect_true(is.vector(pred) || is.matrix(pred))
 })
 
 test_that("xgboost_prop_fit and predict.xgboost_prop_fit work", {
   skip_if_not_installed("xgboost")
   fit <- xgboost_prop_fit(X, Y_bin)
   pred <- predict.xgboost_prop_fit(fit, X, Y_bin, X)
-  expect_true(is.data.frame(pred) || is.matrix(pred))
+  expect_true(is.vector(pred) || is.matrix(pred))
 })
 
 test_that("svm_fit and predict.svm_fit work", {
   skip_if_not_installed("e1071")
   fit <- svm_fit(X, Y_bin)
   pred <- predict.svm_fit(fit, X, Y_bin, X)
-  expect_true(is.matrix(pred) || is.data.frame(pred))
+  expect_true(is.vector(pred) || is.matrix(pred))
 })
 
 test_that("prob_forest_fit and predict.prob_forest_fit work", {
   skip_if_not_installed("grf")
   fit <- prob_forest_fit(X, Y_bin)
   pred <- predict.prob_forest_fit(fit, X, Y_bin, X)
-  expect_true(is.matrix(pred) || is.data.frame(pred))
+  expect_true(is.vector(pred) || is.matrix(pred))
 })
 
 test_that("knn_prop_fit and predict.knn_prop_fit work", {
   skip_if_not_installed("kknn")
   fit <- knn_prop_fit(X, Y_multi)
   pred <- predict.knn_prop_fit(fit, X, Y_multi, X)
-  expect_true(is.matrix(pred) || is.data.frame(pred))
+  expect_true(is.vector(pred) || is.matrix(pred))
 })
 
 test_that("ranger_fit and predict.ranger_fit work", {

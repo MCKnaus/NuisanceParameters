@@ -4,10 +4,25 @@
 \alias{tune_learners}
 \title{Tune learner hyperparameters}
 \usage{
-tune_learners(type = c("tune_full_sample", "tune_on_fold"), methods, X, Y)
+tune_learners(
+  type = c("full_sample", "fold"),
+  tuneLearners = NULL,
+  methods,
+  X,
+  Y
+)
 }
 \arguments{
-\item{type}{Tuning type, either "\code{tune_full_sample}" or "\code{tune_on_fold}".}
+\item{type}{Tuning type, either "\code{full_sample}" or "\code{fold}".}
+
+\item{tuneLearners}{Optional hyperparameter tuning for selected learners (see \code{\link{create_method}} 
+                  for details). Either \code{NULL} (default) for no tuning, or one of:
+\describe{
+  \item{\code{"full_sample" }}{Tune hyperparameters using full sample.}
+  \item{\code{"fold" }}{Tuning is performed on the estimation part of the 
+                       cross-fitting split, which is roughly
+                       \eqn{F} times more computationally demanding.}
+}}
 
 \item{methods}{List of methods for ensemble estimation.}
 
@@ -19,6 +34,6 @@ tune_learners(type = c("tune_full_sample", "tune_on_fold"), methods, X, Y)
 Modified methods list with tuned parameters.
 }
 \description{
-Automatically tunes hyperparameters for specified learners in a methods list
+Tunes hyperparameters for specified learners in a \code{methods} list
 }
 \keyword{internal}

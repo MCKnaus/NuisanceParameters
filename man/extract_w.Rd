@@ -10,13 +10,13 @@ extract_w(np_cf)
 \item{np_cf}{A cross-fitted nuisance parameters object containing ensemble models.
 The object can have two possible structures:
 \enumerate{
-  \item List of sublists, each containing \code{nnls_w} elements
-  \item Top-level \code{nnls_w} element directly accessible
+  \item List of sublists, each containing \code{ens_w} elements
+  \item Top-level \code{ens_w} element directly accessible
 }}
 }
 \value{
 Ensemble weights as named numeric vectors. Returns a list of weights
-  if multiple sublists are present, or a single named vector if \code{nnls_w}
+  if multiple sublists are present, or a single named vector if \code{ens_w}
   is directly accessible.
 }
 \description{

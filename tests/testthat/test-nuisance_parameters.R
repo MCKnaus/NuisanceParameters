@@ -130,7 +130,7 @@ test_that("check nuisance_parameters for D.hat", {
   # # check if ensemble output contains correct info
   # ens = readRDS(files[1])
   # expect_length(ens, 2)
-  # expect_named(ens$nnls_w)
+  # expect_named(ens$ens_w)
   # expect_equal(dim(ens$cf_preds), c(n, length(methods)))
   # expect_true(all(substr(colnames(ens$cf_preds), 1, 1) == "t"))
   # unlink(paste0(path, "/*"))
@@ -165,7 +165,7 @@ test_that("check nuisance_parameters for D.hat", {
   # # check if ensemble output contains correct info
   # ens = readRDS(files[1])
   # expect_length(ens, ncol(cf_mat))
-  # expect_named(ens[[1]]$nnls_w)
+  # expect_named(ens[[1]]$ens_w)
   # expect_equal(dim(ens[[1]]$cf_preds), c(sum(cf_mat[, 1]), length(methods)))
   # expect_true(all(substr(colnames(ens[[1]]$cf_preds), 1, 1) == "t"))
   # unlink(paste0(path, "/*"))
@@ -223,7 +223,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   complete_file = readRDS(file.path(path, "nuisance_models.RDS")) # open saved object
   ens = complete_file[["models"]][["Y.hat.d_m"]][[1]]             # select saved model for Y.hat.d[[1]] only
   expect_length(ens, 2)
-  expect_named(ens$nnls_w)
+  expect_named(ens$ens_w)
   expect_equal(dim(ens[["ens_object"]][["cf_preds"]]), c(n, length(methods)))
 
   # check for correct dimension
@@ -244,7 +244,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   complete_file = readRDS(file.path(path, "nuisance_models.RDS")) # open saved object
   ens = complete_file[["models"]][["Y.hat.d_m"]][[1]]             # select saved model for Y.hat.d[[1]] only
   expect_length(ens, 2)
-  expect_named(ens$nnls_w)
+  expect_named(ens$ens_w)
   expect_equal(dim(ens[["ens_object"]][["cf_preds"]]), c(n, length(methods)))
 
   # check for correct dimension
@@ -269,7 +269,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   complete_file = readRDS(file.path(path, "nuisance_models.RDS")) # open saved object
   ens = complete_file[["models"]][["Y.hat.d_m"]][[1]]             # select saved model for Y.hat.d[1] only
   expect_length(ens, 4) # cf = 4
-  expect_named(ens[[1]]$nnls_w)
+  expect_named(ens[[1]]$ens_w)
 
   # check for correct dimension
   expect_identical(dim(np_m_standard$nuisance_parameters$Y.hat.d), dim(np_m_standard$numbers$d_mat))
@@ -289,7 +289,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   complete_file = readRDS(file.path(path, "nuisance_models.RDS")) # open saved object
   ens = complete_file[["models"]][["Y.hat.d_m"]][[1]]             # select saved model for Y.hat.d[[1]] only
   expect_length(ens, 4) # cf = 4
-  expect_named(ens[[1]]$nnls_w)
+  expect_named(ens[[1]]$ens_w)
 
   # check for correct dimension
   expect_identical(dim(np_m_standard_w$nuisance_parameters$Y.hat.d), dim(np_m_standard_w$numbers$d_mat))

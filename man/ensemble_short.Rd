@@ -11,6 +11,7 @@ ensemble_short(
   cf_mat,
   subset = NULL,
   storeModels = c("No", "Memory", "Disk"),
+  tuneLearners = NULL,
   quiet = TRUE,
   pb = NULL,
   pb_np = NULL
@@ -32,6 +33,15 @@ determining ensemble weights. If not provided, all observations are used.}
 
 \item{storeModels}{Character string specifying whether to store the models. 
 Must be one of \code{c("No", "Memory", "Disk")} with "No" as the default.}
+
+\item{tuneLearners}{Optional hyperparameter tuning for selected learners (see \code{\link{create_method}} 
+                  for details). Either \code{NULL} (default) for no tuning, or one of:
+\describe{
+  \item{\code{"full_sample" }}{Tune hyperparameters using full sample.}
+  \item{\code{"fold" }}{Tuning is performed on the estimation part of the 
+                       cross-fitting split, which is roughly
+                       \eqn{F} times more computationally demanding.}
+}}
 
 \item{quiet}{Logical. If \code{FALSE}, progress output is printed to the console.}
 

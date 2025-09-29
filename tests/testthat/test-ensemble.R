@@ -1,8 +1,5 @@
 test_that("check predictions and smoother weights of ensemble function", {
   
-  registerS3method("predict", "ensemble", predict.ensemble)
-  registerS3method("weights", "ensemble", weights.ensemble)
-  
   n = 600
   n_test = 200
   p = 12
@@ -21,7 +18,7 @@ test_that("check predictions and smoother weights of ensemble function", {
 
   ens = ensemble(methods = methods, X = X, Y = Y, nfolds = 4)
   pred = predict(object = ens, methods = methods, X = X, Y = Y, Xnew = Xnew)
-  weights_mat = weights(object = ens, methods = methods, nnls_w = ens$nnls_w, X = X, Y = Y, Xnew = Xnew)
+  weights_mat = weights(object = ens, methods = methods, ens_w = ens$ens_w, X = X, Y = Y, Xnew = Xnew)
 
   pred_s = as.vector(weights_mat %*% Y)
 

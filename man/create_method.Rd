@@ -28,8 +28,7 @@ one of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.}
 the One-Vs-One (OvO) multiclass routine. Requires \code{foreach} and
 \code{doParallel}.}
 
-\item{arguments}{Optional list of additional arguments passed to the underlying
-method, or a character string specifying tuning mode. See details.}
+\item{arguments}{Optional list of additional arguments passed to the underlying method.}
 }
 \value{
 A list object that can be passed as input to \code{\link{ensemble}}.
@@ -50,8 +49,8 @@ Supported methods include:
   regularization strength \eqn{\lambda}. Users may supply a custom
   \eqn{\lambda} sequence, choose the CV loss, and set the number of folds.
 
-  \item \code{"plasso"}: Post-Lasso estimator via \code{glmnet}, with tuning
-  settings identical to Ridge.
+  \item \code{"plasso"}: Post-Lasso estimator via \code{plasso} built on top of the 
+  \code{glmnet} package, with tuning settings identical to Ridge.
 
   \item \code{"lasso"}: Standard Lasso via \code{glmnet}, with tuning settings
   identical to Ridge.
@@ -66,14 +65,14 @@ Supported methods include:
   \code{sample.fraction = 0.5}, and \code{honesty = TRUE}.
 
   \itemize{
-    \item If \code{arguments = "tune_full_sample"}, tuning is performed on the
+    \item If \code{tuneLearners = "full_sample"}, tuning is performed on the
     full sample \eqn{(X,Y)} over \code{sample.fraction}, \code{mtry},
     \code{min.node.size}, \code{honesty.fraction}, \code{honesty.prune.leaves},
     \code{alpha}, and \code{imbalance.penalty}.
 
-    \item If \code{arguments = "tune_on_fold"}, tuning is performed on the
-    estimation part of the cross-fitting split (F–1 folds), which is roughly
-    F times more computationally demanding.
+    \item If \code{tuneLearners = "fold"}, tuning is performed on the
+    estimation part of the cross-fitting split (\eqn{F–1} folds), which is roughly
+    \eqn{F} times more computationally demanding.
   }
 
   \item \code{"xgboost"}: Gradient boosting via \code{xgboost}, using 100 
@@ -120,16 +119,13 @@ Supported methods include:
   \item \code{"knn_prop"}: k-Nearest Neighbors classifier via
   \code{kknn::train.kknn()}.
 }
-
-For the \code{arguments} parameter, if a character string is provided, it must
-be one of \code{c("tune_on_fold", "tune_full_sample")} to specify tuning mode.
 }
 \examples{
 # Create list of methods for ensemble
 methods <- list(
   "ols" = create_method("ols"),
   "knn" = create_method("knn", arguments = list("k" = 3)),
-  "forest_grf" = create_method("forest_grf", arguments = c("tune_full_sample")),
+  "forest_grf" = create_method("forest_grf"),
   "logit_ovo" = create_method("logit", multinomial = "one-vs-one", parallel = TRUE),
   "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
 )

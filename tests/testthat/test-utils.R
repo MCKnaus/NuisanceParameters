@@ -49,14 +49,14 @@ test_that("prep_cf_mat creates a valid fold matrix", {
   expect_true(all(rowSums(mat2) == 1))
 })
 
-test_that("nnls_weights works for continuous outcomes", {
+test_that("ens_weights_maker works for continuous outcomes", {
   set.seed(123)
   X <- matrix(c(0.2, 0.3, 0.4,
                 0.5, 0.6, 0.7), ncol = 2,
               dimnames = list(NULL, c("learner1", "learner2")))
   Y <- c(0.25, 0.45, 0.65)
   
-  w <- nnls_weights(X = X, Y = Y)
+  w <- ens_weights_maker(X = X, Y = Y)
   
   expect_type(w, "double")
   expect_length(w, ncol(X))
@@ -65,14 +65,14 @@ test_that("nnls_weights works for continuous outcomes", {
   expect_equal(sum(w), 1, tolerance = 1e-8)
 })
 
-test_that("nnls_weights handles subset argument", {
+test_that("ens_weights_maker handles subset argument", {
   set.seed(123)
   X <- matrix(runif(20), ncol = 2,
               dimnames = list(NULL, c("l1", "l2")))
   Y <- rnorm(10)
   
-  w_full <- nnls_weights(X, Y)
-  w_sub <- nnls_weights(X, Y, subset = rep(c(TRUE, FALSE), 5))
+  w_full <- ens_weights_maker(X, Y)
+  w_sub <- ens_weights_maker(X, Y, subset = rep(c(TRUE, FALSE), 5))
   
   expect_true(all(w_full >= 0))
   expect_true(all(w_sub >= 0))
@@ -80,14 +80,14 @@ test_that("nnls_weights handles subset argument", {
   expect_equal(sum(w_sub), 1, tolerance = 1e-8)
 })
 
-test_that("nnls_weights works for multinomial outcomes with stacked NNLS", {
+test_that("ens_weights_maker works for multinomial outcomes with stacked NNLS", {
   set.seed(123)
   N <- 5; K <- 3; M <- 2
   X <- array(runif(N * K * M), dim = c(N, K, M),
              dimnames = list(NULL, paste0("class", 1:K), paste0("learner", 1:M)))
   Y <- factor(sample(1:K, N, replace = TRUE))
   
-  w <- nnls_weights(X = X, Y = Y, is_mult = TRUE, do_bfgs = FALSE)
+  w <- ens_weights_maker(X = X, Y = Y, is_mult = TRUE, do_bfgs = FALSE)
   
   expect_type(w, "double")
   expect_length(w, M)
@@ -96,7 +96,7 @@ test_that("nnls_weights works for multinomial outcomes with stacked NNLS", {
   expect_equal(sum(w), 1, tolerance = 1e-8)
 })
 
-test_that("nnls_weights works for multinomial outcomes with BFGS optimization", {
+test_that("ens_weights_maker works for multinomial outcomes with BFGS optimization", {
   skip_if_not_installed("stats")
   
   set.seed(123)
@@ -105,7 +105,7 @@ test_that("nnls_weights works for multinomial outcomes with BFGS optimization", 
              dimnames = list(NULL, paste0("class", 1:K), paste0("learner", 1:M)))
   Y <- factor(sample(1:K, N, replace = TRUE))
   
-  w <- nnls_weights(X = X, Y = Y, is_mult = TRUE, do_bfgs = TRUE)
+  w <- ens_weights_maker(X = X, Y = Y, is_mult = TRUE, do_bfgs = TRUE)
   
   expect_type(w, "double")
   expect_length(w, M)
@@ -114,13 +114,13 @@ test_that("nnls_weights works for multinomial outcomes with BFGS optimization", 
   expect_equal(sum(w), 1, tolerance = 1e-8)
 })
 
-test_that("nnls_weights falls back to uniform weights if solution is degenerate", {
+test_that("ens_weights_maker falls back to uniform weights if solution is degenerate", {
   # Construct degenerate case where NNLS returns zero weights
   X <- matrix(0, nrow = 4, ncol = 3,
               dimnames = list(NULL, c("a", "b", "c")))
   Y <- rep(0, 4)
   
-  w <- nnls_weights(X, Y)
+  w <- ens_weights_maker(X, Y)
   
   expect_equal(as.numeric(w), rep(1/3, 3))
   expect_equal(sum(w), 1)
@@ -157,22 +157,14 @@ test_that("create_method returns expected structure for defaults", {
   expect_false(m$parallel)
   expect_equal(m$arguments, list())
   expect_null(m$x_select)
-  expect_null(m$name)
 })
 
 test_that("create_method supports list and character arguments", {
   m1 <- create_method("knn", arguments = list(k = 3))
-  m2 <- create_method("forest_grf", arguments = "tune_full_sample")
+  m2 <- create_method("forest_grf", arguments = list("num.trees" = 500))
   
   expect_equal(m1$arguments$k, 3)
-  expect_equal(m2$arguments, "tune_full_sample")
-})
-
-test_that("create_method validates character arguments correctly", {
-  expect_error(
-    create_method("ols", arguments = "invalid_mode"),
-    "If arguments is a character string, it must be one of"
-  )
+  expect_equal(m2$arguments$num.trees, 500)
 })
 
 test_that("create_method validates x_select", {
@@ -182,16 +174,6 @@ test_that("create_method validates x_select", {
   expect_error(
     create_method("ridge", x_select = 1:3),
     "Provide either NULL or logical for x_select."
-  )
-})
-
-test_that("create_method validates name", {
-  m <- create_method("lasso", name = "custom_lasso")
-  expect_equal(m$name, "custom_lasso")
-  
-  expect_error(
-    create_method("lasso", name = 123),
-    "Provide single string to name method."
   )
 })
 
@@ -223,7 +205,7 @@ test_that("create_method errors on unsupported multinomial with svm", {
 # helper to quickly create fake methods
 fake_method <- function(name) {
   list(method = name, arguments = list(), multinomial = NULL,
-       parallel = FALSE, x_select = NULL, name = NULL)
+       parallel = FALSE, x_select = NULL)
 }
 
 test_that("process_methods replicates a simple methods list across NuPas", {

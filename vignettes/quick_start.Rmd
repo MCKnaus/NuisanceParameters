@@ -32,8 +32,7 @@ The sample is drawn from the 1991 Survey of Income and Program Participation (SI
 
 ```{r}
 library(conflicted)
-invisible(lapply(c("create_method", "design_matrix", "get_outcome_weights"), 
-                 function(x) conflict_prefer(x, "NuisanceParameters", quiet = TRUE)))
+invisible(lapply("get_outcome_weights", function(x) conflict_prefer(x, "NuisanceParameters")))
 
 library(hdm)
 library(OutcomeWeights)
@@ -72,9 +71,9 @@ Since this expansion can create highly correlated covariates, the function `data
 X <- data_screen(X_big, treat = D, bin_cut = 0.02, corr_cut = 0.9, quiet = FALSE)
 ```
 
-Next, we will specify a list of base learners for the ensemble. The package offers a great variety of choices—you can find the full list of available learners and their default settings by typing `?create_method` in the console. In the *Estimation* Notebook you will find more details on hyperparameter tuning and the different types of stacking.
+Next, we will specify a list of base learners for the ensemble. The package offers a great variety of choices—you can find the full list of available learners and their default settings by typing `?create_method` in the console. For more details on the different types of stacking and hyperparameter tuning, see the *Stacking* and *Tuning* notebooks.
 
-The logic is simple: choose a base learner from the available methods, add optional arguments (for example, `num_trees` for GRF’s forest), and, if desired, specify a subset of covariates to use for estimation.
+The logic is simple: choose a base learner from the available methods, add optional arguments (for example, `num.trees` for grf’s forest), and, if desired, specify a subset of covariates to use for estimation.
 
 ```{r}
 # For tree methods, restrict to original features
@@ -83,10 +82,12 @@ cols <- colnames(X) %in% colnames(X_raw)
 methods = list(
  "ols" = create_method("ols"),
  "plasso" = create_method("plasso"),
- "forest_grf_tuned" = create_method(
-   "forest_grf", arguments = c("tune_full_sample"), x_select = cols),
- "xgboost" = create_method(
-   "xgboost", arguments = list("nrounds" = 150), x_select = cols)
+ "forest_grf" = create_method("forest_grf", 
+                              arguments = list("num.trees" = 1000, "min.node.size" = 5),
+                              x_select = cols),
+ "xgboost" = create_method("xgboost", 
+                           arguments = list("nrounds" = 150), 
+                           x_select = cols)
  )
 ```
 
@@ -96,7 +97,7 @@ We are now ready to run the main function.
 
 `nuisance_parameters` carries out cross-fitted estimation of nuisance parameters. If more than one method is provided, it will stack them together, creating an ensemble learner.
 
-In this example, we use 5-fold cross-fitting (4/5 of the observations are used to train the machine learner in each cross-fitting sample fold) and keep treatment ratios balanced within the folds (`stratify = TRUE`).
+In this example, we use 5-fold cross-fitting (4/5 of the observations are used to train the machine learner in each cross-fitting split) and keep treatment ratios balanced within the folds (`stratify = TRUE`).
 
 Short stacking is applied:
 
@@ -141,8 +142,8 @@ For example, you might want to adjust your estimation strategy and use a differe
 ```{r}
 methods_2 = list(
  "knn" = create_method("knn"),
- "xgboost" = create_method(
-   "xgboost", arguments = c("tune_on_fold"), x_select = cols)
+ "ridge" = create_method("ridge"),
+ "xgboost" = create_method("xgboost", x_select = cols)
  )
 ```
 

@@ -16,7 +16,12 @@ employment history, location, and occupation:
   \item{hispanic}{1 if Hispanic, 0 otherwise}
   \item{othrace}{1 if non-white, non-Black, non-Hispanic, 0 otherwise}
   \item{dep}{Number of dependents}
-  \item{q1-q6}{Dummies indicating quarter of enrollment}
+  \item{q1}{Dummy indicating enrollment in quarter 1}
+  \item{q2}{Dummy indicating enrollment in quarter 2}
+  \item{q3}{Dummy indicating enrollment in quarter 3}
+  \item{q4}{Dummy indicating enrollment in quarter 4}
+  \item{q5}{Dummy indicating enrollment in quarter 5}
+  \item{q6}{Dummy indicating enrollment in quarter 6}
   \item{recall}{1 if claimant expected to be recalled to previous job, 0 otherwise}
   \item{agelt35}{1 if age < 35, 0 otherwise}
   \item{agegt54}{1 if age > 54, 0 otherwise}
