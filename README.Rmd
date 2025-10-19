@@ -81,7 +81,7 @@ np <- nuisance_parameters(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat"),
                           X = X, Y = Y, D = D, Z = Z,
                           methods = methods, cf = 5, stacking = "short",
                           cluster = NULL, stratify = TRUE,
-                          storeModels = "Memory", path = NULL, quiet = TRUE
+                          store_models = "memory", path = NULL, quiet = TRUE
                           )
 
 # Estimated nuisance parameters
