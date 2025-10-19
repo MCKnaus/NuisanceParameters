@@ -4,10 +4,10 @@
 \alias{predict.rlasso_fit}
 \title{Predict method for hdm rlasso models}
 \usage{
-\method{predict}{rlasso_fit}(rlasso_fit, Xnew = NULL, ...)
+\method{predict}{rlasso_fit}(object, Xnew = NULL, ...)
 }
 \arguments{
-\item{rlasso_fit}{An object of class \code{rlasso_fit} from \code{\link{rlasso_fit}}.}
+\item{object}{An object of class \code{rlasso_fit} from \code{\link{rlasso_fit}}.}
 
 \item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},
 predictions are generated for the training data.}

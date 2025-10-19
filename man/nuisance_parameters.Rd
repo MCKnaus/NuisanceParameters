@@ -16,9 +16,8 @@ nuisance_parameters(
   stratify = FALSE,
   cf,
   cf_mat = NULL,
-  do_bfgs = FALSE,
-  storeModels = c("No", "Memory", "Disk"),
-  tuneLearners = NULL,
+  ensemble_type = "nnls",
+  store_models = c("no", "memory", "disk"),
   path = NULL,
   quiet = TRUE
 )
@@ -28,11 +27,11 @@ nuisance_parameters(
 Currently supported options:
 \code{c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat")}}
 
-\item{X}{A numeric matrix of covariates, with rows as observations and columns as covariates.}
+\item{X}{A numeric matrix of covariates, with rows as observations and columns as covariates; no intercept included.}
 
-\item{Y}{A numeric vector indicating the outcome variable}
+\item{Y}{A numeric vector indicating the outcome variable.}
 
-\item{D}{A numeric vector indicating the treatment variable}
+\item{D}{A numeric vector indicating the treatment variable.}
 
 \item{Z}{A numeric vector indicating the instrumental variable.}
 
@@ -56,23 +55,18 @@ constraints and randomization feasibility issues.}
 \item{cf_mat}{Optional logical matrix of indicators representing the different
 cross-fitting folds, possibly from already estimated \code{NuisanceParameters} object.}
 
-\item{do_bfgs}{Logical. If \code{TRUE} and the treatment is multinomial,
-estimates ensemble weights by BFGS optimization with a softmax 
-constraint. If \code{FALSE}, estimates weights via stacked NNLS 
-from the \code{nnls} package.}
-
-\item{storeModels}{Character vector indicating whether to save individual
-models for future processing (default: "No").
-Supported options: \code{c("No", "Memory", "Disk")}}
-
-\item{tuneLearners}{Optional hyperparameter tuning for selected learners (see \code{\link{create_method}} 
-                  for details). Either \code{NULL} (default) for no tuning, or one of:
+\item{ensemble_type}{Method for calculating ensemble weights:
 \describe{
-  \item{\code{"full_sample" }}{Tune hyperparameters using full sample.}
-  \item{\code{"fold" }}{Tuning is performed on the estimation part of the 
-                       cross-fitting split, which is roughly
-                       \eqn{F} times more computationally demanding.}
+  \item{\code{"nnls"}}{Non-negative least squares; weights sum to 1 (default)}
+  \item{\code{"bfgs"}}{BFGS optimization (for multivalued treatments only; falls to \code{nnls} otherwise)}
+  \item{\code{"singlebest"}}{Weight of 1 on the learner with the lowest RMSE}
+  \item{\code{"ols"}}{Ordinary least squares regression weights (falls to \code{nnls} for multivalued treatments)}
+  \item{\code{"average"}}{Equal weights for all learners}
 }}
+
+\item{store_models}{Character vector indicating whether to save individual
+models for future processing (default: "no").
+Supported options: \code{c("no", "memory", "disk")}}
 
 \item{path}{Optional path to save the \code{\link{ensemble}} objects for
 later processing (saved as a list of models).}

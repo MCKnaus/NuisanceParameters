@@ -87,7 +87,7 @@ test_that("ens_weights_maker works for multinomial outcomes with stacked NNLS", 
              dimnames = list(NULL, paste0("class", 1:K), paste0("learner", 1:M)))
   Y <- factor(sample(1:K, N, replace = TRUE))
   
-  w <- ens_weights_maker(X = X, Y = Y, is_mult = TRUE, do_bfgs = FALSE)
+  w <- ens_weights_maker(X = X, Y = Y, is_mult = TRUE, ensemble_type = "nnls")
   
   expect_type(w, "double")
   expect_length(w, M)
@@ -105,7 +105,7 @@ test_that("ens_weights_maker works for multinomial outcomes with BFGS optimizati
              dimnames = list(NULL, paste0("class", 1:K), paste0("learner", 1:M)))
   Y <- factor(sample(1:K, N, replace = TRUE))
   
-  w <- ens_weights_maker(X = X, Y = Y, is_mult = TRUE, do_bfgs = TRUE)
+  w <- ens_weights_maker(X = X, Y = Y, is_mult = TRUE, ensemble_type = "bfgs")
   
   expect_type(w, "double")
   expect_length(w, M)

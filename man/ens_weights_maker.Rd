@@ -2,9 +2,9 @@
 % Please edit documentation in R/utils.R
 \name{ens_weights_maker}
 \alias{ens_weights_maker}
-\title{Estimate ensemble weights using non-negative least squares (NNLS)}
+\title{Estimate ensemble weights using various methods}
 \usage{
-ens_weights_maker(X, Y, subset = NULL, is_mult = FALSE, do_bfgs = FALSE)
+ens_weights_maker(X, Y, ensemble_type = "nnls", subset = NULL, is_mult = FALSE)
 }
 \arguments{
 \item{X}{For continuous/binary outcomes: a numeric matrix of predictions
@@ -16,23 +16,28 @@ For multinomial outcomes: a 3D array of predictions with dimensions
 \item{Y}{A numeric vector of observed outcomes. For multinomial outcomes,
 a factor or integer vector of class labels.}
 
+\item{ensemble_type}{Method for calculating ensemble weights:
+\describe{
+  \item{\code{"nnls"}}{Non-negative least squares; weights sum to 1 (default)}
+  \item{\code{"bfgs"}}{BFGS optimization (for multivalued treatments only; falls back to \code{nnls} otherwise)}
+  \item{\code{"singlebest"}}{Weight of 1 on the learner with the lowest RMSE}
+  \item{\code{"ols"}}{Ordinary least squares regression weights (falls back to \code{nnls} for multivalued treatments)}
+  \item{\code{"average"}}{Equal weights for all learners}
+}}
+
 \item{subset}{Optional logical vector if only subset of data should be used.}
 
 \item{is_mult}{Logical. Indicates whether the outcome is multinomial
 (\code{TRUE}) or binary/continuous (\code{FALSE}).}
-
-\item{do_bfgs}{Logical. If \code{TRUE} and the outcome is multinomial,
-estimates ensemble weights by BFGS optimization with a softmax constraint.
-If \code{FALSE}, estimates weights via stacked NNLS from the \code{nnls} package.}
 }
 \value{
-A numeric vector of ensemble weights, normalized to sum to 1.
+A numeric vector of ensemble weights.
 }
 \description{
-Estimates ensemble weights via non-negative least squares from the \code{nnls} 
-package. Supports binary/continuous and multinomial outcomes. Optionally, 
-BFGS optimization with a softmax parametrization can be used for multinomial 
-outcomes to directly minimize the Brier score (i.e. MSE).
+Estimates ensemble weights using non-negative least squares (NNLS), BFGS 
+optimization, single best learner selection, ordinary least squares (OLS), 
+and simple averaging. Supports binary/continuous and multinomial outcomes. 
+Weights are normalized to sum to 1 for all methods.
 }
 \examples{
 \dontrun{

@@ -4,10 +4,10 @@
 \alias{predict.knn_fit}
 \title{Predict method for k-Nearest Neighbors}
 \usage{
-\method{predict}{knn_fit}(arguments, X, Y, Xnew = NULL, ...)
+\method{predict}{knn_fit}(object, X, Y, Xnew = NULL, ...)
 }
 \arguments{
-\item{arguments}{Output of \code{\link{knn_fit}} of class \code{knn_fit}. 
+\item{object}{Output of \code{\link{knn_fit}} of class \code{knn_fit}. 
 List of arguments to be used in k-NN prediction. Typically includes \code{k} 
 (number of neighbors). If no \code{k} is specified, defaults to \code{k = 10}.}
 

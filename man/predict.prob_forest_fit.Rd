@@ -4,16 +4,18 @@
 \alias{predict.prob_forest_fit}
 \title{Predict method for Probability Forest fits}
 \usage{
-\method{predict}{prob_forest_fit}(prob_forest_fit, X, Y, Xnew = NULL)
+\method{predict}{prob_forest_fit}(object, X, Y, Xnew = NULL, ...)
 }
 \arguments{
-\item{prob_forest_fit}{Output of \code{\link{prob_forest_fit}}.}
+\item{object}{Output of \code{\link{prob_forest_fit}}.}
 
 \item{X}{Covariate matrix of training sample.}
 
 \item{Y}{Vector of outcomes of training sample.}
 
 \item{Xnew}{Covariate matrix of test sample. If \code{NULL}, uses training data.}
+
+\item{...}{Ignored additional arguments.}
 }
 \value{
 A numeric matrix with one column per class, containing the predicted probabilities.

@@ -25,7 +25,7 @@ mean_fit <- function(X, Y, ...) {
 #' Returns a constant prediction for all observations, equal to the mean of the training sample.
 #' Covariates `Xnew` are ignored.
 #'
-#' @param mean_fit An object of class `mean_fit` from \code{\link{mean_fit}}.
+#' @param object An object of class `mean_fit` from \code{\link{mean_fit}}.
 #' @param Xnew Covariate matrix for predictions. Only `nrow(Xnew)` is used.
 #' @param ... Ignored additional arguments.
 #'
@@ -34,11 +34,11 @@ mean_fit <- function(X, Y, ...) {
 #' @method predict mean_fit
 #' @keywords internal
 #' @exportS3Method
-predict.mean_fit <- function(mean_fit, Xnew = NULL, ...) {
+predict.mean_fit <- function(object, Xnew = NULL, ...) {
   if (is.null(Xnew)) {
-    fit <- rep(mean_fit$mean, mean_fit$N)
+    fit <- rep(object$mean, object$N)
   } else {
-    fit <- rep(mean_fit$mean, nrow(Xnew))
+    fit <- rep(object$mean, nrow(Xnew))
   }
 
   return(fit)
@@ -70,7 +70,7 @@ ols_fit <- function(X, Y, ...) {
 #'
 #' Generates predictions from a fitted ordinary least squares model.
 #'
-#' @param ols_fit An object of class \code{ols_fit} from \code{\link{ols_fit}}.
+#' @param object An object of class \code{ols_fit} from \code{\link{ols_fit}}.
 #' @param Xnew Numeric matrix of covariates for test sample. If \code{NULL},
 #'   predictions are generated for training data.
 #' @param ... Ignored additional arguments.
@@ -80,11 +80,11 @@ ols_fit <- function(X, Y, ...) {
 #' @method predict ols_fit
 #' @keywords internal
 #' @exportS3Method
-predict.ols_fit <- function(ols_fit, Xnew = NULL, ...) {
+predict.ols_fit <- function(object, Xnew = NULL, ...) {
   Xnew <- add_intercept(Xnew)
-  Xnew <- Xnew[, !is.na(ols_fit)]
+  Xnew <- Xnew[, !is.na(object)]
 
-  fit <- as.vector(Xnew %*% matrix(ols_fit, ncol = 1))
+  fit <- as.vector(Xnew %*% matrix(object, ncol = 1))
 
   return(fit)
 }
@@ -130,7 +130,7 @@ ridge_fit <- function(X, Y, arguments = list()) {
 #' Generates predictions from a fitted ridge regression model.
 #' Applies the same standardization used during training to new data.
 #'
-#' @param ridge_fit An object of class \code{ridge_fit} from \code{\link{ridge_fit}}.
+#' @param object An object of class \code{ridge_fit} from \code{\link{ridge_fit}}.
 #' @param Xnew Numeric matrix of covariates for test sample.
 #' @param ... Ignored additional arguments.
 #'
@@ -139,19 +139,19 @@ ridge_fit <- function(X, Y, arguments = list()) {
 #' @method predict ridge_fit
 #' @keywords internal
 #' @exportS3Method
-predict.ridge_fit <- function(ridge_fit, Xnew, ...) {
-  X <- ridge_fit[["call"]][["x"]]
+predict.ridge_fit <- function(object, Xnew, ...) {
+  X <- object[["call"]][["x"]]
   X <- add_intercept(X)
 
-  Y <- ridge_fit[["call"]][["y"]]
+  Y <- object[["call"]][["y"]]
   N <- nrow(X)
   p <- ncol(X) - 1
   
-  Xnew <- scale(Xnew, ridge_fit$x_means, ridge_fit$x_sds)
+  Xnew <- scale(Xnew, object$x_means, object$x_sds)
   Xnew <- add_intercept(Xnew)
   
   sd_y <- sqrt(stats::var(Y) * ((N - 1) / N))
-  lambda <- (1 / sd_y) * ridge_fit$lambda.min * N
+  lambda <- (1 / sd_y) * object$lambda.min * N
   
   # Reference: https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat
   hat_mat <- Xnew %*% solve(crossprod(X) + lambda * diag(x = c(0, rep(1, p)))) %*% t(X)
@@ -194,7 +194,7 @@ plasso_fit <- function(X, Y, arguments = list()) {
 #' Generates predictions from a fitted post-lasso regression model.
 #' Returns predictions for either new data or the training sample.
 #'
-#' @param plasso_fit An object of class \code{plasso_fit} from \code{\link{plasso_fit}}.
+#' @param object An object of class \code{plasso_fit} from \code{\link{plasso_fit}}.
 #' @param Xnew Numeric matrix of covariates for test sample. If \code{NULL},
 #'   predictions are generated for the training data.
 #' @param ... Ignored additional arguments.
@@ -204,9 +204,9 @@ plasso_fit <- function(X, Y, arguments = list()) {
 #' @method predict plasso_fit
 #' @keywords internal
 #' @exportS3Method
-predict.plasso_fit <- function(plasso_fit, Xnew = NULL, ...) {
-  if (is.null(Xnew)) Xnew <- plasso_fit$x
-  fit <- as.vector(predict(plasso_fit, newx = Xnew, type = "response", s = "optimal", se_rule = 0)$plasso)
+predict.plasso_fit <- function(object, Xnew = NULL, ...) {
+  if (is.null(Xnew)) Xnew <- object$x
+  fit <- as.vector(predict(object, newx = Xnew, type = "response", s = "optimal", se_rule = 0)$plasso)
 
   return(fit)
 }
@@ -243,7 +243,7 @@ rlasso_fit <- function(X, Y, arguments = list()) {
 #' Generates predictions from a fitted post-lasso regression model
 #' estimated using the \code{hdm} package.
 #'
-#' @param rlasso_fit An object of class \code{rlasso_fit} from \code{\link{rlasso_fit}}.
+#' @param object An object of class \code{rlasso_fit} from \code{\link{rlasso_fit}}.
 #' @param Xnew Numeric matrix of covariates for test sample. If \code{NULL},
 #'   predictions are generated for the training data.
 #' @param ... Ignored additional arguments.
@@ -253,8 +253,8 @@ rlasso_fit <- function(X, Y, arguments = list()) {
 #' @method predict rlasso_fit
 #' @keywords internal
 #' @exportS3Method
-predict.rlasso_fit <- function(rlasso_fit, Xnew = NULL, ...) {
-  fit <- as.vector(predict(rlasso_fit, newdata = Xnew))
+predict.rlasso_fit <- function(object, Xnew = NULL, ...) {
+  fit <- as.vector(predict(object, newdata = Xnew))
 
   return(fit)
 }
@@ -290,7 +290,7 @@ forest_grf_fit <- function(X, Y, arguments = list()) {
 #' Generates predictions from a fitted random forest model
 #' estimated using the \code{grf} package.
 #'
-#' @param forest_grf_fit An object of class \code{forest_grf_fit} from 
+#' @param object An object of class \code{forest_grf_fit} from 
 #'   \code{\link{forest_grf_fit}}.
 #' @param Xnew Numeric matrix of covariates for test sample. If \code{NULL},
 #'   predictions are generated for the training data.
@@ -301,9 +301,9 @@ forest_grf_fit <- function(X, Y, arguments = list()) {
 #' @method predict forest_grf_fit
 #' @keywords internal
 #' @exportS3Method
-predict.forest_grf_fit <- function(forest_grf_fit, Xnew = NULL, ...) {
-  if (is.null(Xnew)) Xnew <- forest_grf_fit$X.orig
-  fit <- predict(forest_grf_fit, newdata = Xnew)$prediction
+predict.forest_grf_fit <- function(object, Xnew = NULL, ...) {
+  if (is.null(Xnew)) Xnew <- object$X.orig
+  fit <- predict(object, newdata = Xnew)$prediction
 
   return(fit)
 }
@@ -391,7 +391,7 @@ xgboost_fit <- function(X, Y, arguments = list()) {
 #'
 #' Generates predictions from a fitted XGBoost model.
 #'
-#' @param xgboost_fit An object of class \code{xgboost_fit} from \code{\link{xgboost_fit}}.
+#' @param object An object of class \code{xgboost_fit} from \code{\link{xgboost_fit}}.
 #' @param Xnew Numeric matrix of covariates for test sample. If \code{NULL},
 #'   predictions are generated for the training data.
 #' @param ... Ignored additional arguments.
@@ -401,9 +401,9 @@ xgboost_fit <- function(X, Y, arguments = list()) {
 #' @method predict xgboost_fit
 #' @keywords internal
 #' @exportS3Method
-predict.xgboost_fit <- function(xgboost_fit, Xnew = NULL, ...) {
+predict.xgboost_fit <- function(object, Xnew = NULL, ...) {
   dtest <- xgboost::xgb.DMatrix(data = as.matrix(Xnew))
-  fit <- predict(xgboost_fit, newdata = dtest)
+  fit <- predict(object, newdata = dtest)
 
   return(fit)
 }
@@ -440,7 +440,7 @@ lasso_fit <- function(X, Y, arguments = list()) {
 #' Generates predictions from a fitted lasso regression model
 #' using the optimal lambda selected during cross-validation.
 #'
-#' @param lasso_fit An object of class \code{lasso_fit} from \code{\link{lasso_fit}}.
+#' @param object An object of class \code{lasso_fit} from \code{\link{lasso_fit}}.
 #' @param Xnew Numeric matrix of covariates for test sample. If \code{NULL},
 #'   predictions are generated for the training data.
 #' @param ... Ignored additional arguments.
@@ -450,9 +450,9 @@ lasso_fit <- function(X, Y, arguments = list()) {
 #' @method predict lasso_fit
 #' @keywords internal
 #' @exportS3Method
-predict.lasso_fit <- function(lasso_fit, Xnew = NULL, ...) {
-  if (is.null(Xnew)) Xnew <- lasso_fit$X
-  fit <- predict(lasso_fit, newx = Xnew, type = "response", s = "lambda.min")
+predict.lasso_fit <- function(object, Xnew = NULL, ...) {
+  if (is.null(Xnew)) Xnew <- object$X
+  fit <- as.vector(predict(object, newx = Xnew, type = "response", s = "lambda.min"))
 
   return(fit)
 }
@@ -490,7 +490,7 @@ forest_drf_fit <- function(X, Y, arguments = list()) {
 #' By default, returns predictions for the mean functional, but supports
 #' other distributional characteristics.
 #'
-#' @param forest_drf_fit An object of class \code{forest_drf_fit} from 
+#' @param object An object of class \code{forest_drf_fit} from 
 #'   \code{\link{forest_drf_fit}}.
 #' @param Xnew Numeric matrix of covariates for test sample. If \code{NULL},
 #'   predictions are generated for the training data.
@@ -503,10 +503,10 @@ forest_drf_fit <- function(X, Y, arguments = list()) {
 #' @method predict forest_drf_fit
 #' @keywords internal
 #' @exportS3Method
-predict.forest_drf_fit <- function(forest_drf_fit, Xnew = NULL, functional = "mean", ...) {
-  if (is.null(Xnew)) Xnew <- forest_drf_fit$X.orig
+predict.forest_drf_fit <- function(object, Xnew = NULL, functional = "mean", ...) {
+  if (is.null(Xnew)) Xnew <- object$X.orig
 
-  pred <- predict(forest_drf_fit, newdata = Xnew, functional = functional)
+  pred <- predict(object, newdata = Xnew, functional = functional)
   fit <- as.vector(pred[[functional]])
 
   return(fit)
@@ -537,7 +537,7 @@ knn_fit <- function(arguments = list(), ...) {
 #' Euclidean distance calculation, following the same approach as the
 #' \code{Distance_for_KNN_test()} function of the \code{FastKNN} package.
 #'
-#' @param arguments Output of \code{\link{knn_fit}} of class \code{knn_fit}. 
+#' @param object Output of \code{\link{knn_fit}} of class \code{knn_fit}. 
 #'  List of arguments to be used in k-NN prediction. Typically includes \code{k} 
 #'  (number of neighbors). If no \code{k} is specified, defaults to \code{k = 10}.
 #' @param X Numeric matrix of covariates for training sample.
@@ -551,10 +551,11 @@ knn_fit <- function(arguments = list(), ...) {
 #' @method predict knn_fit
 #' @keywords internal
 #' @exportS3Method
-predict.knn_fit <- function(arguments, X, Y, Xnew = NULL, ...) {
+predict.knn_fit <- function(object, X, Y, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew = X
-  k <- if (is.null(arguments$k)) 10 else arguments$k
+  k <- if (is.null(object$k)) 10 else object$k
   
+  # Credit: FastKNN package
   # distance = as.matrix(FastKNN::Distance_for_KNN_test(Xnew, X))
   euclidean_dist <- t(apply(Xnew, 1, function(x_i) {
     sqrt(rowSums(sweep(X, 2, x_i)^2))
@@ -608,10 +609,11 @@ logit_fit <- function(X, Y, arguments = list()) {
 #' 
 #' Generates predictions from fitted logistic regression models.
 #'
-#' @param logit_fit Output of \code{\link{logit_fit}}.
+#' @param object Output of \code{\link{logit_fit}}.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
+#' @param ... Ignored additional arguments.
 #'
 #' @return A data frame of predicted class probabilities.  
 #'   \describe{  
@@ -620,11 +622,11 @@ logit_fit <- function(X, Y, arguments = list()) {
 #'   }
 #'
 #' @keywords internal
-predict.logit_fit <- function(logit_fit, X, Y, Xnew = NULL) {
+predict.logit_fit <- function(object, X, Y, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
-  lambda <- min(logit_fit$lambda)
+  lambda <- min(object$lambda)
   
-  fit <- predict(logit_fit, newx = as.matrix(Xnew), s = lambda, type = "response")
+  fit <- predict(object, newx = as.matrix(Xnew), s = lambda, type = "response")
   if (ncol(fit) == 1) fit <- as.vector(fit)
   
   return(fit)
@@ -661,10 +663,11 @@ logit_nnet_fit <- function(X, Y, arguments = list()) {
 #' 
 #' Generates predicted class probabilities from fitted logistic regression models.
 #'
-#' @param logit_nnet_fit Output of \code{\link{logit_nnet_fit}}.
+#' @param object Output of \code{\link{logit_nnet_fit}}.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
+#' @param ... Ignored additional arguments.
 #'
 #' @return A data frame of predicted class probabilities.  
 #'   \describe{  
@@ -673,13 +676,13 @@ logit_nnet_fit <- function(X, Y, arguments = list()) {
 #'   }  
 #'
 #' @keywords internal
-predict.logit_nnet_fit <- function(logit_nnet_fit, X, Y, Xnew = NULL) {
+predict.logit_nnet_fit <- function(object, X, Y, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
   
   data <- as.data.frame(Xnew)
   data$Y <- as.factor(0)
   
-  fit <- predict(logit_nnet_fit, newdata = Xnew, type = "probs")
+  fit <- predict(object, newdata = Xnew, type = "probs")
   
   return(fit)
 }
@@ -713,10 +716,11 @@ nb_gaussian_fit <- function(X, Y, arguments = list()) {
 #' 
 #' Generates predicted class probabilities from fitted Gaussian Naive Bayes models.
 #'
-#' @param nb_gaussian_fit Output of \code{\link{nb_gaussian_fit}}.
+#' @param object Output of \code{\link{nb_gaussian_fit}}.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
+#' @param ... Ignored additional arguments.
 #'
 #' @return Predicted class probabilities.  
 #'   \describe{  
@@ -725,10 +729,10 @@ nb_gaussian_fit <- function(X, Y, arguments = list()) {
 #'   }  
 #'
 #' @keywords internal
-predict.nb_gaussian_fit <- function(nb_gaussian_fit, X, Y, Xnew = NULL) {
+predict.nb_gaussian_fit <- function(object, X, Y, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
   
-  fit <- predict(nb_gaussian_fit, newdata = Xnew, type = "prob")
+  fit <- predict(object, newdata = Xnew, type = "prob")
   if (ncol(fit) == 2) fit <- fit[, 2, drop = TRUE]
   
   return(fit)
@@ -763,10 +767,11 @@ nb_bernoulli_fit <- function(X, Y, arguments = list()) {
 #' 
 #' Generates predicted class probabilities from fitted Bernoulli Naive Bayes models.
 #'
-#' @param nb_bernoulli_fit Output of \code{\link{nb_bernoulli_fit}}.
+#' @param object Output of \code{\link{nb_bernoulli_fit}}.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
+#' @param ... Ignored additional arguments.
 #'
 #' @return Predicted class probabilities.  
 #'   \describe{  
@@ -775,10 +780,10 @@ nb_bernoulli_fit <- function(X, Y, arguments = list()) {
 #'   }  
 #'
 #' @keywords internal
-predict.nb_bernoulli_fit <- function(nb_bernoulli_fit, X, Y, Xnew = NULL) {
+predict.nb_bernoulli_fit <- function(object, X, Y, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
   
-  fit <- predict(nb_bernoulli_fit, newdata = Xnew, type = "prob")
+  fit <- predict(object, newdata = Xnew, type = "prob")
   if (ncol(fit) == 2) fit <- fit[, 2, drop = TRUE]
   
   return(fit)
@@ -826,10 +831,11 @@ xgboost_prop_fit <- function(X, Y, arguments = list()) {
 #' 
 #' Generates predicted class probabilities from fitted gradient boosting models.
 #'
-#' @param xgboost_fit Output of \code{\link{xgboost_prop_fit}}.
+#' @param object Output of \code{\link{xgboost_prop_fit}}.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
+#' @param ... Ignored additional arguments.
 #'
 #' @return A data frame of predicted class probabilities.  
 #'   \describe{  
@@ -838,9 +844,9 @@ xgboost_prop_fit <- function(X, Y, arguments = list()) {
 #'   }  
 #'
 #' @keywords internal
-predict.xgboost_prop_fit <- function(xgboost_fit, X, Y, Xnew = NULL) {
+predict.xgboost_prop_fit <- function(object, X, Y, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
-  fit <- predict(xgboost_fit, newdata = Xnew, type = "prob")
+  fit <- predict(object, newdata = Xnew, type = "prob")
   
   if (length(unique(Y)) > 2) {
     fit <- matrix(fit, nrow = nrow(Xnew), ncol = length(unique(Y)), byrow = TRUE)
@@ -880,17 +886,18 @@ svm_fit <- function(X, Y, arguments = list()) {
 #' 
 #' Generates predicted class probabilities from fitted Support Vector Machine models.
 #'
-#' @param svm_fit Output of \code{\link{svm_fit}}.
+#' @param object Output of \code{\link{svm_fit}}.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
+#' @param ... Ignored additional arguments.
 #'
 #' @return A numeric matrix with one column per class, containing the predicted probabilities.
 #'
 #' @keywords internal
-predict.svm_fit <- function(svm_fit, X, Y, Xnew = NULL) {
+predict.svm_fit <- function(object, X, Y, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
-  pred <- predict(svm_fit, newdata = Xnew, probability = TRUE)
+  pred <- predict(object, newdata = Xnew, probability = TRUE)
   
   fit <- attr(pred, "probabilities")
   if (ncol(fit) == 2) fit <- fit[, 2, drop = TRUE]
@@ -926,18 +933,19 @@ prob_forest_fit <- function(X, Y, arguments = list()) {
 #' 
 #' Generates predicted class probabilities from fitted Probability Forest models.
 #'
-#' @param prob_forest_fit Output of \code{\link{prob_forest_fit}}.
+#' @param object Output of \code{\link{prob_forest_fit}}.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
+#' @param ... Ignored additional arguments.
 #'
 #' @return A numeric matrix with one column per class, containing the predicted probabilities.
 #'
 #' @keywords internal
-predict.prob_forest_fit <- function(prob_forest_fit, X, Y, Xnew = NULL) {
+predict.prob_forest_fit <- function(object, X, Y, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
   
-  fit <- predict(prob_forest_fit, newdata = Xnew)$predictions
+  fit <- predict(object, newdata = Xnew)$predictions
   if (ncol(fit) == 2) fit <- fit[, 2, drop = TRUE]
   
   return(fit)
@@ -972,19 +980,20 @@ knn_prop_fit <- function(X, Y, arguments = list()) {
 #' 
 #' Generates predicted class probabilities from fitted k-Nearest Neighbor models.
 #'
-#' @param knn_fit Output of \code{\link{knn_prop_fit}}.
+#' @param object Output of \code{\link{knn_prop_fit}}.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
+#' @param ... Ignored additional arguments.
 #'
 #' @return A numeric matrix with one column per class, containing the predicted probabilities.
 #'
 #' @keywords internal
-predict.knn_prop_fit <- function(knn_fit, X, Y, Xnew = NULL) {
+predict.knn_prop_fit <- function(object, X, Y, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
   Xnew = as.data.frame(Xnew)
 
-  fit <- predict(knn_fit, newdata = Xnew, type = "prob")
+  fit <- predict(object, newdata = Xnew, type = "prob")
   if (ncol(fit) == 2) fit <- fit[, 2, drop = TRUE]
   
   return(fit)
@@ -1019,20 +1028,21 @@ ranger_fit <- function(X, Y, arguments = list()) {
 #' 
 #' Generates predicted class probabilities from fitted Probability Forest models.
 #'
-#' @param ranger_fit Output of \code{\link{ranger_fit}}.
+#' @param object Output of \code{\link{ranger_fit}}.
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
+#' @param ... Ignored additional arguments.
 #'
 #' @return A numeric matrix with one column per class, containing the predicted probabilities.
 #'
 #' @keywords internal
-predict.ranger_fit <- function(ranger_fit, X, Y, Xnew = NULL) {
+predict.ranger_fit <- function(object, X, Y, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
   data <- as.data.frame(Xnew)
   data$Y <- as.factor(0)
-  
-  fit <- predict(ranger_fit, data = data)$predictions
+
+  fit <- predict(object, data = data)$predictions
   if (ncol(fit) == 2) fit <- fit[, 2, drop = TRUE]
   
   return(fit)

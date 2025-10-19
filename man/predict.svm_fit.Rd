@@ -4,16 +4,18 @@
 \alias{predict.svm_fit}
 \title{Predict method for Support Vector Machine fits}
 \usage{
-\method{predict}{svm_fit}(svm_fit, X, Y, Xnew = NULL)
+\method{predict}{svm_fit}(object, X, Y, Xnew = NULL, ...)
 }
 \arguments{
-\item{svm_fit}{Output of \code{\link{svm_fit}}.}
+\item{object}{Output of \code{\link{svm_fit}}.}
 
 \item{X}{Covariate matrix of training sample.}
 
 \item{Y}{Vector of outcomes of training sample.}
 
 \item{Xnew}{Covariate matrix of test sample. If \code{NULL}, uses training data.}
+
+\item{...}{Ignored additional arguments.}
 }
 \value{
 A numeric matrix with one column per class, containing the predicted probabilities.

@@ -4,10 +4,10 @@
 \alias{predict.lasso_fit}
 \title{Predict method for lasso regression models}
 \usage{
-\method{predict}{lasso_fit}(lasso_fit, Xnew = NULL, ...)
+\method{predict}{lasso_fit}(object, Xnew = NULL, ...)
 }
 \arguments{
-\item{lasso_fit}{An object of class \code{lasso_fit} from \code{\link{lasso_fit}}.}
+\item{object}{An object of class \code{lasso_fit} from \code{\link{lasso_fit}}.}
 
 \item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},
 predictions are generated for the training data.}

@@ -4,10 +4,10 @@
 \alias{predict.forest_grf_fit}
 \title{Predict method for grf random forest models}
 \usage{
-\method{predict}{forest_grf_fit}(forest_grf_fit, Xnew = NULL, ...)
+\method{predict}{forest_grf_fit}(object, Xnew = NULL, ...)
 }
 \arguments{
-\item{forest_grf_fit}{An object of class \code{forest_grf_fit} from 
+\item{object}{An object of class \code{forest_grf_fit} from 
 \code{\link{forest_grf_fit}}.}
 
 \item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},

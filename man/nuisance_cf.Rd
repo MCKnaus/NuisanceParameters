@@ -11,9 +11,9 @@ nuisance_cf(
   cf_mat,
   cv = 5,
   subset = NULL,
-  storeModels = c("No", "Memory", "Disk"),
-  tuneLearners,
+  store_models = c("no", "memory", "disk"),
   do_bfgs = FALSE,
+  ensemble_type,
   quiet = TRUE,
   pb = NULL,
   pb_np = NULL
@@ -32,21 +32,16 @@ nuisance_cf(
 
 \item{subset}{Optional logical vector if only subset of data should be used for prediction.}
 
-\item{storeModels}{Vector of characters indicating where to save individual models for future processing.}
+\item{store_models}{Vector of characters indicating where to save individual models for future processing.}
 
-\item{tuneLearners}{Optional hyperparameter tuning for selected learners (see \code{\link{create_method}} 
-                  for details). Either \code{NULL} (default) for no tuning, or one of:
+\item{ensemble_type}{Method for calculating ensemble weights:
 \describe{
-  \item{\code{"full_sample" }}{Tune hyperparameters using full sample.}
-  \item{\code{"fold" }}{Tuning is performed on the estimation part of the 
-                       cross-fitting split, which is roughly
-                       \eqn{F} times more computationally demanding.}
+  \item{\code{"nnls"}}{Non-negative least squares; weights sum to 1 (default)}
+  \item{\code{"bfgs"}}{BFGS optimization (for multivalued treatments only; falls back to \code{nnls} otherwise)}
+  \item{\code{"singlebest"}}{Weight of 1 on the learner with the lowest RMSE}
+  \item{\code{"ols"}}{Ordinary least squares regression weights (falls back to \code{nnls} for multivalued treatments)}
+  \item{\code{"average"}}{Equal weights for all learners}
 }}
-
-\item{do_bfgs}{Logical. If \code{TRUE} and the outcome is multinomial,
-estimates ensemble weights by BFGS optimization with a softmax 
-constraint. If \code{FALSE}, estimates weights via stacked NNLS 
-from the \code{nnls} package.}
 
 \item{quiet}{If FALSE, progress output is printed into console.}
 

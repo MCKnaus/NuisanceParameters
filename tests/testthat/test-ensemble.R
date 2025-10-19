@@ -4,6 +4,7 @@ test_that("check predictions and smoother weights of ensemble function", {
   n_test = 200
   p = 12
   p_act = 4
+  ensemble_type <- "nnls"
   
   pi = c(seq(1, 0.1, -(1 / p_act)) * rep(c(1, -1), p_act / 2), rep(0, p - p_act))
   cov_mat = toeplitz(0.7^(0:(p - 1)))
@@ -16,7 +17,7 @@ test_that("check predictions and smoother weights of ensemble function", {
                  "forest_grf" = create_method("forest_grf"),
                  "ridge" = create_method("ridge"))
 
-  ens = ensemble(methods = methods, X = X, Y = Y, nfolds = 4)
+  ens = ensemble(methods = methods, X = X, Y = Y, nfolds = 4, ensemble_type = ensemble_type)
   pred = predict(object = ens, methods = methods, X = X, Y = Y, Xnew = Xnew)
   weights_mat = weights(object = ens, methods = methods, ens_w = ens$ens_w, X = X, Y = Y, Xnew = Xnew)
 

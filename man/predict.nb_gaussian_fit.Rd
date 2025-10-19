@@ -4,16 +4,18 @@
 \alias{predict.nb_gaussian_fit}
 \title{Predict method for Gaussian Naive Bayes fits}
 \usage{
-\method{predict}{nb_gaussian_fit}(nb_gaussian_fit, X, Y, Xnew = NULL)
+\method{predict}{nb_gaussian_fit}(object, X, Y, Xnew = NULL, ...)
 }
 \arguments{
-\item{nb_gaussian_fit}{Output of \code{\link{nb_gaussian_fit}}.}
+\item{object}{Output of \code{\link{nb_gaussian_fit}}.}
 
 \item{X}{Covariate matrix of training sample.}
 
 \item{Y}{Vector of outcomes of training sample.}
 
 \item{Xnew}{Covariate matrix of test sample. If \code{NULL}, uses training data.}
+
+\item{...}{Ignored additional arguments.}
 }
 \value{
 Predicted class probabilities.  

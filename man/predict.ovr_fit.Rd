@@ -4,10 +4,10 @@
 \alias{predict.ovr_fit}
 \title{Predict method for One-vs-Rest (OvR) classifiers}
 \usage{
-\method{predict}{ovr_fit}(ovr_fit, X, Y, Xnew = NULL, method)
+\method{predict}{ovr_fit}(object, X, Y, Xnew = NULL, method, ...)
 }
 \arguments{
-\item{ovr_fit}{Output list from \code{\link{ovr_fit}}.}
+\item{object}{Output list from \code{\link{ovr_fit}}.}
 
 \item{X}{Covariate matrix of training sample.}
 
@@ -16,10 +16,12 @@
 \item{Xnew}{Covariate matrix of test sample. If \code{NULL}, uses training data.}
 
 \item{method}{Character string specifying the binary classifier used for fitting.}
+
+\item{...}{Ignored additional arguments.}
 }
 \value{
-A data frame of predicted class probabilities with one column per class.  
-  Probabilities are normalized to sum to one for each observation.
+A matrix of predicted class probabilities with one column per class, 
+  or a vector of positive-class probabilities for binary classification.
 }
 \description{
 Generates predicted class probabilities using a set of fitted OvR binary classifiers.

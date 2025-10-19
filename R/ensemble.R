@@ -10,16 +10,8 @@
 #'  determining ensemble weights. If not provided, all observations are used.
 #' @param cf_mat Logical matrix with \code{k} columns of indicators representing 
 #'  the different folds.
-#' @param storeModels Character string specifying whether to store the models. 
-#'  Must be one of \code{c("No", "Memory", "Disk")} with "No" as the default.
-#' @param tuneLearners Optional hyperparameter tuning for selected learners (see \code{\link{create_method}} 
-#'                     for details). Either \code{NULL} (default) for no tuning, or one of:
-#'   \describe{
-#'     \item{\code{"full_sample" }}{Tune hyperparameters using full sample.}
-#'     \item{\code{"fold" }}{Tuning is performed on the estimation part of the 
-#'                          cross-fitting split, which is roughly
-#'                          \eqn{F} times more computationally demanding.}
-#'   }
+#' @param store_models Character string specifying whether to store the models. 
+#'  Must be one of \code{c("no", "memory", "disk")} with "no" as the default.
 #' @param quiet Logical. If \code{FALSE}, progress output is printed to the console.
 #' @param pb A progress bar object to track overall computation progress.
 #' @param pb_np String indicating the current nuisance parameter being 
@@ -30,7 +22,7 @@
 #'   \item{cf_preds}{A matrix of dimension \code{nrow(X)} x \code{length(methods)} 
 #'    containing the cross-fitted predictions of the machine learning methods from the ensemble.}
 #'   \item{ens_models}{A list of fitted machine learning models from all 
-#'    cross-fitting folds (if \code{storeModels} is not set to "No").}
+#'    cross-fitting folds (if \code{store_models} is not set to "no").}
 #' }
 #'
 #' @keywords internal
@@ -38,15 +30,14 @@ ensemble_short <- function(methods,
                            X, Y,
                            cf_mat,
                            subset = NULL,
-                           storeModels = c("No", "Memory", "Disk"),
-                           tuneLearners = NULL,
+                           store_models = c("no", "memory", "disk"),
                            quiet = TRUE, pb = NULL, pb_np = NULL) {
   # Checks
   if (is.null(subset)) subset <- rep(TRUE, nrow(X))
-  storeModels <- match.arg(storeModels)
+  store_models <- match.arg(store_models)
 
   cf_preds <- make_cf_preds(methods = methods, N = nrow(X), Y = Y)
-  ens_models <- if (storeModels != "No") vector("list", length = ncol(cf_mat)) else NULL
+  ens_models <- if (store_models != "no") vector("list", length = ncol(cf_mat)) else NULL
 
   # Learn in a subset D=d (Z=z); predict into test data
   for (i in 1:ncol(cf_mat)) {
@@ -56,8 +47,7 @@ ensemble_short <- function(methods,
     X_te <- X[fold, ]
     
     # On-the-fold hyperparameter tuning
-    mtd_tuned <- tune_learners(type = "fold", X = X_tr, Y = Y_tr,
-                               methods = methods, tuneLearners = tuneLearners)
+    mtd_tuned <- tune_learners(type = "fold", X = X_tr, Y = Y_tr, methods = methods)
     
     fits <- ensemble_core(
       methods = mtd_tuned, X_tr = X_tr, Y_tr = Y_tr, quiet = quiet, 
@@ -68,7 +58,7 @@ ensemble_short <- function(methods,
       quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np
       )
     
-    if (storeModels != "No") ens_models[[i]] <- fits
+    if (store_models != "no") ens_models[[i]] <- fits
     if (length(dim(cf_preds)) == 3) { cf_preds[fold, , ] <- preds } else { cf_preds[fold, ] <- preds }
   }
   output <- list(
@@ -90,10 +80,14 @@ ensemble_short <- function(methods,
 #' @param Y Vector of outcomes of the training sample.
 #' @param nfolds Integer. Number of folds used in cross-validation of 
 #'  ensemble weights. Default is 5.
-#' @param do_bfgs Logical. If \code{TRUE} and the outcome is multinomial,
-#'                estimates ensemble weights by BFGS optimization with a softmax 
-#'                constraint. If \code{FALSE}, estimates weights via stacked NNLS 
-#'                from the \code{nnls} package.
+#' @param ensemble_type Method for calculating ensemble weights:
+#'   \describe{
+#'     \item{\code{"nnls"}}{Non-negative least squares; weights sum to 1 (default)}
+#'     \item{\code{"bfgs"}}{BFGS optimization (for multivalued treatments only; falls back to \code{nnls} otherwise)}
+#'     \item{\code{"singlebest"}}{Weight of 1 on the learner with the lowest RMSE}
+#'     \item{\code{"ols"}}{Ordinary least squares regression weights (falls back to \code{nnls} for multivalued treatments)}
+#'     \item{\code{"average"}}{Equal weights for all learners}
+#'   }
 #' @param quiet Logical. If \code{FALSE}, progress output is printed to the console.
 #' @param pb A progress bar object to track overall computation progress.
 #' @param pb_np String indicating the current nuisance parameter being 
@@ -116,7 +110,7 @@ ensemble_short <- function(methods,
 ensemble <- function(methods,
                      X, Y,
                      nfolds = 5,
-                     do_bfgs = FALSE,
+                     ensemble_type,
                      quiet = TRUE,
                      pb = NULL, pb_np = NULL, pb_cf = NULL, pb_cv = NULL) {
   
@@ -146,7 +140,7 @@ ensemble <- function(methods,
     # Is multivalued propensity score being estimated?
     is_mult <- !is.null(methods[[1]]$multinomial)
     
-    ens_w <- ens_weights_maker(X = cf_preds, Y = Y, is_mult = is_mult, do_bfgs = do_bfgs)
+    ens_w <- ens_weights_maker(X = cf_preds, Y = Y, is_mult = is_mult, ensemble_type = ensemble_type)
 
     # Re-run all methods on the full sample (fs)
     fits_fs <- ensemble_core(
@@ -378,7 +372,7 @@ predict.ensemble_core <- function(object,
     
     # If prediction is vector-like or multi-column
     is_vec <- is.vector(m_pred)
-
+    
     # Initialize
     if (is.null(preds)) {
       if (is_vec) {

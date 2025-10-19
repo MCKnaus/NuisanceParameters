@@ -4,16 +4,18 @@
 \alias{predict.ranger_fit}
 \title{Predict method for Probability Forest fits}
 \usage{
-\method{predict}{ranger_fit}(ranger_fit, X, Y, Xnew = NULL)
+\method{predict}{ranger_fit}(object, X, Y, Xnew = NULL, ...)
 }
 \arguments{
-\item{ranger_fit}{Output of \code{\link{ranger_fit}}.}
+\item{object}{Output of \code{\link{ranger_fit}}.}
 
 \item{X}{Covariate matrix of training sample.}
 
 \item{Y}{Vector of outcomes of training sample.}
 
 \item{Xnew}{Covariate matrix of test sample. If \code{NULL}, uses training data.}
+
+\item{...}{Ignored additional arguments.}
 }
 \value{
 A numeric matrix with one column per class, containing the predicted probabilities.

@@ -17,9 +17,9 @@ vignette: >
 
 This notebook briefly reviews three options for saving the individual trained models:
 
-1.  `"Memory"` — saves the models within the `NuisanceParameters` object returned by the `nuisance_parameters()` function,
-2.  `"Disk"` — saves the models locally at a user-specified path, and
-3.  `"No"` — does not save the models.
+1.  `"memory"` — saves the models within the `NuisanceParameters` object returned by the `nuisance_parameters()` function,
+2.  `"disk"` — saves the models locally at a user-specified path, and
+3.  `"no"` — does not save the models.
 
 ## Why save base learners
 
@@ -38,7 +38,7 @@ library(hdm)
 library(NuisanceParameters)
 ```
 
-The sample is drawn from the 1991 Survey of Income and Program Participation (SIPP) and consists of 9,915 observations. To speed up the running time, we will use a 25% subset of the data.
+The sample consists of 9,915 observations. To speed up the running time, we will use a 25% subset of the data.
 
 ```{r}
 # Find dataset description if you type ?pension in console
@@ -55,7 +55,7 @@ X <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc
                   + male + marr + pira + twoearn, data = sub)
 ```
 
-We will specify a generic list of base learners for the ensemble. You can find the full list of available learners and their default settings by typing `?create_method` in the console. For more details on the different types of stacking and hyperparameter tuning, see the *Stacking* and *Tuning* notebooks.
+We will specify a generic list of base learners for the ensemble. You can find the full list of available learners and their default settings by typing `?create_method` in the console. For more details on the different types of stacking and hyperparameter tuning, see the *Stacking* and *Hyperparameter* *Tuning* notebooks.
 
 ```{r}
 methods = list(
@@ -68,9 +68,7 @@ methods = list(
 
 `nuisance_parameters` carries out cross-fitted estimation of nuisance parameters. If more than one method is provided, it will stack them together, creating an ensemble learner.
 
-In this example, we use 3-fold cross-fitting (2/3 of the observations are used to train the machine learner in each cross-fitting split).
-
-Short stacking is applied.
+In this example, we use 3-fold cross-fitting and apply short stacking.
 
 There are three options for storing the trained model output.
 
@@ -78,13 +76,13 @@ There are three options for storing the trained model output.
 
 ### Memory
 
-The first option is `"Memory"`:
+The first option is `"memory"`:
 
 ```{r}
 np <- nuisance_parameters(NuPa = c("Y.hat","Y.hat.d","D.hat","Z.hat"),
                           X = X, Y = Y, D = D, Z = Z,
                           methods = methods, cf = 3, stacking = "short",
-                          storeModels = "Memory", path = NULL)
+                          store_models = "memory", path = NULL)
 
 # Check the object size
 format(object.size(np$models), units = "MB")
@@ -99,7 +97,7 @@ If the trained models are not immediately needed for downstream tasks, this moti
 
 ### Saving to disk
 
-Models can be saved to a user-specified path by selecting `storeModels = "Disk"`.
+Models can be saved to a user-specified path by selecting `store_models = "disk"`.
 
 ```{r}
 # Define a temporary directory
@@ -108,13 +106,13 @@ tmpdir <- tempdir()
 np <- nuisance_parameters(NuPa = c("Y.hat","Y.hat.d","D.hat","Z.hat"),
                           X = X, Y = Y, D = D, Z = Z,
                           methods = methods, cf = 3, stacking = "short",
-                          storeModels = "Disk", path = tmpdir)
+                          store_models = "disk", path = tmpdir)
 ```
 
-Later, smoother matrices can be extracted simply by providing the path to `get_outcome_weights`:
+Later, smoother matrices can be extracted simply by providing the path to `get_smoother_weights`:
 
 ```{r}
-S <- get_outcome_weights(
+S <- get_smoother_weights(
   object = file.path(tmpdir, "nuisance_models.rds"), 
   NuPa = "Y.hat"
 )
@@ -131,6 +129,6 @@ Alternatively, models can be completely omitted from the returned object, both t
 np <- nuisance_parameters(NuPa = c("Y.hat","Y.hat.d","D.hat","Z.hat"),
                           X = X, Y = Y, D = D, Z = Z, stacking = "short",
                           methods = methods, cf = 3,
-                          storeModels = "No")
+                          store_models = "no")
 str(np, 1)
 ```

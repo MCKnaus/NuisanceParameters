@@ -17,7 +17,7 @@
 #'   matrices
 #'
 #' @export
-get_outcome_weights <- function(object,
+get_smoother_weights <- function(object,
                                 NuPa,
                                 quiet = TRUE,
                                 subset = NULL,
@@ -365,7 +365,7 @@ weights.ensemble_core <- function(object,
 #'
 #' Generate smoother weights for a test sample using arithmetic mean fitting of the training sample.
 #'
-#' @param mean_fit An object returned by \code{\link{mean_fit}}.
+#' @param object An object returned by \code{\link{mean_fit}}.
 #' @param Xnew Covariate matrix of the test sample.
 #' @param ... Ignored arguments.
 #'
@@ -374,8 +374,8 @@ weights.ensemble_core <- function(object,
 #' @keywords internal
 #' @method weights mean_fit
 #' @exportS3Method
-weights.mean_fit <- function(mean_fit, Xnew, ...) {
-  w <- matrix(1 / mean_fit$N, nrow = nrow(Xnew), ncol = mean_fit$N)
+weights.mean_fit <- function(object, Xnew, ...) {
+  w <- matrix(1 / object$N, nrow = nrow(Xnew), ncol = object$N)
 
   return(w)
 }
@@ -385,7 +385,7 @@ weights.mean_fit <- function(mean_fit, Xnew, ...) {
 #'
 #' Generate smoother weights for a test sample from an OLS model.
 #'
-#' @param ols_fit An object returned by \code{\link{ols_fit}}.
+#' @param object An object returned by \code{\link{ols_fit}}.
 #' @param X Covariate matrix of the training sample.
 #' @param Xnew Covariate matrix of the test sample.
 #' @param ... Ignored arguments.
@@ -395,13 +395,13 @@ weights.mean_fit <- function(mean_fit, Xnew, ...) {
 #' @keywords internal
 #' @method weights ols_fit
 #' @exportS3Method
-weights.ols_fit <- function(ols_fit, X, Xnew, ...) {
+weights.ols_fit <- function(object, X, Xnew, ...) {
   X <- add_intercept(X)
   Xnew <- add_intercept(Xnew)
 
   # Remove variables dropped due to multi-collinearity
-  X <- X[, !is.na(ols_fit)]
-  Xnew <- Xnew[, !is.na(ols_fit)]
+  X <- X[, !is.na(object)]
+  Xnew <- Xnew[, !is.na(object)]
 
   # Hat matrix
   hat_mat <- Xnew %*% solve(crossprod(X), tol = 2.225074e-308) %*% t(X)
@@ -414,7 +414,7 @@ weights.ols_fit <- function(ols_fit, X, Xnew, ...) {
 #'
 #' Generate smoother weights for a test sample from a ridge regression model.
 #'
-#' @param ridge_fit An object returned by \code{\link{ridge_fit}}.
+#' @param object An object returned by \code{\link{ridge_fit}}.
 #' @param X Covariate matrix of the training sample.
 #' @param Y Vector of outcomes of the training sample.
 #' @param Xnew Optional covariate matrix of the test sample. If not provided, predictions are computed for the training sample.
@@ -425,19 +425,19 @@ weights.ols_fit <- function(ols_fit, X, Xnew, ...) {
 #' @keywords internal
 #' @method weights ridge_fit
 #' @exportS3Method
-weights.ridge_fit <- function(ridge_fit, X, Y, Xnew = NULL, ...) {
+weights.ridge_fit <- function(object, X, Y, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
   N <- nrow(X)
 
-  X <- scale(X, ridge_fit$x_means, ridge_fit$x_sds)
+  X <- scale(X, object$x_means, object$x_sds)
   X <- add_intercept(X)
   p <- ncol(X) - 1
   
-  Xnew <- scale(Xnew, ridge_fit$x_means, ridge_fit$x_sds)
+  Xnew <- scale(Xnew, object$x_means, object$x_sds)
   Xnew <- add_intercept(Xnew)
 
   sd_y <- sqrt(stats::var(Y) * ((N - 1) / N))
-  lambda <- (1 / sd_y) * ridge_fit$lambda.min * N
+  lambda <- (1 / sd_y) * object$lambda.min * N
 
   # Reference: https://stats.stackexchange.com/questions/129179/why-is-glmnet-ridge-regression-giving-me-a-different-answer-than-manual-calculat
   hat_mat <- Xnew %*% solve(crossprod(X) + lambda * diag(x = c(0, rep(1, p)))) %*% t(X)
@@ -450,7 +450,7 @@ weights.ridge_fit <- function(ridge_fit, X, Y, Xnew = NULL, ...) {
 #'
 #' Generate smoother weights for a test sample from a post-Lasso regression model.
 #'
-#' @param plasso_fit An object returned by \code{\link{plasso_fit}}.
+#' @param object An object returned by \code{\link{plasso_fit}}.
 #' @param Xnew Optional covariate matrix of the test sample. 
 #'  If not provided, predictions are computed for the training sample.
 #' @param ... Ignored arguments.
@@ -460,17 +460,17 @@ weights.ridge_fit <- function(ridge_fit, X, Y, Xnew = NULL, ...) {
 #' @keywords internal
 #' @method weights plasso_fit
 #' @exportS3Method
-weights.plasso_fit <- function(plasso_fit, Xnew = NULL, ...) {
-  if (is.null(Xnew)) Xnew <- plasso_fit$X
+weights.plasso_fit <- function(object, Xnew = NULL, ...) {
+  if (is.null(Xnew)) Xnew <- object$X
 
-  X <- add_intercept(plasso_fit$x)
+  X <- add_intercept(object$x)
   Xnew <- add_intercept(Xnew)
 
   colnames(X)[1] <- "(Intercept)"
   colnames(Xnew) <- colnames(X)
 
-  Xact <- X[, plasso_fit$names_pl, drop = FALSE]
-  Xactnew <- Xnew[, plasso_fit$names_pl, drop = FALSE]
+  Xact <- X[, object$names_pl, drop = FALSE]
+  Xactnew <- Xnew[, object$names_pl, drop = FALSE]
 
   hat_mat <- Xactnew %*% solve(crossprod(Xact), tol = 2.225074e-308) %*% t(Xact)
 
@@ -481,7 +481,7 @@ weights.plasso_fit <- function(plasso_fit, Xnew = NULL, ...) {
 #'
 #' Extract smoother weights for test sample from a post-lasso regression model.
 #'
-#' @param rlasso_fit Output of \code{\link{rlasso_fit}}.
+#' @param object Output of \code{\link{rlasso_fit}}.
 #' @param Xnew Covariate matrix of test sample. If not provided, prediction is done for the training sample.
 #' @param ... Ignore unused arguments.
 #'
@@ -490,18 +490,18 @@ weights.plasso_fit <- function(plasso_fit, Xnew = NULL, ...) {
 #' @method weights rlasso_fit
 #' @keywords internal
 #' @exportS3Method
-weights.rlasso_fit <- function(rlasso_fit, Xnew = NULL, ...) {
-  if (!rlasso_fit$options$post) stop("Smoother matrix requires post-lasso specification.")
-  if (is.null(Xnew)) Xnew <- rlasso_fit$model
+weights.rlasso_fit <- function(object, Xnew = NULL, ...) {
+  if (!object$options$post) stop("Smoother matrix requires post-lasso specification.")
+  if (is.null(Xnew)) Xnew <- object$model
 
-  X <- add_intercept(rlasso_fit$model)
+  X <- add_intercept(object$model)
   Xnew <- add_intercept(Xnew)
 
   colnames(X)[1] <- "(Intercept)"
   colnames(Xnew) <- colnames(X)
   
-  active_vars <- which(rlasso_fit$index)
-  active_vars <- c("(Intercept)", names(rlasso_fit$beta)[active_vars])
+  active_vars <- which(object$index)
+  active_vars <- c("(Intercept)", names(object$beta)[active_vars])
 
   Xact <- X[, active_vars, drop = FALSE]
   Xactnew <- Xnew[, active_vars, drop = FALSE]
@@ -516,7 +516,7 @@ weights.rlasso_fit <- function(rlasso_fit, Xnew = NULL, ...) {
 #'
 #' Extract smoother weights for test sample from a random forest model.
 #'
-#' @param forest_grf_fit Output of \code{\link{forest_grf_fit}}.
+#' @param object Output of \code{\link{forest_grf_fit}}.
 #' @param Xnew Covariate matrix of test sample. If not provided, 
 #'  prediction is done for the training sample.
 #' @param ... Ignore unused arguments.
@@ -526,10 +526,10 @@ weights.rlasso_fit <- function(rlasso_fit, Xnew = NULL, ...) {
 #' @method weights forest_grf_fit
 #' @keywords internal
 #' @exportS3Method
-weights.forest_grf_fit <- function(forest_grf_fit, Xnew = NULL, ...) {
-  if (is.null(Xnew)) Xnew <- forest_grf_fit$X.orig
+weights.forest_grf_fit <- function(object, Xnew = NULL, ...) {
+  if (is.null(Xnew)) Xnew <- object$X.orig
 
-  w <- grf::get_forest_weights(forest_grf_fit, newdata = Xnew)
+  w <- grf::get_forest_weights(object, newdata = Xnew)
   w <- as.matrix(w)
 
   return(w)
@@ -540,7 +540,7 @@ weights.forest_grf_fit <- function(forest_grf_fit, Xnew = NULL, ...) {
 #'
 #' Extract smoother weights for test sample from an XGBoost model.
 #'
-#' @param xgboost_fit Output of \code{\link{xgboost_fit}}.
+#' @param object Output of \code{\link{xgboost_fit}}.
 #' @param X Covariate matrix of training sample.
 #' @param Xnew Covariate matrix of test sample. 
 #'  If not provided, prediction is done for the training sample.
@@ -551,11 +551,11 @@ weights.forest_grf_fit <- function(forest_grf_fit, Xnew = NULL, ...) {
 #' @method weights xgboost_fit
 #' @keywords internal
 #' @exportS3Method
-weights.xgboost_fit <- function(xgboost_fit, X, Y, Xnew = NULL, ...) {
+weights.xgboost_fit <- function(object, X, Y, Xnew = NULL, ...) {
   dtrain <- xgboost::xgb.DMatrix(data = as.matrix(X), label = Y)
   dtest <- xgboost::xgb.DMatrix(data = as.matrix(Xnew))
 
-  w <- get_xgboost_weights(xgboost_fit, dtrain = dtrain, dtest = dtest)
+  w <- get_xgboost_weights(model = object, dtrain = dtrain, dtest = dtest)
   w <- as.matrix(w$S_test)
 
   return(w)
@@ -567,7 +567,7 @@ weights.xgboost_fit <- function(xgboost_fit, X, Y, Xnew = NULL, ...) {
 #' Extract smoother weights from a k-nearest neighbor algorithm.
 #' Each weight equals \code{1 / k} for neighbors and 0 for non-neighbors.
 #'
-#' @param arguments Output of \code{\link{knn_fit}}.
+#' @param object Output of \code{\link{knn_fit}}.
 #' @param X Covariate matrix of training sample.
 #' @param Xnew Covariate matrix of test sample.
 #' @param ... Ignore unused arguments.
@@ -577,9 +577,9 @@ weights.xgboost_fit <- function(xgboost_fit, X, Y, Xnew = NULL, ...) {
 #' @method weights knn_fit
 #' @keywords internal
 #' @exportS3Method
-weights.knn_fit <- function(arguments, X, Xnew = NULL, ...) {
+weights.knn_fit <- function(object, X, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
-  k <- if (is.null(arguments$k)) 10 else arguments$k
+  k <- if (is.null(object$k)) 10 else object$k
 
   # distance = as.matrix(FastKNN::Distance_for_KNN_test(Xnew, X))
   euclidean_dist <- t(apply(Xnew, 1, function(x_i) {
@@ -605,7 +605,7 @@ weights.knn_fit <- function(arguments, X, Xnew = NULL, ...) {
 #' Extract smoother (adaptive nearest neighbor) weights for test sample
 #' from a distributional random forest model.
 #'
-#' @param forest_drf_fit Output of \code{\link{forest_drf_fit}}.
+#' @param object Output of \code{\link{forest_drf_fit}}.
 #' @param Xnew Covariate matrix of test sample. 
 #'  If not provided, prediction is done for the training sample.
 #' @param ... Ignore unused arguments.
@@ -615,10 +615,10 @@ weights.knn_fit <- function(arguments, X, Xnew = NULL, ...) {
 #' @method weights forest_drf_fit
 #' @keywords internal
 #' @exportS3Method
-weights.forest_drf_fit <- function(forest_drf_fit, Xnew = NULL, ...) {
-  if (is.null(Xnew)) Xnew <- forest_drf_fit$X.orig
+weights.forest_drf_fit <- function(object, Xnew = NULL, ...) {
+  if (is.null(Xnew)) Xnew <- object$X.orig
 
-  w <- as.matrix(predict(forest_drf_fit, newdata = Xnew)$weights)
+  w <- as.matrix(predict(object, newdata = Xnew)$weights)
 
   return(w)
 }

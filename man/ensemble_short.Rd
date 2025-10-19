@@ -10,8 +10,7 @@ ensemble_short(
   Y,
   cf_mat,
   subset = NULL,
-  storeModels = c("No", "Memory", "Disk"),
-  tuneLearners = NULL,
+  store_models = c("no", "memory", "disk"),
   quiet = TRUE,
   pb = NULL,
   pb_np = NULL
@@ -31,17 +30,8 @@ the different folds.}
 \item{subset}{Logical vector indicating which observations to use for 
 determining ensemble weights. If not provided, all observations are used.}
 
-\item{storeModels}{Character string specifying whether to store the models. 
-Must be one of \code{c("No", "Memory", "Disk")} with "No" as the default.}
-
-\item{tuneLearners}{Optional hyperparameter tuning for selected learners (see \code{\link{create_method}} 
-                  for details). Either \code{NULL} (default) for no tuning, or one of:
-\describe{
-  \item{\code{"full_sample" }}{Tune hyperparameters using full sample.}
-  \item{\code{"fold" }}{Tuning is performed on the estimation part of the 
-                       cross-fitting split, which is roughly
-                       \eqn{F} times more computationally demanding.}
-}}
+\item{store_models}{Character string specifying whether to store the models. 
+Must be one of \code{c("no", "memory", "disk")} with "no" as the default.}
 
 \item{quiet}{Logical. If \code{FALSE}, progress output is printed to the console.}
 
@@ -56,7 +46,7 @@ A list with class \code{"ensemble_short"} containing:
   \item{cf_preds}{A matrix of dimension \code{nrow(X)} x \code{length(methods)} 
    containing the cross-fitted predictions of the machine learning methods from the ensemble.}
   \item{ens_models}{A list of fitted machine learning models from all 
-   cross-fitting folds (if \code{storeModels} is not set to "No").}
+   cross-fitting folds (if \code{store_models} is not set to "no").}
 }
 }
 \description{

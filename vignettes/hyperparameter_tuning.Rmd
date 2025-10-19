@@ -18,31 +18,32 @@ library(NuisanceParameters)
 library(hdm)
 ```
 
-This vignette briefly covers hyperparameter tuning supported by `NuisanceParameters`.
+This vignette covers hyperparameter tuning as implemented in `NuisanceParameters`.
 
 ## Hyperparameter tuning
 
-Selected learners, such as *grf*'s regression forest and *XGBoost*, support hyperparameter tuning. This can be done either on the full sample or "on-the-fold."
+Hyperparameter tuning is supported by grf's regression forest and XGBoost and can be done either on the full sample or "on-the-fold." If `tuning = "fold"`, tuning takes place on the estimation part of the cross-fitting split, which is roughly $F$ (the number of cross-fitting folds) times more computationally intensive than using the full sample.
 
--   For the regression forest, *grf*'s default tuning routine is run. If `tuneLearners = "fold"`, tuning happens on the estimation part of the cross-fitting split, which is roughly $F$ times more computationally intensive than using the full sample.
+-   For the regression forest, grf's default tuning routine is used.
 
--   *XGBoost* is tuned via a hyperband-style multi-armed bandit approach: it progressively allocates resources (boosting rounds) to the most promising configurations across successive evaluation rungs.
+-   XGBoost is tuned via a hyperband-style multi-armed bandit approach: it progressively allocates resources (boosting rounds) to the most promising configurations across successive evaluation rungs.
 
 See details in `?tune_learners` and `?tune_xgb_hyperband`. See also [Bach et al. (2024)](https://arxiv.org/abs/2402.04674) for a discussion of hyperparameter tuning in Double Machine Learning.
 
 Note that the base learners `ridge`, `plasso`, and `lasso` use cross-validation to select the regularization strength $λ$ by default.
 
-## Example using hdm's pension data
+## Tuning and out-of-sample performance
 
-As before, we use the dataset that is provided in the `hdm` package. See [Chernozhukov and Hansen (2004)](#0) and Belloni et al. (2014) for details.
+As before, we use the dataset that is provided in the `hdm` package. See Chernozhukov and Hansen (2004) and Belloni et al. (2014) for details.
 
-The sample contains 9,915 observations. We use a 25% subset to speed up computation:
+The sample contains 9,915 observations. We use a 50% subset to speed up computation:
 
 ```{r}
 # see ?pension for details
 data("pension", package = "hdm")
 
 # subset
+set.seed(123)
 idx <- sample(nrow(pension), size = round(0.25 * nrow(pension)))
 sub <- pension[idx, ]
 
@@ -61,45 +62,50 @@ get_rmse <- function(Y.hat, Y) {
 }
 ```
 
-Base learners are registered as usual:
+When registering base learners, we additionally specify `tuning = "full_sample"` or `tuning = "fold"` (with `"no"` as the default):
 
 ```{r}
-methods = list(
+mtd = list(
  "ols" = create_method("ols"),
  "xgboost" = create_method("xgboost"),
  "forest_grf" = create_method("forest_grf")
  )
+
+mtd_full = list(
+ "ols" = create_method("ols"),
+ "xgboost_full" = create_method("xgboost", tuning = "full_sample"),
+ "forest_grf_full" = create_method("forest_grf", tuning = "full_sample")
+ )
+
+mtd_fold = list(
+ "ols" = create_method("ols"),
+ "xgboost_fold" = create_method("xgboost", tuning = "fold"),
+ "forest_grf_fold" = create_method("forest_grf", tuning = "fold")
+ )
 ```
 
-Set `tuneLearners = "full_sample"` to enable hyperparameter tuning on the full sample:
+The main function remains identical to the case with no tuning.
 
 ```{r}
 time <- system.time({
   np <- nuisance_parameters(
     NuPa = "Y.hat", X = X, Y = Y, D = D, 
-    methods = methods, cf = 3, stacking = "short", 
-    storeModels = "Memory")
+    methods = mtd, cf = 3, stacking = "short", 
+    store_models = "memory")
   })
 
 time_tune <- system.time({
   np_fs_tnd <- nuisance_parameters(
     NuPa = "Y.hat", X = X, Y = Y, D = D, 
-    methods = methods, cf = 3, stacking = "short", 
-    storeModels = "Memory", tuneLearners = "full_sample")
+    methods = mtd_full, cf = 3, stacking = "short", 
+    store_models = "memory")
   })
 
-plot(np$numbers$ens_weights)
-plot(np_fs_tnd$numbers$ens_weights)
-```
-
-By setting `tuneLearners = "fold"`, we perform on-the-fold hyperparameter tuning, which is expected to be more resource-intensive:
-
-```{r}
 time_fold_tune <- system.time({
   np_fold_tnd <- nuisance_parameters(
     NuPa = "Y.hat", X = X, Y = Y, D = D, 
-    methods = methods, cf = 3, stacking = "short", 
-    storeModels = "Memory", tuneLearners = "fold")
+    methods = mtd_fold, cf = 3, stacking = "short", 
+    store_models = "memory")
   })
 
 # Display the runtime
@@ -110,7 +116,7 @@ time_df <- data.frame(
 print(time_df)
 ```
 
-Finally, the RMSE of the ensemble predictions, as well as of the individual learners, is calculated:
+To see if performance gets any better, the RMSE of the ensemble predictions and the individual learners is calculated:
 
 ```{r}
 ens_rmse <- c(Default = get_rmse(np$nuisance_parameters$Y.hat, Y),
@@ -125,4 +131,32 @@ rmse_results <- rbind(
 
 cat("Ensemble:\n"); print(round(ens_rmse, 4))
 cat("\nBase learners:\n"); print(round(rmse_results, 4))
+```
+
+Tuned and default learners can, of course, be combined:
+
+```{r}
+methods = list(
+ "ols" = create_method("ols"),
+ "xgboost" = create_method("xgboost"),
+ "xgboost_full" = create_method("xgboost", tuning = "full_sample"),
+ "xgboost_fold" = create_method("xgboost", tuning = "fold"),
+ "forest_grf" = create_method("forest_grf"),
+ "forest_grf_full" = create_method("forest_grf", tuning = "full_sample"),
+ "forest_grf_fold" = create_method("forest_grf", tuning = "fold")
+ )
+
+np <- nuisance_parameters(
+    NuPa = "Y.hat", X = X, Y = Y, D = D, 
+    methods = methods, cf = 3, stacking = "short", 
+    store_models = "memory")
+
+plot(np$numbers$ens_weights)
+```
+
+```{r}
+cf_preds <- np$models$Y.hat_m$ens_object$cf_preds
+
+cat("Ensemble:\n"); print(get_rmse(np$nuisance_parameters$Y.hat, Y))
+cat("\nBase Learners:\n"); print(as.matrix(apply(cf_preds, 2, get_rmse, Y)))
 ```

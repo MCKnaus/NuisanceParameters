@@ -9,9 +9,10 @@ create_method(
     "forest_drf", "xgboost", "rlasso", "logit", "logit_nnet", "nb_gaussian",
     "nb_bernoulli", "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop"),
   x_select = NULL,
+  arguments = list(),
+  tuning = "no",
   multinomial = NULL,
-  parallel = FALSE,
-  arguments = list()
+  parallel = FALSE
 )
 }
 \arguments{
@@ -21,14 +22,22 @@ create_method(
 variables to use. For example, tree-based methods typically exclude the
 interactions used by Lasso.}
 
+\item{arguments}{Optional list of additional arguments passed to the underlying method.}
+
+\item{tuning}{Hyperparameter tuning options for GRF's regression forest and XGBoost:
+\describe{
+  \item{\code{"full_sample"}}{Tune hyperparameters using full sample.}
+  \item{\code{"fold"}}{Tuning is performed on the estimation part of the cross-fitting split.
+                       Roughly \eqn{F} times more computationally intensive.}
+  \item{\code{"no"}}{No tuning performed; uses default settings.}
+}}
+
 \item{multinomial}{Optional character specifying multiclass handling approach:
 one of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.}
 
 \item{parallel}{Optional logical. If \code{TRUE}, enables parallelization for
 the One-Vs-One (OvO) multiclass routine. Requires \code{foreach} and
 \code{doParallel}.}
-
-\item{arguments}{Optional list of additional arguments passed to the underlying method.}
 }
 \value{
 A list object that can be passed as input to \code{\link{ensemble}}.
@@ -65,12 +74,12 @@ Supported methods include:
   \code{sample.fraction = 0.5}, and \code{honesty = TRUE}.
 
   \itemize{
-    \item If \code{tuneLearners = "full_sample"}, tuning is performed on the
+    \item If \code{tuning = "full_sample"}, tuning is performed on the
     full sample \eqn{(X,Y)} over \code{sample.fraction}, \code{mtry},
     \code{min.node.size}, \code{honesty.fraction}, \code{honesty.prune.leaves},
     \code{alpha}, and \code{imbalance.penalty}.
 
-    \item If \code{tuneLearners = "fold"}, tuning is performed on the
+    \item If \code{tuning = "fold"}, tuning is performed on the
     estimation part of the cross-fitting split (\eqn{F–1} folds), which is roughly
     \eqn{F} times more computationally demanding.
   }

@@ -4,16 +4,18 @@
 \alias{predict.xgboost_prop_fit}
 \title{Predict method for \code{xgboost} fits}
 \usage{
-\method{predict}{xgboost_prop_fit}(xgboost_fit, X, Y, Xnew = NULL)
+\method{predict}{xgboost_prop_fit}(object, X, Y, Xnew = NULL, ...)
 }
 \arguments{
-\item{xgboost_fit}{Output of \code{\link{xgboost_prop_fit}}.}
+\item{object}{Output of \code{\link{xgboost_prop_fit}}.}
 
 \item{X}{Covariate matrix of training sample.}
 
 \item{Y}{Vector of outcomes of training sample.}
 
 \item{Xnew}{Covariate matrix of test sample. If \code{NULL}, uses training data.}
+
+\item{...}{Ignored additional arguments.}
 }
 \value{
 A data frame of predicted class probabilities.  

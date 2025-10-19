@@ -9,46 +9,62 @@ date: "09/25"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteEncoding{UTF-8}
-  %\VignetteIndexEntry{Estimation}
+  %\VignetteIndexEntry{Multivalued Treatments}
   %\VignetteEngine{knitr::rmarkdown}
 ---
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(conflicted)
-invisible(lapply(c("create_method", "design_matrix", "data_screen", "prep_cf_mat"), 
-       function(x) conflict_prefer(x, "NuisanceParameters", quiet = TRUE)))
-
 library(causalDML)
 library(NuisanceParameters)
+
+conflict_prefer("create_method", "NuisanceParameters", quiet = TRUE)
+conflict_prefer("design_matrix", "NuisanceParameters", quiet = TRUE) 
+conflict_prefer("data_screen", "NuisanceParameters", quiet = TRUE)
+conflict_prefer("prep_cf_mat", "NuisanceParameters", quiet = TRUE)
 ```
 
 ## Introduction
 
 This notebook introduces methods for estimating nuisance parameters with multivalued treatments, focusing on:
 
--   estimating generalized propensity scores: multiclass, One-vs-Rest (OvR), and One-vs-One (OvO)
--   ensembling techniques: stacked non-negative least squares and the BFGS algorithm
--   an application to the Pennsylvania re-employment bonus experiment
+-   Estimating propensity scores using multiclass, One-vs-Rest (OvR), and One-vs-One (OvO) approaches
+-   Ensembling techniques: stacked non-negative least squares and the BFGS algorithm
+-   An application to the Pennsylvania re-employment bonus experiment
 
-## Estimating propensity scores for multivalued treatments
+## Propensity scores for multivalued treatments
 
-When propensity scores need to be estimated for treatments with more than two values, algorithms originally designed for binary tasks can still be applied. Two common approaches are One-vs-Rest (OvR) and One-vs-One (OvO).
+For treatments with more than two levels, binary propensity score methods may fail. Still, two common approaches make it possible to use methods developed for binary treatments in more general settings.
 
 *One-vs-Rest (OvR)* reduces a multi-class problem to a series of binary tasks. For example, with categories A, B, and C, one model distinguishes A from (B and C), another B from (A and C), and a third C from (A and B). Each model is trained on the full dataset, with outcomes recoded as “this class” versus “the rest.” Predictions from all models are then normalized to yield class probabilities.
 
-*One-vs-One (OvO)* instead builds a separate classifier for every pair of classes. With A, B, and C, one model distinguishes A from B, another A from C, and a third B from C. In general, $K(K-1)/2$ models are trained, each using only the relevant subset of data. Final predictions are obtained by combining the pairwise probabilities, often through Kullback–Leibler (KL) distance minimization. Note that the number of models grows quickly as $K$ increases—for instance, 13 classes require 78 classifiers.
+*One-vs-One (OvO)* instead builds a separate classifier for every pair of classes. With A, B, and C, one model distinguishes A from B, another A from C, and a third B from C. In general, $K(K-1)/2$ models are trained, each using only the relevant subset of data. Note that the number of models grows quickly as $K$ increases—for instance, 13 classes require 78 classifiers.
 
-Another, and often preferred, approach is to use algorithms that natively support multivalued treatments. This can be done by setting `multinomial = "multiclass"`.
+Another, and often preferred, approach is to use algorithms that natively support multivalued treatments.
+
+In `NuisanceParameters`, the three aforementioned approaches can be used by setting the `multinomial` option in `create_method` to `"multiclass"`, `"one-vs-one"`, or `"one-vs-rest"`.
+
+We now define a flexible set of base learners. For propensity score estimation, we explore all available multinomial strategies:
+
+```{r}
+methods = list(
+ "ols" = create_method("ols"),
+ "plasso" = create_method("plasso"),
+ "forest_grf" = create_method("forest_grf"),
+ "logit" = create_method("logit", multinomial = "multiclass"),
+ "ranger" = create_method("ranger", multinomial = "one-vs-one"),
+ "logit_nnet" = create_method("logit_nnet", multinomial = "one-vs-rest"),
+ "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
+ )
+```
 
 ## Obtaining ensemble weights
 
-With multivalued treatments, each learner produces an array of size $N \times K \times M$, where $K$ is the number of treatments and $M$ the number of models. Each row sums to one across treatment states.
+With multivalued treatments, each learner produces an array of size $N \times K \times M$, where $K$ is the number of treatments and $M$ the number of models. Each row sums to one across treatment states. This setup rules out standard ensembling methods like OLS, since they would violate the probability constraint. We provide several alternatives instead.
 
-This setup rules out standard ensembling methods like OLS, since they would violate the probability constraint. The package provides two alternatives.
+The first is stacked non-negative least squares: all treatment-specific estimates are stacked across $K$, a single outcome vector is formed, and $X$ is flattened into a $(KN \times M)$ matrix, on which `nnls::nnls` is run.
 
-The first is stacked non-negative least squares (NNLS): all treatment-specific estimates are stacked across $K$, a single outcome vector is formed, and $X$ is flattened into a $(KN \times M)$ matrix, on which `nnls::nnls` is applied.
-
-The second, enabled by setting `do_bfgs = TRUE`, uses a quasi-Newton optimization (BFGS) to approximate the Hessian and find local minima of smooth, unconstrained nonlinear functions. For multinomial outcomes, BFGS estimates ensemble weights under a softmax constraint, using mean squared error (the Brier score) as the loss function.
+The second, enabled by setting `ensemble_type = "bfgs"`, uses a quasi-Newton optimization (BFGS) to approximate the Hessian and find local minima of smooth, unconstrained nonlinear functions. For multinomial outcomes, BFGS estimates ensemble weights under a softmax constraint, using mean squared error (the Brier score) as the loss function.
 
 ## Pennsylvania re-employment bonus experiment
 
@@ -56,11 +72,12 @@ We revisit the Pennsylvania re-employment bonus experiment ([Bilias, 2000](https
 
 These experiments were conducted in the 1980s by the U.S. Department of Labor to test the incentive effects of alternative compensation schemes for unemployment insurance (UI): UI claimants were randomly assigned either to a control group or one of six treatments.
 
-All treatments offered a cash bonus for finding a job quickly, but varied three factors: the bonus size (low = 3x or high = 6x the weekly benefit amount), the time limit to qualify (short = 6 weeks or long = 12 weeks), and whether a job search workshop was offered. The control group received the standard unemployment benefits with no bonus or workshop.
+All treatments offered a cash bonus for finding a job quickly, but varied three factors: the bonus size (low or high), the time limit to qualify (short or long), and whether a job search workshop was offered. The control group received the standard unemployment benefits with no bonus or workshop.
 
 $X$ includes demographics, enrollment details, and occupation; $Y$ is the first unemployment spell in weeks. You can learn more about the data by typing `?pa_reemployment` in the console.
 
 ```{r}
+set.seed(123)
 data(pa_reemployment)
 Penn <- pa_reemployment
 
@@ -73,24 +90,12 @@ X_raw <- model.matrix(~0 + female + black + hispanic + othrace + dep + q2
 X <- data_screen(data = X_raw, treat = D, bin_cut = 0.02, corr_cut = 0.9, quiet = FALSE)
 ```
 
-We define a flexible set of base learners. For propensity score estimation, we explore all available multiclass strategies ("one-vs-one", "one-vs-rest" and "multiclass").
-
-We also set `stratify = TRUE` so that cross-fitting folds preserve the treatment ratios from the full sample.
+We set `stratify = TRUE` so that cross-fitting folds preserve the treatment ratios from the full sample.
 
 ```{r}
-methods = list(
- "ols" = create_method("ols"),
- "plasso" = create_method("plasso"),
- "forest_grf" = create_method("forest_grf"),
- "logit" = create_method("logit", multinomial = "multiclass"),
- "ranger" = create_method("ranger", multinomial = "one-vs-one"),
- "logit_nnet" = create_method("logit_nnet", multinomial = "one-vs-rest"),
- "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
- )
-
 np <- nuisance_parameters(NuPa = c("Y.hat.d", "D.hat"), X = X, Y = Y, D = D,
                           methods = methods, cf = 3, stacking = "short", 
-                          stratify = TRUE, storeModels = "No")
+                          stratify = TRUE, store_models = "no")
 
 plot(np$numbers$ens_weights)
 ```
@@ -100,7 +105,7 @@ By default, ensemble weights for multivalued treatments are estimated via non-ne
 ```{r}
 np <- nuisance_parameters(NuPa = c("Y.hat.d", "D.hat"), X = X, Y = Y, D = D,
                           methods = methods, cf = 3, stacking = "short",
-                          stratify = TRUE, storeModels = "No", do_bfgs = TRUE)
+                          stratify = TRUE, store_models = "no", ensemble_type = "bfgs")
 
 plot(np$numbers$ens_weights)
 ```
@@ -133,4 +138,4 @@ The ATEs show the percentage decrease in unemployment spells resulting from prog
 DML$ATE$results[1:6,]
 ```
 
-We find results consistent with the study’s conclusion that reemployment bonuses had limited overall effects on accelerating job finding or reducing UI duration.
+The results are consistent with the study’s conclusion that reemployment bonuses had limited overall effects on accelerating job finding or reducing UI duration.

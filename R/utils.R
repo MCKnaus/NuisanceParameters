@@ -154,12 +154,12 @@ prep_cf_mat <- function(N,
 }
 
 
-#' Estimate ensemble weights using non-negative least squares (NNLS)
+#' Estimate ensemble weights using various methods
 #'
-#' Estimates ensemble weights via non-negative least squares from the \code{nnls} 
-#' package. Supports binary/continuous and multinomial outcomes. Optionally, 
-#' BFGS optimization with a softmax parametrization can be used for multinomial 
-#' outcomes to directly minimize the Brier score (i.e. MSE).
+#' Estimates ensemble weights using non-negative least squares (NNLS), BFGS 
+#' optimization, single best learner selection, ordinary least squares (OLS), 
+#' and simple averaging. Supports binary/continuous and multinomial outcomes. 
+#' Weights are normalized to sum to 1 for all methods.
 #'
 #' @param X For continuous/binary outcomes: a numeric matrix of predictions
 #'   with rows as observations and columns as base learners.
@@ -171,11 +171,16 @@ prep_cf_mat <- function(N,
 #' @param subset Optional logical vector if only subset of data should be used.
 #' @param is_mult Logical. Indicates whether the outcome is multinomial
 #'   (\code{TRUE}) or binary/continuous (\code{FALSE}).
-#' @param do_bfgs Logical. If \code{TRUE} and the outcome is multinomial,
-#'   estimates ensemble weights by BFGS optimization with a softmax constraint.
-#'   If \code{FALSE}, estimates weights via stacked NNLS from the \code{nnls} package.
+#' @param ensemble_type Method for calculating ensemble weights:
+#'   \describe{
+#'     \item{\code{"nnls"}}{Non-negative least squares; weights sum to 1 (default)}
+#'     \item{\code{"bfgs"}}{BFGS optimization (for multivalued treatments only; falls back to \code{nnls} otherwise)}
+#'     \item{\code{"singlebest"}}{Weight of 1 on the learner with the lowest RMSE}
+#'     \item{\code{"ols"}}{Ordinary least squares regression weights (falls back to \code{nnls} for multivalued treatments)}
+#'     \item{\code{"average"}}{Equal weights for all learners}
+#'   }
 #'
-#' @return A numeric vector of ensemble weights, normalized to sum to 1.
+#' @return A numeric vector of ensemble weights.
 #'
 #' @examples
 #' \dontrun{
@@ -185,13 +190,62 @@ prep_cf_mat <- function(N,
 #' }
 #' @keywords internal
 ens_weights_maker <- function(X, Y, 
+                              ensemble_type = "nnls",
                               subset = NULL, 
-                              is_mult = FALSE, 
-                              do_bfgs = FALSE) {
+                              is_mult = FALSE
+                              ) {
+  # Checks
   if (is.null(subset)) subset <- rep(TRUE, length(Y))
+  n_learners <- if (is_mult) dim(X)[3] else ncol(X)
   
-  ## Multinomial - BFGS optimization
-  if (is_mult && do_bfgs) {
+  # Method validation
+  if (ensemble_type == "bfgs" && !is_mult) {
+    #message("BFGS only available for multinomial outcomes. Using 'nnls' instead.")
+    ensemble_type <- "nnls"
+  }
+  if (ensemble_type == "ols" && is_mult) {
+    #message("OLS not implemented for multinomial outcomes. Using 'nnls' instead.")
+    ensemble_type <- "nnls"
+  }
+  
+  # RMSE helper function
+  get_rmse <- function(Y.hat, Y) {
+    sqrt(mean((Y - Y.hat)^2))
+  }
+  
+  if (ensemble_type == "singlebest") {
+    # Find learner with lowest RMSE
+    if (is_mult) {
+      # 3D array case (multiclass)
+      rmses <- apply(X[subset, , , drop = FALSE], 3, function(preds) {
+        get_rmse(as.vector(preds), Y[subset])
+      })
+    } else {
+      # 2D matrix case
+      rmses <- apply(X[subset, , drop = FALSE], 2, function(preds) {
+        get_rmse(preds, Y[subset])
+      })
+    }
+    best_idx <- which.min(rmses)
+    ens_w <- numeric(n_learners)
+    ens_w[best_idx] <- 1
+    
+  } else if (ensemble_type == "average") {
+    # Equal weights for all learners
+    ens_w <- rep(1 / n_learners, n_learners)
+    
+  } else if (ensemble_type == "ols") {
+    # OLS regression weights
+    if (length(dim(X)) == 3) {
+      Y_stack <- as.vector(one_hot(Y[subset]))
+      X_stack <- apply(X[subset, , , drop = FALSE], 3, as.vector)
+      ens_w <- qr.solve(a = X_stack, b = Y_stack)
+    } else {
+      ens_w <- qr.solve(a = as.matrix(X[subset, ]), b = Y[subset])
+    }
+
+  } else if (ensemble_type == "bfgs") {
+    # Multinomial - BFGS optimization
     softmax <- function(z) { z <- z - max(z); exp(z) / sum(exp(z)) }
     one_hot_Y <- one_hot(Y = Y)
     
@@ -208,24 +262,24 @@ ens_weights_maker <- function(X, Y,
       control = list(reltol = 1e-8)
     )
     ens_w <- softmax(bfgs$par)
-    
-  } else if (is_mult && !do_bfgs) {
-    ## Multinomial - NNLS - stack Y (K*N vector) and flatten X (K*N × M matrix)
-    Y_stack <- as.vector(one_hot(Y[subset]))
-    X_stack <- apply(X[subset, , , drop = FALSE], 3, as.vector)
-    ens_w <- nnls::nnls(A = as.matrix(X_stack), b = Y_stack)$x
-    
-  } else {
-    ## Binary/continuous outcome
-    ens_w <- nnls::nnls(A = as.matrix(X[subset, ]), b = Y[subset])$x
+
+  } else if (ensemble_type == "nnls") {
+    # NNLS
+    if (is_mult) {
+      # Multinomial - stack Y (K*N vector) and flatten X (K*N × M matrix)
+      Y_stack <- as.vector(one_hot(Y[subset]))
+      X_stack <- apply(X[subset, , , drop = FALSE], 3, as.vector)
+      ens_w <- nnls::nnls(A = as.matrix(X_stack), b = Y_stack)$x
+    } else {
+      # Binary/continuous outcome
+      ens_w <- nnls::nnls(A = as.matrix(X[subset, ]), b = Y[subset])$x
+    }
+    # Handle degenerate all-zero weights
+    if (sum(ens_w) == 0) ens_w <- rep(1 / n_learners, n_learners)
+    ens_w <- ens_w / sum(ens_w)
   }
   
-  # Handle degenerate all-zero weights
-  if (sum(ens_w) == 0) ens_w <- rep(1 / length(ens_w), length(ens_w))
-  
-  ens_w <- ens_w / sum(ens_w)
-  names(ens_w) <- if (length(dim(X)) == 3) dimnames(X)[[3]] else colnames(X)
-
+  names(ens_w) <- if (is_mult) dimnames(X)[[3]] else colnames(X)
   return(ens_w)
 }
 
@@ -658,6 +712,13 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, methods) {
 #'  variables to use. For example, tree-based methods typically exclude the
 #'  interactions used by Lasso.
 #' @param arguments Optional list of additional arguments passed to the underlying method.
+#' @param tuning Hyperparameter tuning options for GRF's regression forest and XGBoost:
+#'   \describe{
+#'     \item{\code{"full_sample"}}{Tune hyperparameters using full sample.}
+#'     \item{\code{"fold"}}{Tuning is performed on the estimation part of the cross-fitting split.
+#'                          Roughly \eqn{F} times more computationally intensive.}
+#'     \item{\code{"no"}}{No tuning performed; uses default settings.}
+#'   }
 #' @param multinomial Optional character specifying multiclass handling approach:
 #'   one of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.
 #' @param parallel Optional logical. If \code{TRUE}, enables parallelization for
@@ -695,12 +756,12 @@ setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, methods) {
 #'   \code{sample.fraction = 0.5}, and \code{honesty = TRUE}.
 #'
 #'   \itemize{
-#'     \item If \code{tuneLearners = "full_sample"}, tuning is performed on the
+#'     \item If \code{tuning = "full_sample"}, tuning is performed on the
 #'     full sample \eqn{(X,Y)} over \code{sample.fraction}, \code{mtry},
 #'     \code{min.node.size}, \code{honesty.fraction}, \code{honesty.prune.leaves},
 #'     \code{alpha}, and \code{imbalance.penalty}.
 #'
-#'     \item If \code{tuneLearners = "fold"}, tuning is performed on the
+#'     \item If \code{tuning = "fold"}, tuning is performed on the
 #'     estimation part of the cross-fitting split (\eqn{F–1} folds), which is roughly
 #'     \eqn{F} times more computationally demanding.
 #'   }
@@ -767,11 +828,13 @@ create_method <- function(method = c("mean", "ols", "ridge", "plasso", "forest_g
                                      "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop"
                                      ),
                           x_select = NULL,
+                          arguments = list(),
+                          tuning = "no",
                           multinomial = NULL,
-                          parallel = FALSE,
-                          arguments = list()) {
+                          parallel = FALSE) {
   # Sanity checks
   method <- match.arg(method)
+  tuning <- match.arg(tuning, choices = c("no", "full_sample", "fold"))
 
   if (!(is.null(arguments) || is.list(arguments))) {
     stop("Provide either NULL or a list for arguments.")
@@ -797,10 +860,11 @@ create_method <- function(method = c("mean", "ols", "ridge", "plasso", "forest_g
 
   return(list(
     method = method,
-    multinomial = multinomial,
-    parallel = parallel,
+    x_select = x_select,
     arguments = arguments,
-    x_select = x_select
+    tuning = tuning,
+    multinomial = multinomial,
+    parallel = parallel
   ))
 }
 
@@ -1238,14 +1302,6 @@ tune_xgb_hyperband <- function(X, Y,
 #' Tunes hyperparameters for specified learners in a \code{methods} list
 #'
 #' @param type Tuning type, either "\code{full_sample}" or "\code{fold}".
-#' @param tuneLearners Optional hyperparameter tuning for selected learners (see \code{\link{create_method}} 
-#'                     for details). Either \code{NULL} (default) for no tuning, or one of:
-#'   \describe{
-#'     \item{\code{"full_sample" }}{Tune hyperparameters using full sample.}
-#'     \item{\code{"fold" }}{Tuning is performed on the estimation part of the 
-#'                          cross-fitting split, which is roughly
-#'                          \eqn{F} times more computationally demanding.}
-#'   }
 #' @param methods List of methods for ensemble estimation.
 #' @param X Covariate matrix.
 #' @param Y Numeric vector containing the outcome variable.
@@ -1255,25 +1311,24 @@ tune_xgb_hyperband <- function(X, Y,
 #' @keywords internal
 #'
 tune_learners <- function(type = c("full_sample", "fold"),
-                          tuneLearners = NULL,
                           methods,
                           X, Y) {
   type <- match.arg(type)
   
-  if (is.null(tuneLearners) || !identical(type, tuneLearners)) {
-    return(methods)
-  }
-
   # Process each method in the list
   for (i in seq_along(methods)) {
     mtd <- methods[[i]]
-
+    
+    if (mtd$tuning == "no" || !identical(type, mtd$tuning)) {
+      next
+    }
+    
     if (is.null(mtd$x_select)) {
       X_sub <- X
     } else {
       X_sub <- X[, mtd$x_select, drop = FALSE]
     }
-
+    
     # grf's random forest tuning
     if (identical(mtd$method, "forest_grf")) {
       tuned_forest <- grf::regression_forest(
@@ -1282,17 +1337,18 @@ tune_learners <- function(type = c("full_sample", "fold"),
         tune.parameters = "all",
         num.trees = 50
       )
-
-        methods[[i]][["arguments"]] <- tuned_forest[["tuning.output"]][["params"]]
-      }
-
-      # XGBoost tuning using hyperband
-      else if (identical(mtd$method, "xgboost")) {
-        tuned_xgb <- tune_xgb_hyperband(X = X_sub, Y = Y)
-
-        methods[[i]][["arguments"]] <- tuned_xgb[["params"]]
-      }
+      
+      # Merge with existing arguments
+      tuned_params <- tuned_forest[["tunable.params"]]
+      methods[[i]][["arguments"]] <- utils::modifyList(methods[[i]][["arguments"]], tuned_params)
     }
-
+    
+    # XGBoost tuning using hyperband
+    else if (identical(mtd$method, "xgboost")) {
+      tuned_xgb <- tune_xgb_hyperband(X = X_sub, Y = Y)
+      methods[[i]][["arguments"]] <- tuned_xgb[["params"]]
+    }
+  }
+  
   return(methods)
 }

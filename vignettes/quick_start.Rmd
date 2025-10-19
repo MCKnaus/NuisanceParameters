@@ -15,25 +15,25 @@ vignette: >
 
 ## Introduction
 
-This notebook offers a general introduction to the package. It covers:
+This notebook offers a general introduction to `NuisanceParameters`.
+
+It covers:
 
 1.  Data preprocessing and base learner setup
 2.  Estimation with multiple machine learners using short-stacking
-3.  Adding nuisance parameters ex post
-4.  Target parameter estimation and smoother matrix extraction (will be delegated to other packages in the trilogy)
+3.  Adding or replacing nuisance parameters ex-post
+4.  Target parameter estimation and smoother matrix extraction \
+    (will be delegated to other packages in the trilogy)
 
-More advanced topics are presented in the *Estimation* and *Multivalued Treatments* vignettes.
+Find more advanced topics in the *Stacking*, *Hyperparameter Tuning*, and *Multivalued Treatments* vignettes.
 
 ## Data
 
-The Notebook builds on the dataset that is provided in the `hdm` package. The data was used in [Chernozhukov and Hansen (2004)](#0) and Belloni et al. (2014) where further details can be found. They investigate the effect of participation in the employer-sponsored 401(k) retirement savings plan on net assets (`net_tfa`), using 401(k) eligibility (`e401`) as an instrument for 401(k) participation (`p401`).
+The notebook builds on the dataset provided in the `hdm` package. The data was used in Chernozhukov and Hansen (2004) and Belloni et al. (2014) where further details can be found. They investigate the effect of participation in the employer-sponsored 401(k) retirement savings plan on net assets (`net_tfa`), using 401(k) eligibility (`e401`) as an instrument for 401(k) participation (`p401`).
 
 The sample is drawn from the 1991 Survey of Income and Program Participation (SIPP) and consists of 9,915 observations.
 
 ```{r}
-library(conflicted)
-invisible(lapply("get_outcome_weights", function(x) conflict_prefer(x, "NuisanceParameters")))
-
 library(hdm)
 library(OutcomeWeights)
 library(NuisanceParameters)
@@ -56,7 +56,7 @@ X_raw <- model.matrix(~ 0 + age + db + educ + fsize + hown + inc
                       + male + marr + pira + twoearn, data = sub)
 ```
 
-The package provides preprocessing tools for the covariate matrix. The function `design_matrix` constructs an expanded matrix by adding interaction terms, polynomial expansions, and logarithmic transformations:
+The covariate matrix can be preprocessed using the `design_matrix` function, which expands it with interactions, polynomials, and logs:
 
 ```{r}
 # see ?design_matrix
@@ -64,16 +64,16 @@ X_big <- design_matrix(data = X_raw, int = "all", int_d = 2, poly = "all", poly_
 dim(X_big)
 ```
 
-Since this expansion can create highly correlated covariates, the function `data_screen` helps clean the data and improve performance in prediction algorithms.
+Since this expansion can create highly correlated covariates, `data_screen` helps clean the data and improve performance in prediction algorithms.
 
 ```{r}
 # see ?data_screen
 X <- data_screen(X_big, treat = D, bin_cut = 0.02, corr_cut = 0.9, quiet = FALSE)
 ```
 
-Next, we will specify a list of base learners for the ensemble. The package offers a great variety of choices—you can find the full list of available learners and their default settings by typing `?create_method` in the console. For more details on the different types of stacking and hyperparameter tuning, see the *Stacking* and *Tuning* notebooks.
+Next, we specify a list of base learners for the ensemble. The package offers a wide variety of choices—you can find the full list of available learners and their default settings by typing `?create_method` in the console. For more details on the different types of stacking and hyperparameter tuning, see the *Stacking* and *Hyperparameter Tuning* notebooks.
 
-The logic is simple: choose a base learner from the available methods, add optional arguments (for example, `num.trees` for grf’s forest), and, if desired, specify a subset of covariates to use for estimation.
+The logic is simple: choose a base learner from the available methods, supply any optional method-specific arguments (for example, `num.trees` for grf’s forest), and, if desired, specify a subset of covariates to be used in estimation.
 
 ```{r}
 # For tree methods, restrict to original features
@@ -82,18 +82,17 @@ cols <- colnames(X) %in% colnames(X_raw)
 methods = list(
  "ols" = create_method("ols"),
  "plasso" = create_method("plasso"),
- "forest_grf" = create_method("forest_grf", 
-                              arguments = list("num.trees" = 1000, "min.node.size" = 5),
-                              x_select = cols),
- "xgboost" = create_method("xgboost", 
-                           arguments = list("nrounds" = 150), 
-                           x_select = cols)
+ "forest_grf" = create_method("forest_grf", x_select = cols, 
+                              arguments = list("num.trees" = 1000, "min.node.size" = 5)),
+ "xgboost" = create_method("xgboost", x_select = cols,
+                           arguments = list("nrounds" = 150)),
+ "xgboost_tuned" = create_method("xgboost", x_select = cols, tuning = "full_sample")
  )
 ```
 
-## Main Function
+## Estimate nuisance parameters
 
-We are now ready to run the main function.
+We are now all set to run the main function.
 
 `nuisance_parameters` carries out cross-fitted estimation of nuisance parameters. If more than one method is provided, it will stack them together, creating an ensemble learner.
 
@@ -105,7 +104,7 @@ Short stacking is applied:
 np <- nuisance_parameters(NuPa = c("Y.hat","Y.hat.d","D.hat","Z.hat"),
                           X = X, Y = Y, D = D, Z = Z,
                           methods = methods, cf = 5, stacking = "short",
-                          cluster = NULL, stratify = TRUE, storeModels = "Memory")
+                          cluster = NULL, stratify = TRUE, store_models = "memory")
 ```
 
 Estimated nuisance parameters can be immediately inspected:
@@ -114,15 +113,13 @@ Estimated nuisance parameters can be immediately inspected:
 lapply(np$nuisance_parameters, head)
 ```
 
-Along with the ensemble weights in the short stacking procedure. These are obtained by regressing the outcome on the individual cross-fitted learners using non-negative least squares:
+Along with the ensemble weights in the short-stacking procedure. These are obtained by regressing the outcome on the individual cross-fitted learners using non-negative least squares:
 
 ```{r}
 plot(np$numbers$ens_weights)
 ```
 
-Now let’s estimate some target parameters using the early `MLeffect` function (to be outsourced).
-
-Note: the Wald AIPW estimator is skipped here because the conditional variance of the instrument given the treatment is very low. This makes cross-validation in lasso/ridge unstable.
+Now, let's estimate some target parameters using the early `MLeffect` function (to be outsourced).
 
 ```{r}
 TargetParam <- MLeffect(Y, D, X, Z, 
@@ -137,7 +134,7 @@ plot(TargetParam)
 
 Nuisance parameters (and their trained models) can be easily replaced or added to a `NuisanceParameter` object.
 
-For example, you might want to adjust your estimation strategy and use a different set of base learners:
+For example, you might want to adjust your estimation strategy by using a different set of base learners:
 
 ```{r}
 methods_2 = list(
@@ -147,13 +144,13 @@ methods_2 = list(
  )
 ```
 
-The only important detail is to keep using the same cross-fit indicator matrix from the original call:
+The only important detail is to keep using the same cross-fit indicator matrix from the original call. Notice the additional `cf_mat` argument:
 
 ```{r}
 np_2 <- nuisance_parameters(NuPa = c("Y.hat","Z.hat"),
                             X = X, Y = Y, D = D, Z = Z, cf_mat = np$numbers$cf_mat,
                             methods = methods_2, cf = 5, stacking = "short",
-                            cluster = NULL, stratify = TRUE, storeModels = "Memory")
+                            cluster = NULL, stratify = TRUE, store_models = "memory")
 
 plot(np_2$numbers$ens_weights)
 ```
@@ -169,25 +166,18 @@ plot(np_new$numbers$ens_weights)
 
 A key feature of this package pipeline (`NuisanceParameters → MLeffects → OutcomeWeights`) is the ability to extract smoothers from the underlying trained models.
 
-Smoother matrices are $N \times N$ objects that generate outcome predictions by weighting observed outcomes: $\hat{Y}_i = \sum^N_{j=1} s_{i \leftarrow j} Y_j$. Each entry $s_{i \leftarrow j}$ shows how much unit $j$’s outcome contributes to predicting unit $i$. A familiar example of a smoother is the OLS projection matrix.
+Smoother matrices are $N \times N$ objects that generate outcome predictions by weighting observed outcomes: $\widehat{Y}_i = \sum^N_{j=1} s_{i \leftarrow j} Y_j$. Each entry $s_{i \leftarrow j}$ shows how much unit $j$’s outcome contributes to predicting unit $i$. A familiar example of a smoother is the OLS projection matrix.
 
 Smoothers let us express predictions as linear transformations of outcomes: this makes it possible to define outcome weights $\omega$ for complex machine learning estimators (like causal forests) and connect them to familiar diagnostic tools such as covariate balance checks. For details, see [Knaus (2024)](https://arxiv.org/abs/2411.11559).
 
-Use `get_outcome_weights` to extract outcome smoother matrices using the trained models saved in the previous step (will be handled by the `OutcomeWeights` package):
+Use `get_smoother_weights` to extract outcome smoother matrices using the trained models saved in the previous step (will be soon handled by the `OutcomeWeights` package):
 
 ```{r}
 # Delivers smoother matrices for each outcome nuisance parameter
-S <- get_outcome_weights(object = np, NuPa = c("Y.hat", "Y.hat.d"))
+S <- get_smoother_weights(object = np, NuPa = "Y.hat")
 
 # Check if S*Y = Y_hat
-check_pairs <- list(
-  list(A = S$Y.hat %*% Y,         B = np$nuisance_parameters$Y.hat),
-  list(A = S$Y.hat.d[[1]] %*% Y,  B = np$nuisance_parameters$Y.hat.d[, 1]),
-  list(A = S$Y.hat.d[[2]] %*% Y,  B = np$nuisance_parameters$Y.hat.d[, 2])
-  )
-
-checks <- sapply(check_pairs, function(pair) {
-  isTRUE(all.equal(as.numeric(pair$A), pair$B, tolerance = 1e-7))})
-
-all(checks)
+isTRUE(all.equal(as.numeric(S$Y.hat %*% Y), 
+                 np$nuisance_parameters$Y.hat, 
+                 tolerance = 1e-7))
 ```

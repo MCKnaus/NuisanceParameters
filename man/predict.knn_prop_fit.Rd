@@ -4,16 +4,18 @@
 \alias{predict.knn_prop_fit}
 \title{Predict method for k-Nearest Neighbor fits}
 \usage{
-\method{predict}{knn_prop_fit}(knn_fit, X, Y, Xnew = NULL)
+\method{predict}{knn_prop_fit}(object, X, Y, Xnew = NULL, ...)
 }
 \arguments{
-\item{knn_fit}{Output of \code{\link{knn_prop_fit}}.}
+\item{object}{Output of \code{\link{knn_prop_fit}}.}
 
 \item{X}{Covariate matrix of training sample.}
 
 \item{Y}{Vector of outcomes of training sample.}
 
 \item{Xnew}{Covariate matrix of test sample. If \code{NULL}, uses training data.}
+
+\item{...}{Ignored additional arguments.}
 }
 \value{
 A numeric matrix with one column per class, containing the predicted probabilities.

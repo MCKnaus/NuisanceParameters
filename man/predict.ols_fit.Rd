@@ -4,10 +4,10 @@
 \alias{predict.ols_fit}
 \title{Predict method for OLS models}
 \usage{
-\method{predict}{ols_fit}(ols_fit, Xnew = NULL, ...)
+\method{predict}{ols_fit}(object, Xnew = NULL, ...)
 }
 \arguments{
-\item{ols_fit}{An object of class \code{ols_fit} from \code{\link{ols_fit}}.}
+\item{object}{An object of class \code{ols_fit} from \code{\link{ols_fit}}.}
 
 \item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},
 predictions are generated for training data.}

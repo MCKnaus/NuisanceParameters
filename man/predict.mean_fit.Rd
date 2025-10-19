@@ -4,10 +4,10 @@
 \alias{predict.mean_fit}
 \title{Predict method for arithmetic mean model}
 \usage{
-\method{predict}{mean_fit}(mean_fit, Xnew = NULL, ...)
+\method{predict}{mean_fit}(object, Xnew = NULL, ...)
 }
 \arguments{
-\item{mean_fit}{An object of class `mean_fit` from \code{\link{mean_fit}}.}
+\item{object}{An object of class `mean_fit` from \code{\link{mean_fit}}.}
 
 \item{Xnew}{Covariate matrix for predictions. Only `nrow(Xnew)` is used.}
 

@@ -4,10 +4,10 @@
 \alias{predict.plasso_fit}
 \title{Predict method for post-lasso regression models}
 \usage{
-\method{predict}{plasso_fit}(plasso_fit, Xnew = NULL, ...)
+\method{predict}{plasso_fit}(object, Xnew = NULL, ...)
 }
 \arguments{
-\item{plasso_fit}{An object of class \code{plasso_fit} from \code{\link{plasso_fit}}.}
+\item{object}{An object of class \code{plasso_fit} from \code{\link{plasso_fit}}.}
 
 \item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},
 predictions are generated for the training data.}

@@ -4,10 +4,10 @@
 \alias{predict.ovo_fit}
 \title{Predicts class probabilities using One-Vs-One (OvO) routine}
 \usage{
-\method{predict}{ovo_fit}(ovo_fit, X, Y, Xnew = NULL, method, parallel = FALSE, quiet = TRUE)
+\method{predict}{ovo_fit}(object, X, Y, Xnew = NULL, method, parallel = FALSE, quiet = TRUE, ...)
 }
 \arguments{
-\item{ovo_fit}{Output list of \code{\link{ovo_fit}}.}
+\item{object}{Output list of \code{\link{ovo_fit}}.}
 
 \item{X}{Covariate matrix of training sample.}
 
@@ -21,9 +21,12 @@
 \code{doParallel} packages are available. Defaults to FALSE.}
 
 \item{quiet}{Logical. If FALSE, messages about parallel/sequential choice are printed.}
+
+\item{...}{Ignored additional arguments.}
 }
 \value{
-Matrix of class probability predictions for \code{Xnew}
+A matrix of predicted class probabilities for \code{Xnew} with one 
+column per class, or a vector of positive-class probabilities for binary classification.
 }
 \description{
 Predicts class probabilities using One-Vs-One (OvO) fitted classifiers

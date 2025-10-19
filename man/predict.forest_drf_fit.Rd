@@ -4,10 +4,10 @@
 \alias{predict.forest_drf_fit}
 \title{Predict method for distributional random forest models}
 \usage{
-\method{predict}{forest_drf_fit}(forest_drf_fit, Xnew = NULL, functional = "mean", ...)
+\method{predict}{forest_drf_fit}(object, Xnew = NULL, functional = "mean", ...)
 }
 \arguments{
-\item{forest_drf_fit}{An object of class \code{forest_drf_fit} from 
+\item{object}{An object of class \code{forest_drf_fit} from 
 \code{\link{forest_drf_fit}}.}
 
 \item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},

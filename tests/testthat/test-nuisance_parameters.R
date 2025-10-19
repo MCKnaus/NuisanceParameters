@@ -22,22 +22,22 @@ test_that("check nuisance_parameters for Y.hat estimation", {
   unlink(paste0(dirname(path), "/*"))
 
   t = Sys.time()
-  np_standard <- nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = 5, storeModels = "No", path = path)
+  np_standard <- nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = 5, store_models = "no", path = path)
   t_standard = (Sys.time() - t) %>% as.numeric(units = "secs")
   unlink(paste0(dirname(path), "/*"))
 
 
   t = Sys.time()
-  np_short <- nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = "short", storeModels = "No", path = path)
+  np_short <- nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = "short", store_models = "no", path = path)
   t_short = (Sys.time() - t) %>% as.numeric(units = "secs")
   unlink(paste0(dirname(path), "/*"))
 
 
   t = Sys.time()
-  np_standard_w = nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = 5, storeModels = "Disk", path = path)
+  np_standard_w = nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = 5, store_models = "disk", path = path)
   t_standard_w = (Sys.time() - t) %>% as.numeric(units = "secs")
   expect_true(file.exists(path))
-  w = get_outcome_weights(object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat")$Y.hat
+  w = get_smoother_weights(object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat")$Y.hat
   fold = np_standard_w$numbers$cf_mat[, 1]
   expect_identical(as.vector(w[fold, fold]), rep(0, sum(fold)^2))
   expect_equal(np_standard_w[["nuisance_parameters"]][["Y.hat"]], as.vector(w %*% Y), tolerance = 1e-5)
@@ -45,10 +45,10 @@ test_that("check nuisance_parameters for Y.hat estimation", {
 
 
   t = Sys.time()
-  np_short_w = nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = "short", storeModels = "Disk", path = path)
+  np_short_w = nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = "short", store_models = "disk", path = path)
   t_short_w = (Sys.time() - t) %>% as.numeric(units = "secs")
   expect_true(file.exists(path))
-  w = get_outcome_weights(object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat")$Y.hat
+  w = get_smoother_weights(object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat")$Y.hat
   fold = np_short_w$numbers$cf_mat[, 1]
   expect_identical(as.vector(w[fold, fold]), rep(0, sum(fold)^2))
   expect_equal(np_short_w[["nuisance_parameters"]][["Y.hat"]], as.vector(w %*% Y), tolerance = 1e-5)
@@ -116,7 +116,7 @@ test_that("check nuisance_parameters for D.hat", {
 
   ### Short-Stacking ###
   expect_message(np_e_short <- nuisance_parameters(NuPa="D.hat", X = X, D = D, methods = methods, cf = 5, stacking = "short", 
-                                                   storeModels = "No", path = path, quiet = FALSE), "Short-stacking is used.")
+                                                   store_models = "no", path = path, quiet = FALSE), "Short-stacking is used.")
   
   ## Saving models for non-outcome NuPas is disabled
   
@@ -151,7 +151,7 @@ test_that("check nuisance_parameters for D.hat", {
 
   ### Standard-Stacking ###
   expect_message(np_e_standard <- nuisance_parameters(NuPa="D.hat", X = X, D = D, methods = methods, cf = 5, stacking = 3, 
-                                                      storeModels = "No", path = path, quiet = FALSE), "Standard-stacking is used.")
+                                                      store_models = "no", path = path, quiet = FALSE), "Standard-stacking is used.")
 
   ## Saving models for non-outcome NuPas is disabled
   
@@ -213,7 +213,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   
   ### Short-Stacking ###
   expect_message(np_m_short <- nuisance_parameters(NuPa=c("Y.hat.d"), X = X, D = D, Y = Y, methods = methods, cf = 4, stacking = "short", 
-                                                   storeModels = "Disk", stratify = TRUE, path = path, quiet = FALSE), "Short-stacking is used.")
+                                                   store_models = "disk", stratify = TRUE, path = path, quiet = FALSE), "Short-stacking is used.")
 
 
   # check if ensemble output is stored in files
@@ -234,7 +234,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
 
   ### Short-Stacking with Smoother Weights ###
   expect_message(np_m_short_w <- nuisance_parameters(NuPa=c("Y.hat.d"), X = X, D = D, Y = Y, methods = methods, cf = 4, stacking = "short", 
-                                                     storeModels = "Disk", stratify = TRUE, path = path, quiet = FALSE), "Short-stacking is used.")
+                                                     store_models = "disk", stratify = TRUE, path = path, quiet = FALSE), "Short-stacking is used.")
 
 
   # check if ensemble output is stored in files
@@ -251,7 +251,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   expect_identical(dim(np_m_short_w$nuisance_parameters$Y.hat.d), dim(np_m_short_w$numbers$d_mat))
 
   # check smoother weights
-  w = get_outcome_weights(object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat.d")$Y.hat.d[[1]]
+  w = get_smoother_weights(object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat.d")$Y.hat.d[[1]]
   expect_equal(np_m_short_w[["nuisance_parameters"]][["Y.hat.d"]][, 1], as.vector(w %*% Y), tolerance = 1e-3)
 
   unlink(paste0(path, "/*"))
@@ -260,7 +260,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   
   ### Standard-Stacking ###
   expect_message(np_m_standard <- nuisance_parameters(NuPa=c("Y.hat.d"), X = X, D = D, Y = Y, methods = methods, cf = 4, stacking = 3, 
-                                                      storeModels = "Disk", stratify = TRUE, path = path, quiet = FALSE), "Standard-stacking is used.")
+                                                      store_models = "disk", stratify = TRUE, path = path, quiet = FALSE), "Standard-stacking is used.")
   
   # check if ensemble output is stored in files
   expect_true(file.exists(path))
@@ -280,7 +280,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   
   ### Standard-Stacking with Smoother Weights ###
   expect_message(np_m_standard_w <- nuisance_parameters(NuPa=c("Y.hat.d"), X = X, D = D, Y = Y, methods = methods, cf = 4, stacking = 3, 
-                                                      storeModels = "Disk", stratify = TRUE, path = path, quiet = FALSE), "Standard-stacking is used.")
+                                                      store_models = "disk", stratify = TRUE, path = path, quiet = FALSE), "Standard-stacking is used.")
   
   # check if ensemble output is stored in files
   expect_true(file.exists(path))
@@ -295,7 +295,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   expect_identical(dim(np_m_standard_w$nuisance_parameters$Y.hat.d), dim(np_m_standard_w$numbers$d_mat))
 
   # check smoother weights
-  w = get_outcome_weights(object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat.d")$Y.hat.d[[1]]
+  w = get_smoother_weights(object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat.d")$Y.hat.d[[1]]
   expect_equal(np_m_standard_w[["nuisance_parameters"]][["Y.hat.d"]][, 1], as.vector(w %*% Y), tolerance = 1e-3)
   
   unlink(paste0(path, "/*"))

@@ -9,7 +9,7 @@ ensemble(
   X,
   Y,
   nfolds = 5,
-  do_bfgs = FALSE,
+  ensemble_type,
   quiet = TRUE,
   pb = NULL,
   pb_np = NULL,
@@ -28,10 +28,14 @@ used in the ensemble model.}
 \item{nfolds}{Integer. Number of folds used in cross-validation of 
 ensemble weights. Default is 5.}
 
-\item{do_bfgs}{Logical. If \code{TRUE} and the outcome is multinomial,
-estimates ensemble weights by BFGS optimization with a softmax 
-constraint. If \code{FALSE}, estimates weights via stacked NNLS 
-from the \code{nnls} package.}
+\item{ensemble_type}{Method for calculating ensemble weights:
+\describe{
+  \item{\code{"nnls"}}{Non-negative least squares; weights sum to 1 (default)}
+  \item{\code{"bfgs"}}{BFGS optimization (for multivalued treatments only; falls back to \code{nnls} otherwise)}
+  \item{\code{"singlebest"}}{Weight of 1 on the learner with the lowest RMSE}
+  \item{\code{"ols"}}{Ordinary least squares regression weights (falls back to \code{nnls} for multivalued treatments)}
+  \item{\code{"average"}}{Equal weights for all learners}
+}}
 
 \item{quiet}{Logical. If \code{FALSE}, progress output is printed to the console.}
 

@@ -4,16 +4,18 @@
 \alias{predict.logit_nnet_fit}
 \title{Predict method for \code{nnet} logistic regression fits}
 \usage{
-\method{predict}{logit_nnet_fit}(logit_nnet_fit, X, Y, Xnew = NULL)
+\method{predict}{logit_nnet_fit}(object, X, Y, Xnew = NULL, ...)
 }
 \arguments{
-\item{logit_nnet_fit}{Output of \code{\link{logit_nnet_fit}}.}
+\item{object}{Output of \code{\link{logit_nnet_fit}}.}
 
 \item{X}{Covariate matrix of training sample.}
 
 \item{Y}{Vector of outcomes of training sample.}
 
 \item{Xnew}{Covariate matrix of test sample. If \code{NULL}, uses training data.}
+
+\item{...}{Ignored additional arguments.}
 }
 \value{
 A data frame of predicted class probabilities.  
