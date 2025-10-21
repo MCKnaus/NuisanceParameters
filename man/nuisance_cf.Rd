@@ -12,7 +12,6 @@ nuisance_cf(
   cv = 5,
   subset = NULL,
   store_models = c("no", "memory", "disk"),
-  do_bfgs = FALSE,
   ensemble_type,
   quiet = TRUE,
   pb = NULL,

@@ -104,52 +104,52 @@ prep_cf_mat <- function(N,
             Only the cluster vector will be used.")
     d_mat <- NULL
   }
-
+  
   # Only one fold (i.e. no cross-fitting)
   if (cf == 1) {
-    cf_mat <- matrix(rep(1, N), ncol = 1)
-
+    cf_mat <- matrix(rep(TRUE, N), ncol = 1)
+    
     # Neither treatment matrix nor cluster vector provided
   } else if (is.null(d_mat) & is.null(cluster)) {
     rnd_id <- sample(1:N, N)
     fold <- factor(as.numeric(cut(rnd_id, breaks = stats::quantile(rnd_id, probs = seq(0, 1, length = cf + 1)), include.lowest = TRUE)))
     cf_mat <- (stats::model.matrix(~ 0 + fold) == 1)
-
+    
     # Treatment matrix but no cluster vector provided
   } else if (!is.null(d_mat) & is.null(cluster)) {
     cf_mat <- matrix(NA, nrow = N, ncol = cf)
     nw <- colSums(d_mat)
-
+    
     for (i in 1:ncol(d_mat)) {
       cf_mat_w <- matrix(FALSE, nrow = nw[i], ncol = cf)
       rnd_id <- sample(1:nw[i], nw[i])
       fold <- as.numeric(cut(rnd_id, breaks = stats::quantile(rnd_id, probs = seq(0, 1, length = cf + 1)), include.lowest = TRUE))
-
+      
       for (j in 1:cf) {
         cf_mat_w[fold == j, j] <- TRUE
       }
-
+      
       cf_mat[d_mat[, i], ] <- cf_mat_w
     }
-
+    
     # No treatment matrix but cluster vector provided
   } else if (is.null(d_mat) & !is.null(cluster)) {
     check_cluster_compatibility(cluster, cf)
-
+    
     rnd_id <- sample(1:length(unique(cluster)), length(unique(cluster)))
     fold <- as.numeric(cut(rnd_id, breaks = stats::quantile(rnd_id, probs = seq(0, 1, length = cf + 1)), include.lowest = TRUE))
     fold <- factor(fold[match(cluster, unique(cluster))])
     cf_mat <- (stats::model.matrix(~ 0 + fold) == 1)
-
+    
     cf_mat_balance <- colSums(cf_mat) / nrow(cf_mat)
-
+    
     if (any(cf_mat_balance < (1 / cf) * 0.5)) {
       stop("High cluster size imbalance detected. Choose fewer folds or omit cluster vector.")
     }
   }
-
+  
   colnames(cf_mat) <- sprintf("CF %d", 1:cf)
-
+  
   return(cf_mat)
 }
 
@@ -586,7 +586,7 @@ plot.ens_weights_stand <- function(x,
   p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = fold, y = value, fill = variable)) +
     ggplot2::geom_col(position = "stack", width = 0.7) +
     ggplot2::scale_fill_manual(values = method_palette, name = "Method") +
-    ggplot2::scale_y_continuous(limits = c(0, 1.01), expand = c(0, 0)) +
+    # ggplot2::scale_y_continuous(limits = c(0, 1.01), expand = c(0, 0)) +
     ggplot2::facet_wrap(~model, ncol = ncols, scales = "free_x") +
     ggplot2::labs(x = NULL, y = "Ensemble Weight") +
     ggplot2::theme_minimal(base_size = base_size) +
@@ -679,7 +679,11 @@ plot.ens_weights_short <- function(x,
 #' @seealso \code{\link[progress]{progress_bar}} for the underlying progress bar implementation.
 #'
 #' @keywords internal
-setup_pb <- function(NuPa, n_d, n_z, cf_folds, cv_folds, methods) {
+setup_pb <- function(NuPa, 
+                     n_d, n_z, 
+                     cf_folds, cv_folds, 
+                     methods
+                     ) {
   count_nested_lists <- function(methods, n_d, n_z) {
     multipliers <- list("Y.hat.d" = n_d, "Y.hat.z" = n_z, "D.hat.z" = n_z)
 

@@ -50,7 +50,7 @@ treatment ratios from the full sample. Note: If cluster vector
 is provided, stratification is ignored due to computational
 constraints and randomization feasibility issues.}
 
-\item{cf}{Number of cross-fitting folds (default: 5).}
+\item{cf}{Number of cross-fitting folds}
 
 \item{cf_mat}{Optional logical matrix of indicators representing the different
 cross-fitting folds, possibly from already estimated \code{NuisanceParameters} object.}

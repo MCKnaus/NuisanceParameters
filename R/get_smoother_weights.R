@@ -43,14 +43,22 @@ get_smoother_weights <- function(object,
   d_mat <- object$numbers$d_mat
   z_mat <- object$numbers$z_mat
   cf_mat <- object$numbers$cf_mat
-  methods <- object$numbers$methods
   models <- object$models
-
+  
+  methods <- object$numbers$methods
+  methods <- methods[names(methods) %in% NuPa]
+  
+  all_methods <- unique(unlist(lapply(methods, function(m) unlist(lapply(m, `[[`, "method")))))
+  
   # Lasso check
-  if (any(sapply(methods, function(met) {
-    any(sapply(met, function(x) identical(x$method, "lasso")))
-  }))) {stop("Smoother matrices cannot be extracted if method = 'lasso' was used.")}
-
+  if ("lasso" %in% all_methods)
+    stop("Smoother matrices cannot be extracted if method = 'lasso' was used.")
+  
+  # XGBoost check
+  if ("xgboost" %in% all_methods)
+    message("Note that numerical equivalence is only at single precision, not at double precision", 
+            " because XGBoost contributes to the predictions. This is usually no reason to worry.")
+  
   # Models check
   m_names <- paste0(NuPa, "_m")
   outcome_m <- m_names[m_names %in% names(models) & !vapply(models[m_names], is.character, logical(1))]
@@ -189,17 +197,20 @@ get_smoother <- function(object,
     smoother_w <- matrix(0, nrow = nrow(X), ncol = nrow(X))
 
     for (i in 1:ncol(cf_mat)) {
-      fold <- cf_mat[, i]
-      X_tr <- X[!fold & subset, ]
-      Y_tr <- Y[!fold & subset]
-      X_te <- X[fold, ]
+      fold  <- cf_mat[, i]
+      no_cf <- ncol(cf_mat) == 1
+      
+      X_tr <- X[if (no_cf) subset else (!fold & subset), ]
+      Y_tr <- Y[if (no_cf) subset else (!fold & subset)]
+      X_te <- X[if (no_cf) TRUE else fold, ]
 
       smoother_w_fold <- weights(
         object = object[[i]]$ens_object, methods = methods, ens_w = object[[i]]$ens_w,
         X = X_tr, Y = Y_tr, Xnew = X_te, quiet = quiet
         )
       
-      smoother_w[fold, !fold & subset] <- smoother_w_fold
+      if (no_cf) { smoother_w[, subset] <- smoother_w_fold } 
+      else { smoother_w[fold, !fold & subset] <- smoother_w_fold}
     }
   }
 

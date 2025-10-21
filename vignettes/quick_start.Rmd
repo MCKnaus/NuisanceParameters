@@ -5,7 +5,7 @@ author:
   - Michael Knaus
   - Stefan Glaisner
   - Roman Rakov
-date: "09/25"
+date: "10/25"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteEncoding{UTF-8}
@@ -22,26 +22,21 @@ It covers:
 1.  Data preprocessing and base learner setup
 2.  Estimation with multiple machine learners using short-stacking
 3.  Adding or replacing nuisance parameters ex-post
-4.  Target parameter estimation and smoother matrix extraction \
-    (will be delegated to other packages in the trilogy)
+4.  Target parameter estimation and smoother matrix extraction (will be delegated to other packages in the trilogy)
 
-Find more advanced topics in the *Stacking*, *Hyperparameter Tuning*, and *Multivalued Treatments* vignettes.
+Find more advanced topics in the *Stacking*, *Hyperparameter Tuning*, and *Multivalued Treatment* vignettes.
 
 ## Data
 
 The notebook builds on the dataset provided in the `hdm` package. The data was used in Chernozhukov and Hansen (2004) and Belloni et al. (2014) where further details can be found. They investigate the effect of participation in the employer-sponsored 401(k) retirement savings plan on net assets (`net_tfa`), using 401(k) eligibility (`e401`) as an instrument for 401(k) participation (`p401`).
 
-The sample is drawn from the 1991 Survey of Income and Program Participation (SIPP) and consists of 9,915 observations.
+The sample contains 9,915 observations. We use a 25% subset to speed up computation:
 
 ```{r}
 library(hdm)
 library(OutcomeWeights)
 library(NuisanceParameters)
-```
 
-To speed up the running time, we will use a 25% subset of the data.
-
-```{r}
 # Find dataset description if you type ?pension in console
 data("pension", package = "hdm")
 
@@ -113,7 +108,7 @@ Estimated nuisance parameters can be immediately inspected:
 lapply(np$nuisance_parameters, head)
 ```
 
-Along with the ensemble weights in the short-stacking procedure. These are obtained by regressing the outcome on the individual cross-fitted learners using non-negative least squares:
+Along with the ensemble weights in the short-stacking procedure. By default, these are obtained by regressing the outcome (and similarly the treatment and instrument) on cross-fitted base learner predictions using non-negative least squares. The weights are normalized to sum to one:
 
 ```{r}
 plot(np$numbers$ens_weights)
@@ -132,12 +127,12 @@ plot(TargetParam)
 
 ## Adding nuisance parameters ex-post
 
-Nuisance parameters (and their trained models) can be easily replaced or added to a `NuisanceParameter` object.
+Nuisance parameters (and the respective trained models) can be easily replaced or added to a `NuisanceParameters` object.
 
 For example, you might want to adjust your estimation strategy by using a different set of base learners:
 
 ```{r}
-methods_2 = list(
+new_methods = list(
  "knn" = create_method("knn"),
  "ridge" = create_method("ridge"),
  "xgboost" = create_method("xgboost", x_select = cols)
@@ -149,7 +144,7 @@ The only important detail is to keep using the same cross-fit indicator matrix f
 ```{r}
 np_2 <- nuisance_parameters(NuPa = c("Y.hat","Z.hat"),
                             X = X, Y = Y, D = D, Z = Z, cf_mat = np$numbers$cf_mat,
-                            methods = methods_2, cf = 5, stacking = "short",
+                            methods = new_methods, cf = 5, stacking = "short",
                             cluster = NULL, stratify = TRUE, store_models = "memory")
 
 plot(np_2$numbers$ens_weights)

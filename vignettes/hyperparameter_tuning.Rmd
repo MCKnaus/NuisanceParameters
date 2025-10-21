@@ -22,9 +22,11 @@ This vignette covers hyperparameter tuning as implemented in `NuisanceParameters
 
 ## Hyperparameter tuning
 
-Hyperparameter tuning is supported by grf's regression forest and XGBoost and can be done either on the full sample or "on-the-fold." If `tuning = "fold"`, tuning takes place on the estimation part of the cross-fitting split, which is roughly $F$ (the number of cross-fitting folds) times more computationally intensive than using the full sample.
+Hyperparameter tuning improves predictive performance by adapting learners to the structure of the data.
 
--   For the regression forest, grf's default tuning routine is used.
+In `NuisanceParameters`, it is supported by two learners: GRFs regression forest and XGBoost—and can be done either on the full sample or *on-the-fold*. In the latter, tuning takes place within each estimation part of the cross-fitting split, making it roughly as many times more computationally intensive as there are cross-fitting folds.
+
+-   For the regression forest, GRF's [default tuning routine](https://grf-labs.github.io/grf/reference/regression_forest.html) is used.
 
 -   XGBoost is tuned via a hyperband-style multi-armed bandit approach: it progressively allocates resources (boosting rounds) to the most promising configurations across successive evaluation rungs.
 
@@ -36,7 +38,7 @@ Note that the base learners `ridge`, `plasso`, and `lasso` use cross-validation 
 
 As before, we use the dataset that is provided in the `hdm` package. See Chernozhukov and Hansen (2004) and Belloni et al. (2014) for details.
 
-The sample contains 9,915 observations. We use a 50% subset to speed up computation:
+The sample contains 9,915 observations. We use a 25% subset to speed up computation:
 
 ```{r}
 # see ?pension for details
@@ -126,11 +128,10 @@ ens_rmse <- c(Default = get_rmse(np$nuisance_parameters$Y.hat, Y),
 rmse_results <- rbind(
   "Default" = apply(np$models$Y.hat_m$ens_object$cf_preds, 2, get_rmse, Y),
   "Tuned (full sample)" = apply(np_fs_tnd$models$Y.hat_m$ens_object$cf_preds, 2, get_rmse, Y),
-  "Tuned (fold)" = apply(np_fold_tnd$models$Y.hat_m$ens_object$cf_preds, 2, get_rmse, Y)
-)
+  "Tuned (fold)" = apply(np_fold_tnd$models$Y.hat_m$ens_object$cf_preds, 2, get_rmse, Y))
 
-cat("Ensemble:\n"); print(round(ens_rmse, 4))
-cat("\nBase learners:\n"); print(round(rmse_results, 4))
+rmse_results <- cbind(rmse_results, Ensemble = ens_rmse)
+print(rmse_results)
 ```
 
 Tuned and default learners can, of course, be combined:
@@ -157,6 +158,6 @@ plot(np$numbers$ens_weights)
 ```{r}
 cf_preds <- np$models$Y.hat_m$ens_object$cf_preds
 
-cat("Ensemble:\n"); print(get_rmse(np$nuisance_parameters$Y.hat, Y))
-cat("\nBase Learners:\n"); print(as.matrix(apply(cf_preds, 2, get_rmse, Y)))
+rmse <- c(Ensemble=get_rmse(np$nuisance_parameters$Y.hat, Y), apply(cf_preds, 2, get_rmse, Y))
+print(as.matrix(rmse))
 ```

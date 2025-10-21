@@ -49,7 +49,7 @@ methods = list(
  )
 ```
 
-The estimation routine of `nuisance_parameters` automatically checks the defined methods and excludes those that are not suitable for a given nuisance parameter. For example, logit will not be applied when estimating the outcome nuisance parameter, $E[Y \mid X]$.
+The estimation routine of `nuisance_parameters` automatically checks the defined methods and excludes those that are not suitable for a given nuisance parameter (some methods are excluded as smoother extraction is not implemented). For example, logit will not be applied when estimating the outcome nuisance parameter, $E[Y \mid X]$.
 
 When the treatment variable is multivalued, users must choose the estimation technique from `"one-vs-one"`, `"one-vs-rest"`, or `"multiclass"`.
 
@@ -193,7 +193,7 @@ print(time_df)
 
 ## Combining base learners
 
-There are several ways to combine base learners into the final ensemble estimate:
+There are several ways to combine base learner predictions into the final ensemble estimate:
 
 -   `"nnls"` — Non-negative least squares with all weights summing to one.
 -   `"singlebest"` — Selects the base learner with the lowest RMSE.

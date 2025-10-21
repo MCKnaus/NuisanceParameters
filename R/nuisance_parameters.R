@@ -11,7 +11,7 @@
 #' @param D A numeric vector indicating the treatment variable.
 #' @param Z A numeric vector indicating the instrumental variable.
 #' @param X A numeric matrix of covariates, with rows as observations and columns as covariates; no intercept included.
-#' @param cf Number of cross-fitting folds (default: 5).
+#' @param cf Number of cross-fitting folds
 #' @param cf_mat Optional logical matrix of indicators representing the different
 #'               cross-fitting folds, possibly from already estimated \code{NuisanceParameters} object.
 #' @param cluster Optional vector of cluster variables if cross-fitting should
@@ -76,7 +76,10 @@
 #'
 #' @export
 nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat"),
-                                X, Y = NULL, D = NULL, Z = NULL,
+                                X, 
+                                Y = NULL, 
+                                D = NULL, 
+                                Z = NULL,
                                 methods,
                                 stacking,
                                 cluster = NULL,
@@ -92,6 +95,8 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
   store_models <- match.arg(store_models)
   ensemble_type <- match.arg(ensemble_type, choices = c('nnls', 'bfgs', 'singlebest', 'ols', 'average'))
   
+  if (cf < 1) stop("Number of cross-fitting folds must be a positive integer.")
+  if (identical(stacking, "short") && cf == 1) stop("Short-stacking with cf = 1 is not implemented.")
   if (is.null(path)) path <- getwd()
 
   supported_NuPas <- c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat")
@@ -358,7 +363,6 @@ nuisance_cf <- function(methods,
                         cv = 5,
                         subset = NULL,
                         store_models = c("no", "memory", "disk"),
-                        do_bfgs = FALSE,
                         ensemble_type, 
                         quiet = TRUE,
                         pb = NULL, 
@@ -394,10 +398,12 @@ nuisance_cf <- function(methods,
     models_nupa <- list()
 
     for (i in 1:ncol(cf_mat)) {
-      fold <- cf_mat[, i]
-      X_tr <- X[!fold & subset, ]
-      Y_tr <- Y[!fold & subset]
-      X_te <- X[fold, ]
+      fold  <- cf_mat[, i]
+      no_cf <- ncol(cf_mat) == 1
+      
+      X_tr <- X[if (no_cf) subset else (!fold & subset), ]
+      Y_tr <- Y[if (no_cf) subset else (!fold & subset)]
+      X_te <- X[if (no_cf) TRUE else fold, ]
 
       # On-the-fold hyperparameter tuning
       mtd_tuned_fold <- tune_learners(type = "fold", X = X_tr, Y = Y_tr, methods = mtd_tuned)
@@ -411,8 +417,8 @@ nuisance_cf <- function(methods,
         quiet = quiet, pb = pb, pb_np = pb_np, pb_cf = i)
         np[fold] <- ens_pred$np
         
-        ens_object <- list("ens_models" = ens$ens_models, "cf_preds" = ens_pred$cf_preds)
-        class(ens_object) <- "ensemble"
+      ens_object <- list("ens_models" = ens$ens_models, "cf_preds" = ens_pred$cf_preds)
+      class(ens_object) <- "ensemble"
         
       models_nupa[[i]] <- list(
         "ens_object" = ens_object, 
