@@ -353,8 +353,7 @@ xgboost_fit <- function(X, Y, arguments = list()) {
     subsample      = 1,
     max_delta_step = 0,
     base_score     = 0,
-    objective      = "reg:squarederror",
-    booster        = "gbtree"
+    objective      = "reg:squarederror"
   )
   
   # sanitize restricted params

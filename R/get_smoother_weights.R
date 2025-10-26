@@ -472,7 +472,7 @@ weights.ridge_fit <- function(object, X, Y, Xnew = NULL, ...) {
 #' @method weights plasso_fit
 #' @exportS3Method
 weights.plasso_fit <- function(object, Xnew = NULL, ...) {
-  if (is.null(Xnew)) Xnew <- object$X
+  if (is.null(Xnew)) Xnew <- object$x
 
   X <- add_intercept(object$x)
   Xnew <- add_intercept(Xnew)
@@ -563,6 +563,8 @@ weights.forest_grf_fit <- function(object, Xnew = NULL, ...) {
 #' @keywords internal
 #' @exportS3Method
 weights.xgboost_fit <- function(object, X, Y, Xnew = NULL, ...) {
+  if (is.null(Xnew)) Xnew <- X
+  
   dtrain <- xgboost::xgb.DMatrix(data = as.matrix(X), label = Y)
   dtest <- xgboost::xgb.DMatrix(data = as.matrix(Xnew))
 
@@ -592,6 +594,7 @@ weights.knn_fit <- function(object, X, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- X
   k <- if (is.null(object$k)) 10 else object$k
 
+  # Credit: FastKNN R package
   # distance = as.matrix(FastKNN::Distance_for_KNN_test(Xnew, X))
   euclidean_dist <- t(apply(Xnew, 1, function(x_i) {
     sqrt(rowSums(sweep(X, 2, x_i)^2))
