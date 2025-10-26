@@ -227,7 +227,7 @@ reconstruct_predictions <- function(bst, dtest) {
       leaf_node <- leaf_indices[i, j]
 
       # Find the corresponding row in the trees data.table
-      leaf_row <- trees[Tree == (j - 1) & Node == leaf_node]
+      leaf_row <- trees[trees$Tree == (j - 1) & trees$Node == leaf_node, ]
 
       sample_prediction <- sample_prediction + leaf_row$Quality
 

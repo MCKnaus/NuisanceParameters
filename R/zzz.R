@@ -1,4 +1,4 @@
 # Declare global variables to avoid check NOTES
 utils::globalVariables(c(
-  "X_tr_select", "variable", "value", "fold", "Tree", "Node", "method"
+  "X_tr_select", "variable", "value", "fold", "method"
 ))
