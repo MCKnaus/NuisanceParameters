@@ -4,24 +4,20 @@
 \alias{predict.logit_fit}
 \title{Predict method for \code{glmnet} logistic regression fits}
 \usage{
-\method{predict}{logit_fit}(object, X, Y, Xnew = NULL, ...)
+\method{predict}{logit_fit}(object, Xnew = NULL, ...)
 }
 \arguments{
 \item{object}{Output of \code{\link{logit_fit}}.}
-
-\item{X}{Covariate matrix of training sample.}
-
-\item{Y}{Vector of outcomes of training sample.}
 
 \item{Xnew}{Covariate matrix of test sample. If \code{NULL}, uses training data.}
 
 \item{...}{Ignored additional arguments.}
 }
 \value{
-A data frame of predicted class probabilities.  
-  \describe{  
-    \item{Binary outcome}{A two-column data frame with probabilities for each class.}  
-    \item{Multiclass outcome}{A data frame with one column per class, containing the predicted probabilities.}  
+A data frame of predicted class probabilities.
+  \describe{
+    \item{Binary outcome}{A two-column data frame with probabilities for each class.}
+    \item{Multiclass outcome}{A data frame with one column per class, containing the predicted probabilities.}
   }
 }
 \description{

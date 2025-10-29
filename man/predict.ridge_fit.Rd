@@ -4,7 +4,7 @@
 \alias{predict.ridge_fit}
 \title{Predict method for ridge regression models}
 \usage{
-\method{predict}{ridge_fit}(object, Xnew, ...)
+\method{predict}{ridge_fit}(object, Xnew = NULL, ...)
 }
 \arguments{
 \item{object}{An object of class \code{ridge_fit} from \code{\link{ridge_fit}}.}

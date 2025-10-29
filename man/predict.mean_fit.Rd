@@ -7,9 +7,9 @@
 \method{predict}{mean_fit}(object, Xnew = NULL, ...)
 }
 \arguments{
-\item{object}{An object of class `mean_fit` from \code{\link{mean_fit}}.}
+\item{object}{An object of class \code{mean_fit} from \code{\link{mean_fit}}.}
 
-\item{Xnew}{Covariate matrix for predictions. Only `nrow(Xnew)` is used.}
+\item{Xnew}{Covariate matrix for predictions. Only \code{nrow(Xnew)} is used.}
 
 \item{...}{Ignored additional arguments.}
 }
@@ -17,7 +17,7 @@
 A numeric vector of predictions, all equal to the trained mean.
 }
 \description{
-Returns a constant prediction for all observations, equal to the mean of the training sample.
-Covariates `Xnew` are ignored.
+Returns a constant prediction for all observations, equal to the mean of the
+training sample. Covariates \code{Xnew} are ignored.
 }
 \keyword{internal}

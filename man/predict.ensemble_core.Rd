@@ -8,7 +8,6 @@
   object,
   methods,
   X_tr,
-  Y_tr,
   X_te,
   quiet = TRUE,
   pb = NULL,
@@ -24,8 +23,6 @@
 \item{methods}{List of raw methods created with \code{\link{create_method}}.}
 
 \item{X_tr}{Covariate matrix of the training sample.}
-
-\item{Y_tr}{Vector of outcomes of the training sample.}
 
 \item{X_te}{Covariate matrix of the test sample.}
 

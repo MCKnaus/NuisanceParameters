@@ -87,7 +87,6 @@ ovo_fit <- function(X, Y, method, parallel = FALSE, quiet = TRUE) {
 #'
 #' @param object Output list of \code{\link{ovo_fit}}.
 #' @param X Covariate matrix of training sample.
-#' @param Y Vector of outcomes of training sample.
 #' @param Xnew Covariate matrix of test sample.
 #' @param method Method used for fitting the binary classifiers (e.g., "logit").
 #' @param parallel Logical. Tries to run in parallel if \code{foreach} and 
@@ -99,16 +98,19 @@ ovo_fit <- function(X, Y, method, parallel = FALSE, quiet = TRUE) {
 #' column per class, or a vector of positive-class probabilities for binary classification. 
 #'
 #' @keywords internal
-predict.ovo_fit <- function(object, X, Y, Xnew = NULL, method,
-                            parallel = FALSE, quiet = TRUE, ...) {
+predict.ovo_fit <- function(object, 
+                            X,
+                            Xnew = NULL, 
+                            method,
+                            parallel = FALSE,
+                            quiet = TRUE, 
+                            ...) {
   if (is.null(Xnew)) Xnew <- X
   use_parallel <- FALSE
 
   n_classifiers <- length(object)
   n_samples <- nrow(Xnew)
   n_classes <- length(unique(unlist(strsplit(names(object), "_"))))
-
-  if (min(Y) == 0) Y <- Y + 1
 
   # Build q-matrix tensor
   q_matrix_tensor <- array(NA, dim = c(n_samples, n_classes, n_classes))
@@ -117,13 +119,9 @@ predict.ovo_fit <- function(object, X, Y, Xnew = NULL, method,
     class_names <- unlist(strsplit(names(object)[[i]], "_"))
     class_i <- class_names[1]
     class_j <- class_names[2]
-    subset_y <- Y[Y %in% c(class_i, class_j)]
 
     # Predict probabilities using the i-th binary classifier
-    fit_raw <- do.call(
-      paste0("predict.", method, "_fit"),
-      list(object[[i]], X = X, Y = subset_y, Xnew = Xnew)
-    )
+    fit_raw <- do.call(paste0("predict.", method, "_fit"), list(object[[i]], Xnew = Xnew))
 
     # Ensure the proper data format (need both classes)
     fit_raw <- data.frame(1 - fit_raw, fit_raw, check.names = FALSE)
@@ -220,7 +218,6 @@ ovr_fit <- function(X, Y, method) {
 #'
 #' @param object Output list from \code{\link{ovr_fit}}.
 #' @param X Covariate matrix of training sample.
-#' @param Y Vector of outcomes of training sample.
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
 #' @param method Character string specifying the binary classifier used for fitting.
 #' @param ... Ignored additional arguments.
@@ -229,9 +226,12 @@ ovr_fit <- function(X, Y, method) {
 #'   or a vector of positive-class probabilities for binary classification.  
 #'
 #' @keywords internal
-predict.ovr_fit <- function(object, X, Y, Xnew = NULL, method, ...) {
+predict.ovr_fit <- function(object, 
+                            X,
+                            Xnew = NULL, 
+                            method, 
+                            ...) {
   if (is.null(Xnew)) Xnew <- X
-  if (min(Y) == 0) Y <- Y + 1
   
   n_classifiers <- length(object)
   n_samples <- nrow(Xnew)
@@ -241,13 +241,9 @@ predict.ovr_fit <- function(object, X, Y, Xnew = NULL, method, ...) {
   colnames(fit) <- seq.int(1, n_classes)
   
   for (i in seq_len(n_classifiers)) {
-    binarized_y <- ifelse(Y == i, 1, 0)
-    
     # Predict probabilities using the i-th binary classifier
-    fit_raw <- do.call(
-      paste0("predict.", method, "_fit"),
-      list(object[[i]], X = X, Y = binarized_y, Xnew = Xnew)
-    )
+    fit_raw <- do.call(paste0("predict.", method, "_fit"), list(object[[i]], Xnew = Xnew))
+    
     # Update the corresponding column in fit
     fit[, as.character(i)] <- fit_raw
   }

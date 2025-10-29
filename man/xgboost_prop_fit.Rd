@@ -17,8 +17,8 @@ xgboost_prop_fit(X, Y, arguments = list())
 An object of class \code{xgb.Booster} containing the fitted model.
 }
 \description{
-Fits a gradient boosting model using the \code{xgboost} package.  
-Uses \code{objective = "binary:logistic"} for binary outcomes and  
+Fits a gradient boosting model using the \code{xgboost} package.
+Uses \code{objective = "binary:logistic"} for binary outcomes and
 \code{objective = "multi:softprob"} for multiclass outcomes.
 }
 \keyword{internal}

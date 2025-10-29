@@ -21,12 +21,11 @@ An object of class \code{xgboost_fit} containing the fitted
 Fits an XGBoost model using the \code{xgboost} package.
 }
 \details{
-Parameter restrictions for the smoother matrix multiplied by the outcome 
-vector to be (roughly) equivalent to the outcome nuisance vector 
+Parameter restrictions for the smoother matrix multiplied by the outcome
+vector to be (roughly) equivalent to the outcome nuisance vector
 \itemize{
-  \item \strong{Restricted}: \code{reg_alpha = 0}, \code{subsample = 1}, 
-        \code{max_delta_step = 0}, \code{base_score = 0}, 
-        \code{objective = "reg:squarederror"}, \code{booster = "gbtree"}
+  \item \strong{Restricted}: \code{reg_alpha = 0}, \code{subsample = 1},
+        \code{max_delta_step = 0}, \code{base_score = 0}.
   \item \strong{Free}: \code{nrounds}, \code{eta}, \code{gamma}, \code{max_depth},
         \code{min_child_weight}, \code{sampling_method}, \code{colsample_bytree},
         \code{colsample_bylevel}, \code{colsample_bynode}, \code{lambda},

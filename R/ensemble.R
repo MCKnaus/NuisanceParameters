@@ -54,7 +54,7 @@ ensemble_short <- function(methods,
       pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np
       )
     preds <- predict.ensemble_core(
-      object = fits, methods = mtd_tuned, X_tr = X_tr, Y_tr = Y_tr, X_te = X_te, 
+      object = fits, methods = mtd_tuned, X_tr = X_tr, X_te = X_te, 
       quiet = quiet, pb = pb, pb_cf = i, pb_cv = ".", pb_np = pb_np
       )
     
@@ -114,7 +114,7 @@ ensemble <- function(methods,
                      quiet = TRUE,
                      pb = NULL, pb_np = NULL, pb_cf = NULL, pb_cv = NULL) {
   
-  cv_mat <- prep_cf_mat(length(Y), nfolds)
+  cv_mat <- prep_cf_matrix(length(Y), nfolds)
   cf_preds <- make_cf_preds(methods = methods, N = nrow(X), Y = Y)
 
   ## Multiple methods specified: cross-validation of ensemble weights
@@ -130,7 +130,7 @@ ensemble <- function(methods,
         pb = pb, pb_cf = pb_cf, pb_cv = i, pb_np = pb_np
         )
       preds <- predict.ensemble_core(
-        object = fits, methods = methods, X_tr = X_tr, Y_tr = Y_tr, X_te = X_te, 
+        object = fits, methods = methods, X_tr = X_tr, X_te = X_te, 
         quiet = quiet, pb = pb, pb_cf = pb_cf, pb_cv = i, pb_np = pb_np
         )
       
@@ -200,7 +200,6 @@ predict.ensemble_short <- function(object, w = NULL, ...) {
 #' @param object An object of class \code{"ensemble"} returned by \code{\link{ensemble}}.
 #' @param methods List of methods created with \code{\link{create_method}}.
 #' @param X Covariate matrix of the training sample.
-#' @param Y Vector of outcomes of the training sample.
 #' @param Xnew Covariate matrix of the test sample.
 #' @param quiet Logical. If \code{FALSE}, progress output is printed to the console.
 #' @param pb A progress bar object to track overall computation progress.
@@ -221,12 +220,16 @@ predict.ensemble_short <- function(object, w = NULL, ...) {
 #' @exportS3Method
 predict.ensemble <- function(object,
                              methods,
-                             X, Y, Xnew,
-                             quiet = TRUE, pb = NULL, pb_cf = NULL, pb_np = NULL,
+                             X, 
+                             Xnew,
+                             quiet = TRUE, 
+                             pb = NULL, 
+                             pb_cf = NULL, 
+                             pb_np = NULL,
                              ...) {
   
   cf_preds <- predict.ensemble_core(
-    object = object$ens_models, methods = methods, X_tr = X, Y_tr = Y, X_te = Xnew, 
+    object = object$ens_models, methods = methods, X_tr = X, X_te = Xnew, 
     quiet = quiet, pb = pb, pb_cf = pb_cf, pb_cv = ".", pb_np = pb_np
     )
   
@@ -266,9 +269,13 @@ predict.ensemble <- function(object,
 #'
 #' @keywords internal
 ensemble_core <- function(methods,
-                          X_tr, Y_tr,
+                          X_tr, 
+                          Y_tr,
                           quiet = TRUE,
-                          pb = NULL, pb_cf = NULL, pb_cv = NULL, pb_np = NULL) {
+                          pb = NULL, 
+                          pb_cf = NULL, 
+                          pb_cv = NULL, 
+                          pb_np = NULL) {
   fits <- list()
   
   # Loop over methods
@@ -313,7 +320,6 @@ ensemble_core <- function(methods,
 #' @param object An object of class \code{"ensemble_core"} returned by \code{\link{ensemble_core}}.
 #' @param methods List of raw methods created with \code{\link{create_method}}.
 #' @param X_tr Covariate matrix of the training sample.
-#' @param Y_tr Vector of outcomes of the training sample.
 #' @param X_te Covariate matrix of the test sample.
 #' @param quiet Logical. If \code{FALSE}, progress output is printed to the console.
 #' @param pb A progress bar object to track overall computation progress.
@@ -334,7 +340,8 @@ ensemble_core <- function(methods,
 #' @exportS3Method
 predict.ensemble_core <- function(object, 
                                   methods,
-                                  X_tr, Y_tr, X_te,
+                                  X_tr,
+                                  X_te,
                                   quiet = TRUE, 
                                   pb = NULL, 
                                   pb_cf = NULL, 
@@ -352,20 +359,21 @@ predict.ensemble_core <- function(object,
 
     # Default case
     if (is.null(methods[[i]]$multinomial)) {
-      m_pred <- do.call(paste0("predict.", wrapper), list(object[[i]], X = X_tr_sel, Y = Y_tr, Xnew = X_te_sel))
+      m_pred <- do.call(paste0("predict.", wrapper), list(object[[i]], Xnew = X_te_sel))
     } else {
       # Multiclass treatment case
       m_pred <- switch(methods[[i]]$multinomial,
         "one-vs-one" = {
-          do.call(predict.ovo_fit, list(object[[i]], X = X_tr_sel, Y = Y_tr, Xnew = X_te_sel, quiet = quiet,
-                                        method = methods[[i]]$method, parallel = methods[[i]]$parallel))
+          do.call(predict.ovo_fit, list(object[[i]], X = X_tr_sel, Xnew = X_te_sel, 
+                                        method = methods[[i]]$method, quiet = quiet, 
+                                        parallel = methods[[i]]$parallel))
         },
         "one-vs-rest" = {
-          do.call(predict.ovr_fit, list(object[[i]], X = X_tr_sel, Y = Y_tr, 
-                                        Xnew = X_te_sel, method = methods[[i]]$method))
+          do.call(predict.ovr_fit, list(object[[i]], X = X_tr_sel, Xnew = X_te_sel, 
+                                        method = methods[[i]]$method))
         },
         "multiclass" = {
-          do.call(paste0("predict.", wrapper), list(object[[i]], X = X_tr_sel, Y = Y_tr, Xnew = X_te_sel))
+          do.call(paste0("predict.", wrapper), list(object[[i]], Xnew = X_te_sel))
         }
       )
     }

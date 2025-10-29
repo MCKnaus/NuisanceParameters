@@ -4,14 +4,12 @@
 \alias{predict.ovo_fit}
 \title{Predicts class probabilities using One-Vs-One (OvO) routine}
 \usage{
-\method{predict}{ovo_fit}(object, X, Y, Xnew = NULL, method, parallel = FALSE, quiet = TRUE, ...)
+\method{predict}{ovo_fit}(object, X, Xnew = NULL, method, parallel = FALSE, quiet = TRUE, ...)
 }
 \arguments{
 \item{object}{Output list of \code{\link{ovo_fit}}.}
 
 \item{X}{Covariate matrix of training sample.}
-
-\item{Y}{Vector of outcomes of training sample.}
 
 \item{Xnew}{Covariate matrix of test sample.}
 

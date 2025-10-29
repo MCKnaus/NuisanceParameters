@@ -4,19 +4,24 @@
 \alias{knn_fit}
 \title{Pseudo-fitting for k-Nearest Neighbors}
 \usage{
-knn_fit(arguments = list(), ...)
+knn_fit(X, Y, arguments = list())
 }
 \arguments{
+\item{X}{Numeric matrix of covariates for training sample.}
+
+\item{Y}{Numeric vector of outcomes for training sample.}
+
 \item{arguments}{List of arguments to be used in k-NN prediction. Typically
 includes \code{k} (number of neighbors).}
-
-\item{...}{Ignored additional arguments.}
 }
 \value{
-A list of class \code{knn_fit} containing the arguments for k-NN.
+A list of class \code{knn_fit} containing:
+  \item{X}{Training covariate matrix}
+  \item{Y}{Training outcome vector}
+  \item{arguments}{List of arguments for k-NN prediction}
 }
 \description{
 Creates a k-NN model object without actual fitting, as k-NN fitting occurs
-naturally during prediction.
+during prediction.
 }
 \keyword{internal}

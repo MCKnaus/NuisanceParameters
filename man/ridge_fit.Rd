@@ -19,7 +19,6 @@ An object of class \code{ridge_fit} containing the fitted
 }
 \description{
 Estimates ridge regression using the \code{glmnet} package.
-Standardizes covariates and selects optimal lambda via
-cross-validation.
+Standardizes covariates and selects optimal lambda via cross-validation.
 }
 \keyword{internal}

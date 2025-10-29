@@ -1,25 +1,25 @@
-test_that("prep_cf_mat uses check_cluster_compatibility correctly", {
+test_that("prep_cf_matrix uses check_cluster_compatibility correctly", {
 
   set.seed(3)
 
   # Test case 1: Imbalances with different # folds
   cl1 = c(1, 1, 1, 2, 2, 2, 3, 3, 3, 3)
-  expect_no_error(prep_cf_mat(length(cl1), cf = 2, cl = cl1))
-  expect_error(prep_cf_mat(length(cl1), cf = 3, cl = cl1), "There is a high imbalance in the cluster sizes.")
+  expect_no_error(prep_cf_matrix(length(cl1), cf = 2, cl = cl1))
+  expect_error(prep_cf_matrix(length(cl1), cf = 3, cl = cl1), "There is a high imbalance in the cluster sizes.")
 
   # Test case 2: Too few clusters, should throw an error
   cl2 = c(1, 1, 2, 2, 2)
-  expect_error(prep_cf_mat(length(cl2), cf = 3, cl = cl2), "The number of clusters is less than the desired number of folds.")
+  expect_error(prep_cf_matrix(length(cl2), cf = 3, cl = cl2), "The number of clusters is less than the desired number of folds.")
 
   # Test case 3: High imbalance in cluster sizes, should throw an error
   cl3 = c(1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)
-  expect_error(prep_cf_mat(length(cl3), cf = 2, cl = cl3),  "There is a high imbalance in the cluster sizes.")
-  expect_error(prep_cf_mat(length(cl3), cf = 3, cl = cl3),  "There is a high imbalance in the cluster sizes.")
+  expect_error(prep_cf_matrix(length(cl3), cf = 2, cl = cl3),  "There is a high imbalance in the cluster sizes.")
+  expect_error(prep_cf_matrix(length(cl3), cf = 3, cl = cl3),  "There is a high imbalance in the cluster sizes.")
 
 })
 
 
-test_that("prep_cf_mat returns correct dimensions", {
+test_that("prep_cf_matrix returns correct dimensions", {
 
   set.seed(50)
 
@@ -27,24 +27,24 @@ test_that("prep_cf_mat returns correct dimensions", {
   cf = 5
 
   # Test without treatment matrix
-  cf_mat1 = prep_cf_mat(n, cf)
+  cf_mat1 = prep_cf_matrix(n, cf)
   expect_equal(dim(cf_mat1), c(n, cf))
 
   # Test with treatment matrix
   treat = 3
   d_mat = prep_indicator_mat(sample(1:treat, n, replace = TRUE))
-  cf_mat2 = prep_cf_mat(n, cf, d_mat = d_mat)
+  cf_mat2 = prep_cf_matrix(n, cf, d_mat = d_mat)
   expect_equal(dim(cf_mat2), c(n, cf))
 
   # Test with clusters
   cl = sample(x = c("a","b","c","d","e","f","g","h","i","j","k","l"), size = n, replace = TRUE, prob = c(rep(0.1, 8), rep(0.05, 4)))
-  cf_mat3 = prep_cf_mat(n, cf, cl = cl)
+  cf_mat3 = prep_cf_matrix(n, cf, cl = cl)
   expect_equal(dim(cf_mat3), c(n, cf))
 
 })
 
 
-test_that("prep_cf_mat returns correct fold proportions with treatment matrix", {
+test_that("prep_cf_matrix returns correct fold proportions with treatment matrix", {
 
   n = 1000
   cf = 5
@@ -52,7 +52,7 @@ test_that("prep_cf_mat returns correct fold proportions with treatment matrix", 
   treatment_probs = c(0.5, 0.4, 0.08, 0.02)
   d_mat = prep_indicator_mat(sample(x = treatments, size = n, replace = TRUE, prob = treatment_probs))
 
-  cf_mat = prep_cf_mat(n, cf, d_mat = d_mat)
+  cf_mat = prep_cf_matrix(n, cf, d_mat = d_mat)
 
   # test fold sizes
   expect_equal(unname(colMeans(cf_mat)), rep(1 / cf, cf), tolerance = 0.04)
@@ -67,19 +67,19 @@ test_that("prep_cf_mat returns correct fold proportions with treatment matrix", 
 })
 
 
-test_that("prep_cf_mat returns warning if both treatment matrix and cluster vector is provided", {
+test_that("prep_cf_matrix returns warning if both treatment matrix and cluster vector is provided", {
 
   n = 1000
   cf = 3
   d_mat = prep_indicator_mat(sample(x = 1:3, size = n, replace = TRUE))
   cl = sample(x = c("b", "d", "o", "k", "u", "r"), size = n, replace = TRUE)
 
-  expect_warning(prep_cf_mat(n, cf, d_mat = d_mat, cl = cl), "Only the cluster vector will be used")
+  expect_warning(prep_cf_matrix(n, cf, d_mat = d_mat, cl = cl), "Only the cluster vector will be used")
 
 })
 
 
-test_that("prep_cf_mat keeps observations from one cluster in the same cross-fitting fold", {
+test_that("prep_cf_matrix keeps observations from one cluster in the same cross-fitting fold", {
 
   set.seed(870)
 
@@ -88,7 +88,7 @@ test_that("prep_cf_mat keeps observations from one cluster in the same cross-fit
 
   cl = sample(x = 1:100, size = n, replace = TRUE, prob = 100:1)
 
-  cf_mat = prep_cf_mat(n, cf, cl = cl)
+  cf_mat = prep_cf_matrix(n, cf, cl = cl)
 
   # test fold sizes
   expect_equal(unname(colMeans(cf_mat)), rep(1 / cf, cf), tolerance = 0.1)

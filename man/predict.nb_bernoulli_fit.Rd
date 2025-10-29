@@ -4,24 +4,20 @@
 \alias{predict.nb_bernoulli_fit}
 \title{Predict method for Bernoulli Naive Bayes fits}
 \usage{
-\method{predict}{nb_bernoulli_fit}(object, X, Y, Xnew = NULL, ...)
+\method{predict}{nb_bernoulli_fit}(object, Xnew = NULL, ...)
 }
 \arguments{
 \item{object}{Output of \code{\link{nb_bernoulli_fit}}.}
-
-\item{X}{Covariate matrix of training sample.}
-
-\item{Y}{Vector of outcomes of training sample.}
 
 \item{Xnew}{Covariate matrix of test sample. If \code{NULL}, uses training data.}
 
 \item{...}{Ignored additional arguments.}
 }
 \value{
-Predicted class probabilities.  
-  \describe{  
-    \item{Binary outcome}{A numeric vector of probabilities for the positive class.}  
-    \item{Multiclass outcome}{A numeric matrix with one column per class, containing the predicted probabilities.}  
+Predicted probabilities:
+  \describe{
+    \item{Binary outcome}{A numeric vector of probabilities for the positive class.}
+    \item{Multiclass outcome}{A numeric matrix with one column per class.}
   }
 }
 \description{

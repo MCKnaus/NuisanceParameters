@@ -17,7 +17,7 @@ logit_nnet_fit(X, Y, arguments = list())
 An object of class \code{nnet} containing the fitted model.
 }
 \description{
-Fits a logistic regression model using the \code{nnet} package.  
+Fits a logistic regression model using the \code{nnet} package.
 Uses \code{multinom()} for binary and multiclass outcomes.
 }
 \keyword{internal}

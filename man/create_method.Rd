@@ -6,7 +6,7 @@
 \usage{
 create_method(
   method = c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn",
-    "forest_drf", "xgboost", "rlasso", "logit", "logit_nnet", "nb_gaussian",
+    "forest_drf", "xgboost", "rlasso", "glm", "logit", "logit_nnet", "nb_gaussian",
     "nb_bernoulli", "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop"),
   x_select = NULL,
   arguments = list(),
@@ -85,7 +85,9 @@ Supported methods include:
   }
 
   \item \code{"xgboost"}: Gradient boosting via \code{xgboost}, using 100 
-  boosting rounds by default. Supports the same tuning logic as regression
+  boosting rounds by default. These hyperparameters are fixed to unsure smoother 
+  extraction: \code{reg_alpha = 0}, \code{subsample = 1}, \code{max_delta_step = 0}, 
+  \code{base_score = 0}. Supports the same tuning logic as regression
   forests. The Hyperband-like tuning routine and tunable hyperparameters are
   described in \code{?tune_xgb_hyperband}.
 
@@ -95,13 +97,17 @@ Supported methods include:
   \item \code{"forest_drf"}: Distributional random forest via \code{drf}, with
   defaults \code{min.node.size = 15}, \code{num.trees = 2000},
   \code{splitting.rule = "FourierMMD"}.
+  
+  \item \code{"glm"}: Binary regression models using \code{glm}. Supports logistic
+  (logit) and probit link functions. To use probit, specify 
+  \code{family = binomial(link = "probit")}. Default is logit.
 
   \item \code{"logit"}: Logistic regression via \code{glmnet}. Uses
   \code{family = "binomial"} for binary outcomes and
   \code{family = "multinomial"} for multiclass outcomes.
 
-  \item \code{"logit_nnet"}: Multinomial logistic regression via
-  \code{nnet::multinom()}.
+  \item \code{"logit_nnet"}: Logistic regression via \code{nnet::multinom()},
+  supports binary and multiclass outcomes.
 
   \item \code{"nb_gaussian"}: Gaussian Naive Bayes via
   \code{naivebayes::gaussian_naive_bayes()}.

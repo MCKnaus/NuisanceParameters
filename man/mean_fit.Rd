@@ -14,11 +14,12 @@ mean_fit(X, Y, ...)
 \item{...}{Ignored additional arguments.}
 }
 \value{
-An object of class `mean_fit` containing:
+An object of class \code{mean_fit} containing:
   \item{mean}{The arithmetic mean of `Y`}
   \item{N}{Number of observations}
 }
 \description{
-Calculates the arithmetic mean of the training outcomes for use as a constant prediction model.
+Calculates the arithmetic mean of the training outcomes for use as a
+constant prediction model.
 }
 \keyword{internal}

@@ -90,12 +90,12 @@ check_cluster_compatibility <- function(cluster, cf) {
 #' \dontrun{
 #' N <- 1000
 #' d_mat <- prep_indicator_mat(x = sample(3, N, replace = TRUE))
-#' cf_mat <- prep_cf_mat(N = N, cf = 5, d_mat = d_mat)
+#' cf_mat <- prep_cf_matrix(N = N, cf = 5, d_mat = d_mat)
 #' head(cf_mat)
 #' }
 #'
 #' @keywords internal
-prep_cf_mat <- function(N,
+prep_cf_matrix <- function(N,
                         cf,
                         cluster = NULL,
                         d_mat = NULL) {
@@ -771,7 +771,9 @@ setup_pb <- function(NuPa,
 #'   }
 #'
 #'   \item \code{"xgboost"}: Gradient boosting via \code{xgboost}, using 100 
-#'   boosting rounds by default. Supports the same tuning logic as regression
+#'   boosting rounds by default. These hyperparameters are fixed to unsure smoother 
+#'   extraction: \code{reg_alpha = 0}, \code{subsample = 1}, \code{max_delta_step = 0}, 
+#'   \code{base_score = 0}. Supports the same tuning logic as regression
 #'   forests. The Hyperband-like tuning routine and tunable hyperparameters are
 #'   described in \code{?tune_xgb_hyperband}.
 #'
@@ -781,13 +783,17 @@ setup_pb <- function(NuPa,
 #'   \item \code{"forest_drf"}: Distributional random forest via \code{drf}, with
 #'   defaults \code{min.node.size = 15}, \code{num.trees = 2000},
 #'   \code{splitting.rule = "FourierMMD"}.
+#'   
+#'   \item \code{"glm"}: Binary regression models using \code{glm}. Supports logistic
+#'   (logit) and probit link functions. To use probit, specify 
+#'   \code{family = binomial(link = "probit")}. Default is logit.
 #'
 #'   \item \code{"logit"}: Logistic regression via \code{glmnet}. Uses
 #'   \code{family = "binomial"} for binary outcomes and
 #'   \code{family = "multinomial"} for multiclass outcomes.
 #'
-#'   \item \code{"logit_nnet"}: Multinomial logistic regression via
-#'   \code{nnet::multinom()}.
+#'   \item \code{"logit_nnet"}: Logistic regression via \code{nnet::multinom()},
+#'   supports binary and multiclass outcomes.
 #'
 #'   \item \code{"nb_gaussian"}: Gaussian Naive Bayes via
 #'   \code{naivebayes::gaussian_naive_bayes()}.
@@ -828,7 +834,7 @@ setup_pb <- function(NuPa,
 #' )
 create_method <- function(method = c("mean", "ols", "ridge", "plasso", "forest_grf", 
                                      "lasso", "knn", "forest_drf", "xgboost", "rlasso", 
-                                     "logit", "logit_nnet", "nb_gaussian", "nb_bernoulli",
+                                     "glm", "logit", "logit_nnet", "nb_gaussian", "nb_bernoulli",
                                      "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop"
                                      ),
                           x_select = NULL,
@@ -891,7 +897,7 @@ create_method <- function(method = c("mean", "ols", "ridge", "plasso", "forest_g
 #' @keywords internal
 process_methods <- function(methods, NuPa, K) {
   available_NuPa <- c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat")
-  multiclass_method <- c("logit", "logit_nnet", "nb_gaussian", "nb_bernoulli", "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop")
+  multiclass_method <- c( "glm", "logit", "logit_nnet", "nb_gaussian", "nb_bernoulli", "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop")
   base_method <- c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf", "xgboost", "rlasso")
 
   # A function to extract method types from a methods list

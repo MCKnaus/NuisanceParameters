@@ -1,5 +1,7 @@
 test_that("check predictions and smoother weights of ensemble function", {
   
+  skip_if_not_installed("OutcomeWeights")
+  
   n = 600
   n_test = 200
   p = 12
@@ -18,8 +20,8 @@ test_that("check predictions and smoother weights of ensemble function", {
                  "ridge" = create_method("ridge"))
 
   ens = ensemble(methods = methods, X = X, Y = Y, nfolds = 4, ensemble_type = ensemble_type)
-  pred = predict(object = ens, methods = methods, X = X, Y = Y, Xnew = Xnew)
-  weights_mat = weights(object = ens, methods = methods, ens_w = ens$ens_w, X = X, Y = Y, Xnew = Xnew)
+  pred = predict(object = ens, methods = methods, X = X, Xnew = Xnew)
+  weights_mat = OutcomeWeights:::weights.ensemble(object = ens, methods = methods, ens_w = ens$ens_w, X = X, Xnew = Xnew)
 
   pred_s = as.vector(weights_mat %*% Y)
 

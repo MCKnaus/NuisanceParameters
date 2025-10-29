@@ -1,5 +1,5 @@
 set.seed(123)
-n <- 50
+n <- 100
 X <- data.frame(x1 = rnorm(n), x2 = rnorm(n))
 Y_3class <- sample(1:3, size = n, replace = TRUE)
 Y_0_2 <- sample(0:2, size = n, replace = TRUE)
@@ -21,7 +21,7 @@ test_that("ovo_fit works when classes start at 0", {
 
 test_that("predict.ovo_fit returns matrix with correct dimensions and probabilities", {
   ovo <- ovo_fit(X, Y_3class, method = "logit", parallel = FALSE, quiet = TRUE)
-  preds <- predict.ovo_fit(ovo, X, Y_3class, Xnew = Xnew, method = "logit", parallel = FALSE, quiet = TRUE)
+  preds <- predict.ovo_fit(ovo, Xnew = Xnew, method = "logit", parallel = FALSE, quiet = TRUE)
   expect_type(preds, "double")
   expect_true(is.matrix(preds) | is.data.frame(preds))
   expect_equal(dim(preds), c(nrow(Xnew), length(unique(Y_3class))))
@@ -31,7 +31,7 @@ test_that("predict.ovo_fit returns matrix with correct dimensions and probabilit
 
 test_that("predict.ovo_fit works with training data as Xnew=NULL", {
   ovo <- ovo_fit(X, Y_3class, method = "logit", parallel = FALSE, quiet = TRUE)
-  preds <- predict.ovo_fit(ovo, X, Y_3class, Xnew = NULL, method = "logit", parallel = FALSE, quiet = TRUE)
+  preds <- predict.ovo_fit(ovo, X = X, Xnew = NULL, method = "logit", parallel = FALSE, quiet = TRUE)
   expect_equal(nrow(preds), nrow(X))
 })
 
@@ -50,7 +50,7 @@ test_that("ovr_fit works if minimum class is 0", {
 
 test_that("predict.ovr_fit returns matrix with correct dimensions and probabilities", {
   ovr <- ovr_fit(X, Y_3class, method = "logit")
-  preds <- predict.ovr_fit(ovr, X, Y_3class, Xnew = Xnew, method = "logit")
+  preds <- predict.ovr_fit(ovr, Xnew = Xnew, method = "logit")
   expect_true(is.data.frame(preds) | is.matrix(preds))
   expect_equal(dim(preds), c(nrow(Xnew), length(unique(Y_3class))))
   expect_equal(round(rowSums(preds), 5), rep(1, nrow(Xnew)))
@@ -59,7 +59,7 @@ test_that("predict.ovr_fit returns matrix with correct dimensions and probabilit
 
 test_that("predict.ovr_fit works with training data as Xnew=NULL", {
   ovr <- ovr_fit(X, Y_3class, method = "logit")
-  preds <- predict.ovr_fit(ovr, X, Y_3class, Xnew = NULL, method = "logit")
+  preds <- predict.ovr_fit(ovr, X = X, Xnew = NULL, method = "logit")
   expect_equal(nrow(preds), nrow(X))
 })
 

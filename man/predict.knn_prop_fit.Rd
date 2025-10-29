@@ -4,21 +4,21 @@
 \alias{predict.knn_prop_fit}
 \title{Predict method for k-Nearest Neighbor fits}
 \usage{
-\method{predict}{knn_prop_fit}(object, X, Y, Xnew = NULL, ...)
+\method{predict}{knn_prop_fit}(object, Xnew = NULL, ...)
 }
 \arguments{
 \item{object}{Output of \code{\link{knn_prop_fit}}.}
-
-\item{X}{Covariate matrix of training sample.}
-
-\item{Y}{Vector of outcomes of training sample.}
 
 \item{Xnew}{Covariate matrix of test sample. If \code{NULL}, uses training data.}
 
 \item{...}{Ignored additional arguments.}
 }
 \value{
-A numeric matrix with one column per class, containing the predicted probabilities.
+Predicted probabilities:
+  \describe{
+    \item{Binary outcome}{A numeric vector of probabilities for the positive class.}
+    \item{Multiclass outcome}{A numeric matrix with one column per class.}
+  }
 }
 \description{
 Generates predicted class probabilities from fitted k-Nearest Neighbor models.

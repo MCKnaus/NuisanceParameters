@@ -132,7 +132,7 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
   d_mat <- if (!is.null(D)) prep_indicator_mat(D) else NULL
   z_mat <- if (!is.null(Z)) prep_indicator_mat(Z) else NULL
   if (is.null(cf_mat)) {
-    cf_mat <- prep_cf_mat(N, cf = cf, d_mat = if (stratify) d_mat else NULL, cluster = cluster)
+    cf_mat <- prep_cf_matrix(N, cf = cf, d_mat = if (stratify) d_mat else NULL, cluster = cluster)
   }
 
   if (isFALSE(quiet)) which_stacking(cv)
@@ -308,7 +308,9 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
   
   if (store_models == "disk") {
     models_path <- file.path(path, "nuisance_models.rds")
-    saveRDS(list(models = models_list, numbers = nums_list), file = models_path)
+    saved_object <- list(models = models_list, numbers = nums_list)
+    class(saved_object) <- c("NuisanceParameters")
+    saveRDS(saved_object, file = models_path)
     if (!quiet) message("Models saved to: ", models_path)
   }
 

@@ -26,19 +26,23 @@ It covers:
 
 Find more advanced topics in the *Stacking*, *Hyperparameter Tuning*, and *Multivalued Treatment* vignettes.
 
-## Data
+## **Load packages and data**
+
+Load the relevant packages
+
+```{r}
+library(hdm)
+library(OutcomeWeights)
+library(NuisanceParameters)
+```
 
 The notebook builds on the dataset provided in the `hdm` package. The data was used in Chernozhukov and Hansen (2004) and Belloni et al. (2014) where further details can be found. They investigate the effect of participation in the employer-sponsored 401(k) retirement savings plan on net assets (`net_tfa`), using 401(k) eligibility (`e401`) as an instrument for 401(k) participation (`p401`).
 
 The sample contains 9,915 observations. We use a 25% subset to speed up computation:
 
 ```{r}
-library(hdm)
-library(OutcomeWeights)
-library(NuisanceParameters)
-
 # Find dataset description if you type ?pension in console
-data("pension", package = "hdm")
+data("pension")
 
 set.seed(123)
 idx <- sample(nrow(pension), size = round(0.25 * nrow(pension)))
@@ -165,7 +169,7 @@ Smoother matrices are $N \times N$ objects that generate outcome predictions by 
 
 Smoothers let us express predictions as linear transformations of outcomes: this makes it possible to define outcome weights $\omega$ for complex machine learning estimators (like causal forests) and connect them to familiar diagnostic tools such as covariate balance checks. For details, see [Knaus (2024)](https://arxiv.org/abs/2411.11559).
 
-Use `get_smoother_weights` to extract outcome smoother matrices using the trained models saved in the previous step (will be soon handled by the `OutcomeWeights` package):
+Use `get_smoother_weights` from the `OutcomeWeights` package to extract outcome smoother matrices using the trained models saved in the previous step:
 
 ```{r}
 # Delivers smoother matrices for each outcome nuisance parameter

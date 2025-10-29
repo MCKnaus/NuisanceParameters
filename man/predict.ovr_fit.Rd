@@ -4,14 +4,12 @@
 \alias{predict.ovr_fit}
 \title{Predict method for One-vs-Rest (OvR) classifiers}
 \usage{
-\method{predict}{ovr_fit}(object, X, Y, Xnew = NULL, method, ...)
+\method{predict}{ovr_fit}(object, X, Xnew = NULL, method, ...)
 }
 \arguments{
 \item{object}{Output list from \code{\link{ovr_fit}}.}
 
 \item{X}{Covariate matrix of training sample.}
-
-\item{Y}{Vector of outcomes of training sample.}
 
 \item{Xnew}{Covariate matrix of test sample. If \code{NULL}, uses training data.}
 

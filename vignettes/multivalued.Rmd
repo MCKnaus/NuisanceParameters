@@ -21,7 +21,6 @@ library(NuisanceParameters)
 conflict_prefer("create_method", "NuisanceParameters", quiet = TRUE)
 conflict_prefer("design_matrix", "NuisanceParameters", quiet = TRUE) 
 conflict_prefer("data_screen", "NuisanceParameters", quiet = TRUE)
-conflict_prefer("prep_cf_mat", "NuisanceParameters", quiet = TRUE)
 ```
 
 ## Introduction

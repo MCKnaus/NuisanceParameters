@@ -1,7 +1,7 @@
 test_that("check predictions and smoother weights of ensemble_short function", {
 
-  library(mvtnorm)
-
+  skip_if_not_installed("OutcomeWeights")
+  
   n = 200
   p = 12
   p_act = 4
@@ -12,7 +12,7 @@ test_that("check predictions and smoother weights of ensemble_short function", {
   X = mvtnorm::rmvnorm(n = n, mean = rep(0, p), sigma = cov_mat)
   Y = X %*% pi + rnorm(n, 0, 1)
 
-  cf_mat = prep_cf_mat(n, cf = 5)
+  cf_mat = prep_cf_matrix(n, cf = 5)
 
   methods = list("ols" = create_method("ols"),
                 "forest_grf" = create_method("forest_grf"),
@@ -20,7 +20,7 @@ test_that("check predictions and smoother weights of ensemble_short function", {
 
   ens = ensemble_short(methods, X = X, Y = Y, cf_mat = cf_mat, store_models = "memory")
   pred = predict(ens)
-  weights_mat = weights(ens, methods = methods, X = X, Y = Y, cf_mat = cf_mat)
+  weights_mat = OutcomeWeights:::weights.ensemble_short(ens, methods = methods, X = X, Y = Y, cf_mat = cf_mat)
   pred_s = as.vector(weights_mat %*% Y)
 
   weights_rows = rep(1, n)
@@ -47,7 +47,7 @@ test_that("check predictions and smoother weights of ensemble_short function", {
 #   X = mvtnorm::rmvnorm(n = n, mean = rep(0, p), sigma = cov_mat)
 #   Y = X %*% pi + rnorm(n, 0, 1)
 # 
-#   cf_mat = prep_cf_mat(n, cf = 3)
+#   cf_mat = prep_cf_matrix(n, cf = 3)
 # 
 #   methods = list("ols" = create_method("ols"),
 #                 "forest_grf" = create_method("forest_grf"),
@@ -87,7 +87,7 @@ test_that("check predictions and smoother weights of ensemble_short function", {
 #   X = mvtnorm::rmvnorm(n = n, mean = rep(0, p), sigma = cov_mat)
 #   Y = X %*% pi + rnorm(n, 2, 3)
 # 
-#   cf_mat = prep_cf_mat(n, cf = 3)
+#   cf_mat = prep_cf_matrix(n, cf = 3)
 # 
 #   subset = sample(c(TRUE, FALSE), length(Y), replace = TRUE)
 # 

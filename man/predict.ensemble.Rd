@@ -8,7 +8,6 @@
   object,
   methods,
   X,
-  Y,
   Xnew,
   quiet = TRUE,
   pb = NULL,
@@ -23,8 +22,6 @@
 \item{methods}{List of methods created with \code{\link{create_method}}.}
 
 \item{X}{Covariate matrix of the training sample.}
-
-\item{Y}{Vector of outcomes of the training sample.}
 
 \item{Xnew}{Covariate matrix of the test sample.}
 

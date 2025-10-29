@@ -31,12 +31,12 @@ test_that("check_cluster_compatibility detects issues", {
   expect_error(check_cluster_compatibility(cluster, 3), "high imbalance")
 })
 
-test_that("prep_cf_mat creates a valid fold matrix", {
+test_that("prep_cf_matrix creates a valid fold matrix", {
   set.seed(123)
   N <- 50
   cf <- 3
   # No cluster or d_mat
-  mat <- prep_cf_mat(N, cf)
+  mat <- prep_cf_matrix(N, cf)
   expect_true(is.matrix(mat))
   expect_equal(dim(mat), c(N, cf))
   expect_true(all(rowSums(mat) == 1))
@@ -44,7 +44,7 @@ test_that("prep_cf_mat creates a valid fold matrix", {
   # d_mat preserves ratios
   d_vec <- sample(c("A", "B", "C"), N, replace = TRUE)
   dmat <- prep_indicator_mat(d_vec)
-  mat2 <- prep_cf_mat(N, cf, d_mat = dmat)
+  mat2 <- prep_cf_matrix(N, cf, d_mat = dmat)
   expect_equal(dim(mat2), c(N, cf))
   expect_true(all(rowSums(mat2) == 1))
 })

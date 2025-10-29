@@ -17,7 +17,7 @@ svm_fit(X, Y, arguments = list())
 An object of class \code{svm} containing the fitted model.
 }
 \description{
-Fits a Support Vector Machine (SVM) model using the \code{e1071} package.  
+Fits a Support Vector Machine (SVM) model using the \code{e1071} package.
 Uses a radial kernel and \code{C-classification} by default, with probability estimates enabled.
 }
 \keyword{internal}

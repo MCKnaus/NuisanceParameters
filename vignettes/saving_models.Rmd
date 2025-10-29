@@ -37,6 +37,7 @@ The sample consists of 9,915 observations. To speed up the running time, we use 
 
 ```{r}
 library(hdm)
+library(OutcomeWeights)
 library(NuisanceParameters)
 
 # Find dataset description if you type ?pension in console
@@ -107,13 +108,12 @@ np <- nuisance_parameters(NuPa = c("Y.hat","Y.hat.d","D.hat","Z.hat"),
                           store_models = "disk", path = tmpdir)
 ```
 
-Smoother matrices are then extracted simply by providing the path to `get_smoother_weights`:
+Smoother matrices are then extracted simply by providing the saved models to `get_smoother_weights`:
 
 ```{r}
-S <- get_smoother_weights(
-  object = file.path(tmpdir, "nuisance_models.rds"), 
-  NuPa = "Y.hat"
-)
+object <- readRDS(file.path(tmpdir, "nuisance_models.rds"))
+
+S <- get_smoother_weights(object = object, NuPa = "Y.hat")
 
 # Check if S*Y = Y_hat
 all.equal(as.numeric(S$Y.hat %*% Y), np$nuisance_parameters$Y.hat, tolerance = 1e-7)

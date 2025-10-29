@@ -7,7 +7,7 @@
 \method{predict}{forest_grf_fit}(object, Xnew = NULL, ...)
 }
 \arguments{
-\item{object}{An object of class \code{forest_grf_fit} from 
+\item{object}{An object of class \code{forest_grf_fit} from
 \code{\link{forest_grf_fit}}.}
 
 \item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},

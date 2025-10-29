@@ -14,10 +14,11 @@ ols_fit(X, Y, ...)
 \item{...}{Ignored additional arguments.}
 }
 \value{
-Numeric vector of OLS coefficients with class \code{ols_fit}.
+An object of class \code{ols_fit} containing estimated coefficients
+        and the training covariate matrix.
 }
 \description{
 Fits an ordinary least squares (OLS) regression to the given data using
-\code{stats::lm.fit()}.
+\code{stats::lm.fit()}. An intercept is always added to the covariate matrix.
 }
 \keyword{internal}

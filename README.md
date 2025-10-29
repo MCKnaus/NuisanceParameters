@@ -38,9 +38,10 @@ stand-alone unit:
 2.  `MLeffects` – combines estimated nuisance parameters ($\hat{m}(X)$,
     $\hat{m}_d(d,X)$, $\hat{e}(X)$, …) in the doubly robust (DR) score
     to estimate a target parameter $\tau$.
-3.  `OutcomeWeights` – extracts the smoother matrices $\omega$ behind
-    the nuisance and target parameters. The weights can be used to study
-    estimator properties or to check covariate balance (see [Knaus,
+3.  `OutcomeWeights` – extracts the smoother matrices $S$ and calculates
+    the outcome weights $\omega$ behind the nuisance and target
+    parameters. The weights can be used to study estimator properties or
+    to check covariate balance (see [Knaus,
     2024](https://arxiv.org/abs/2411.11559)).
 
 Among other features, `NuisanceParameters` offers ensemble estimation
@@ -52,14 +53,14 @@ treatments, and allows for a rich selection of base learners.
 The package is work in progress. Find here the current state
 (suggestions welcome):
 
-- [ ] Compatibility with
+- \[ x\] Compatibility with
   [`OutcomeWeights`](https://github.com/MCKnaus/OutcomeWeights) package
   - [x] Create a separate `get_outcome_weights` function that takes the
     objects produced by `nuisance_parameters` as inputs and provides the
     user with a list of $N \times N$ smoother matrices for all outcome
     regressions produced in `NuisanceParameters`, or raise a flag (e.g.,
     for Lasso)
-  - [ ] Integrate it with `OutcomeWeights` package
+  - [x] Integrate it with `OutcomeWeights` package
 - [ ] Storage options
   - [x] Allow the user to choose where to store the models: “No” (just
     the nuisance parameters in the output), “Memory” (keep all trained
@@ -103,7 +104,7 @@ methods = list(
 np <- nuisance_parameters(NuPa = c("Y.hat","Y.hat.d","Y.hat.z","D.hat"),
                           X = X, Y = Y, D = D, Z = Z,
                           methods = methods, cf = 5, stacking = "short",
-                          cluster = NULL, stratify = TRUE,
+                          cluster = NULL, stratify = TRUE, ensemble_type = "nnls",
                           store_models = "memory", path = NULL, quiet = TRUE
                           )
 
@@ -160,6 +161,35 @@ See our vignettes to learn more:
 - `vignette("saving_models")` reviews three options for saving the
   trained models
 - `vignette("hyperparameter_tuning")` covers hyperparameter tuning
+
+### Supported Methods
+
+Base learners can be adjusted by providing method-specific arguments in
+`create_method`. Some learners are not implemented for certain nuisance
+parameters and will be filtered out; see the table:
+
+| Method | Description | Outcome NuPa | D/Z Capability |
+|----|----|----|----|
+| `mean` | Mean difference. | Yes | Binary |
+| `ols` | Ordinary Least Squares. | Yes | Binary |
+| `ridge` | Ridge regression via `glmnet` with 10-fold CV to select λ. | Yes | Binary |
+| `plasso` | Post-Lasso via `plasso` (built on `glmnet`), same tuning as Ridge. | Yes | Binary |
+| `lasso` | Lasso via `glmnet`, same tuning as Ridge. | Yes | Binary |
+| `rlasso` | (Post-) Lasso via `hdm` with theory-based penalty. Defaults: $c = 1.1$, $\gamma = 0.1 / \log(n)$. | Yes | Binary |
+| `forest_grf` | Regression forest via `grf` (2000 trees, honesty = TRUE). Supports full-sample & fold tuning using grf’s tuning routines. | Yes | Binary |
+| `xgboost` | Gradient boosting via `xgboost` (100 rounds; some hyperparameters are fixed - see `?create_method`). Supports full-sample & fold tuning (see `?tune_xgb_hyperband`) | Yes | Binary |
+| `knn` | k-Nearest Neighbors via `FastKNN` (default k = 10). | Yes | Binary |
+| `forest_drf` | Distributional random forest via `drf` (2000 trees, FourierMMD splits). | Yes | Binary |
+| `glm` | Logit and probit via `glm`. | No | Binary |
+| `logit` | Logistic regression via `glmnet`. Uses `family = "binomial"` for binary outcomes, `family = "multinomial"` for multiclass outcomes. | No | Binary & Multiclass-Native |
+| `logit_nnet` | Logistic regression via `nnet::multinom()`. | No | Binary & Multiclass-Native |
+| `nb_gaussian` | Gaussian Naive Bayes via `naivebayes::gaussian_naive_bayes()`. | No | Binary & Multiclass-Native |
+| `nb_bernoulli` | Bernoulli Naive Bayes via `naivebayes::naive_bayes()`. | No | Binary & Multiclass-Native |
+| `xgboost_prop` | Gradient boosting for propensity scores via `xgboost`. Uses `objective = "binary:logistic"` or `objective = "multi:softprob"`. Default 100 rounds. | No | Binary & Multiclass-Native |
+| `svm` | SVM via `e1071::svm()` (radial kernel). | No | Binary & Multiclass-Wrapper |
+| `prob_forest` | Probability forest via `grf` (2000 trees). | No | Binary & Multiclass-Native |
+| `ranger` | Random forest classifier via `ranger` (500 trees). | No | Binary & Multiclass-Native |
+| `knn_prop` | k-NN classifier via `kknn::train.kknn()` with leave-one-out cross-validation of k. | No | Binary & Multiclass-Native |
 
 ### Bug reports & support
 
