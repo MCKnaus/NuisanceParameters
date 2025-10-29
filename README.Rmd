@@ -40,7 +40,7 @@ Among other features, `NuisanceParameters` offers ensemble estimation (using sho
 
 The package is work in progress. Find here the current state (suggestions welcome):
 
--   [ x] Compatibility with [`OutcomeWeights`](https://github.com/MCKnaus/OutcomeWeights) package
+-   [x] Compatibility with [`OutcomeWeights`](https://github.com/MCKnaus/OutcomeWeights) package
     -   [x] Create a separate `get_outcome_weights` function that takes the objects produced by `nuisance_parameters` as inputs and provides the user with a list of $N \times N$ smoother matrices for all outcome regressions produced in `NuisanceParameters`, or raise a flag (e.g., for Lasso)
     -   [x] Integrate it with `OutcomeWeights` package
 -   [ ] Storage options

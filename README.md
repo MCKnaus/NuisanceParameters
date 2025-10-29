@@ -53,7 +53,7 @@ treatments, and allows for a rich selection of base learners.
 The package is work in progress. Find here the current state
 (suggestions welcome):
 
-- \[ x\] Compatibility with
+- [x] Compatibility with
   [`OutcomeWeights`](https://github.com/MCKnaus/OutcomeWeights) package
   - [x] Create a separate `get_outcome_weights` function that takes the
     objects produced by `nuisance_parameters` as inputs and provides the
