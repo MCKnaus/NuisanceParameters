@@ -771,11 +771,11 @@ setup_pb <- function(NuPa,
 #'   }
 #'
 #'   \item \code{"xgboost"}: Gradient boosting via \code{xgboost}, using 100 
-#'   boosting rounds by default. These hyperparameters are fixed to unsure smoother 
-#'   extraction: \code{reg_alpha = 0}, \code{subsample = 1}, \code{max_delta_step = 0}, 
-#'   \code{base_score = 0}. Supports the same tuning logic as regression
-#'   forests. The Hyperband-like tuning routine and tunable hyperparameters are
-#'   described in \code{?tune_xgb_hyperband}.
+#'   boosting rounds by default. These hyperparameters are suggested as defaults 
+#'   to ensure smoother extraction in the \pkg{OutcomeWeights} package: \code{alpha = 0}, 
+#'   \code{subsample = 1}, \code{max_delta_step = 0}, and \code{base_score = mean(Y)}. 
+#'   Supports the same tuning logic as regression forests. The Hyperband-like tuning 
+#'   routine and tunable hyperparameters are described in \code{?tune_xgb_hyperband}.
 #'
 #'   \item \code{"knn"}: k-Nearest Neighbors via \code{FastKNN}, with
 #'   \eqn{k = 10} neighbors by default.
@@ -814,8 +814,11 @@ setup_pb <- function(NuPa,
 #'   \item \code{"prob_forest"}: Probability forest via
 #'   \code{grf::probability_forest()}. Grows 2000 trees by default.
 #'
-#'   \item \code{"ranger"}: Random forest classifier via \code{ranger}.
-#'   Grows 500 trees by default.
+#'   \item \code{"ranger_prop"}: Random forest classifier via \code{ranger} for 
+#'   propensity scores. Grows 500 trees by default.
+#'   
+#'   \item \code{"ranger"}: Random forest regressor via \code{ranger} 
+#'   for continuous outcomes. Grows 500 trees by default.
 #'
 #'   \item \code{"knn_prop"}: k-Nearest Neighbors classifier via
 #'   \code{kknn::train.kknn()}.
@@ -834,8 +837,9 @@ setup_pb <- function(NuPa,
 #' )
 create_method <- function(method = c("mean", "ols", "ridge", "plasso", "forest_grf", 
                                      "lasso", "knn", "forest_drf", "xgboost", "rlasso", 
-                                     "glm", "logit", "logit_nnet", "nb_gaussian", "nb_bernoulli",
-                                     "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop"
+                                     "glm", "logit", "logit_nnet", "nb_gaussian", 
+                                     "nb_bernoulli", "xgboost_prop", "svm", "prob_forest", 
+                                     "ranger", "ranger_prop", "knn_prop"
                                      ),
                           x_select = NULL,
                           arguments = list(),
@@ -890,55 +894,63 @@ create_method <- function(method = c("mean", "ols", "ridge", "plasso", "forest_g
 #'   \item{A named list where each name corresponds to a nuisance parameter and contains a list of methods for that parameter}
 #' }
 #' @param NuPa Character vector of nuisance parameters to be estimated
-#' @param K Number of unique treatment statuses (default is 2, binary treatment)
+#' @param K Number of unique treatment statuses
+#' @param M Number of unique outcome values
 #'
 #' @return Nested list object organized by nuisance parameter that will be passed as input to \code{\link{ensemble}}
 #'
 #' @keywords internal
-process_methods <- function(methods, NuPa, K) {
+process_methods <- function(methods, NuPa, K, M) {
   available_NuPa <- c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat")
-  multiclass_method <- c( "glm", "logit", "logit_nnet", "nb_gaussian", "nb_bernoulli", "xgboost_prop", "svm", "prob_forest", "ranger", "knn_prop")
-  base_method <- c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", "knn", "forest_drf", "xgboost", "rlasso")
-
-  # A function to extract method types from a methods list
+  
+  classif_method <- c("glm", "logit", "logit_nnet", "nb_gaussian",
+                      "nb_bernoulli", "xgboost_prop", "svm", 
+                      "prob_forest", "ranger_prop", "knn_prop")
+  
+  regr_method <- c("mean", "ols", "ridge", "plasso", "forest_grf", "lasso", 
+                   "knn", "forest_drf", "xgboost", "rlasso", "ranger")
+  
+  # Helper function to extract method types from a methods list
   get_method_types <- function(method_list) {
     sapply(method_list, function(x) x$method)
   }
-
+  
   # Check if a "one for all" methods list
   is_simple_list <- !any(names(methods) %in% available_NuPa)
-
+  
   if (is_simple_list) {
     # Case 1: "One for all" methods list - replicate for all NuPa after filtering
     result <- stats::setNames(vector("list", length(NuPa)), NuPa)
-
-    filter_multiclass <- NuPa[(NuPa %in% c("Y.hat", "Y.hat.d", "Y.hat.z"))]
-    filter_base <- NuPa[NuPa %in% c("D.hat", "D.hat.z") & K > 2]
-
+    
+    # Filter classification methods from regression tasks with non-binary outcomes (M > 2)
+    # .. and regression methods from multiclass classification tasks (i.e. K > 2)
+    filter_classif <- NuPa[(NuPa %in% c("Y.hat", "Y.hat.d", "Y.hat.z")) & M > 2]
+    filter_regr <- NuPa[NuPa %in% c("D.hat", "D.hat.z") & K > 2]
+    
     # If any methods need to be removed
     method_types <- get_method_types(methods)
-    multiclass_in_method <- any(method_types %in% multiclass_method)
-    base_in_method <- any(method_types %in% base_method)
-
-    if (length(filter_multiclass) > 0 && multiclass_in_method) {
+    classif_in_method <- any(method_types %in% classif_method)
+    regr_in_method <- any(method_types %in% regr_method)
+    
+    if (length(filter_classif) > 0 && classif_in_method) {
       message(
-        "Multiclass methods incompatible with NuPa: ",
-        paste(filter_multiclass, collapse = ", "), ", they will be omitted."
+        "Classification methods incompatible with continuous outcome NuPa: ",
+        paste(filter_classif, collapse = ", "), ", they will be omitted."
       )
     }
-    if (length(filter_base) > 0 && base_in_method) {
+    if (length(filter_regr) > 0 && regr_in_method) {
       message(
-        "Base methods incompatible with NuPa: ",
-        paste(filter_base, collapse = ", "), ", they will be omitted."
+        "Regression methods incompatible with multiclass NuPa: ",
+        paste(filter_regr, collapse = ", "), ", they will be omitted."
       )
     }
-
+    
     # Apply filters
     for (nupa in NuPa) {
-      if (nupa %in% filter_multiclass) {
-        result[[nupa]] <- methods[!method_types %in% multiclass_method]
-      } else if (nupa %in% filter_base) {
-        result[[nupa]] <- methods[!method_types %in% base_method]
+      if (nupa %in% filter_classif) {
+        result[[nupa]] <- methods[!method_types %in% classif_method]
+      } else if (nupa %in% filter_regr) {
+        result[[nupa]] <- methods[!method_types %in% regr_method]
       } else {
         result[[nupa]] <- methods
       }
@@ -946,52 +958,52 @@ process_methods <- function(methods, NuPa, K) {
   } else {
     # Case 2: NuPa-specific methods list
     result <- stats::setNames(vector("list", length(NuPa)), NuPa)
-    multiclass_nupas <- base_nupas <- character(0)
-
+    classif_nupas <- regr_nupas <- character(0)
+    
     for (nupa in intersect(names(methods), NuPa)) {
       method_types <- get_method_types(methods[[nupa]])
-
-      # Multiclass methods to remove
+      
+      # Classification methods to remove
       if ((nupa %in% c("Y.hat", "Y.hat.d", "Y.hat.z"))) {
-        if (any(method_types %in% multiclass_method)) {
-          multiclass_nupas <- c(multiclass_nupas, nupa)
+        if (any(method_types %in% classif_method)) {
+          classif_nupas <- c(classif_nupas, nupa)
         }
       }
-      # Base methods to remove
+      # Regression methods to remove
       if (nupa %in% c("D.hat", "D.hat.z") && K > 2) {
-        if (any(method_types %in% base_method)) {
-          base_nupas <- c(base_method, nupa)
+        if (any(method_types %in% regr_method)) {
+          regr_nupas <- c(regr_nupas, nupa)
         }
       }
     }
-
-    if (length(multiclass_nupas) > 0) {
+    
+    if (length(classif_nupas) > 0) {
       message(
-        "Multiclass methods incompatible with NuPa: ",
-        paste(unique(multiclass_nupas), collapse = ", "), ", they will be omitted."
+        "Classification methods incompatible with continuous outcome NuPa: ",
+        paste(unique(classif_nupas), collapse = ", "), ", they will be omitted."
       )
     }
-    if (length(base_nupas) > 0) {
+    if (length(regr_nupas) > 0) {
       message(
-        "Base methods incompatible with NuPa: ",
-        paste(unique(base_nupas), collapse = ", "), ", they will be omitted."
+        "Regression methods incompatible with multiclass NuPa: ",
+        paste(unique(regr_nupas), collapse = ", "), ", they will be omitted."
       )
     }
-
+    
     # Apply filters
     for (nupa in intersect(names(methods), NuPa)) {
       method_types <- get_method_types(methods[[nupa]])
-
-      if ((nupa %in% c("Y.hat", "Y.hat.d", "Y.hat.z"))) {
-        result[[nupa]] <- methods[[nupa]][!method_types %in% multiclass_method]
+      
+      if ((nupa %in% c("Y.hat", "Y.hat.d", "Y.hat.z") & M > 2)) {
+        result[[nupa]] <- methods[[nupa]][!method_types %in% classif_method]
       } else if (nupa %in% c("D.hat", "D.hat.z") && K > 2) {
-        result[[nupa]] <- methods[[nupa]][!method_types %in% base_method]
+        result[[nupa]] <- methods[[nupa]][!method_types %in% regr_method]
       } else {
         result[[nupa]] <- methods[[nupa]]
       }
     }
   }
-
+  
   empty_nupas <- names(which(lengths(result) == 0))
   if (length(empty_nupas) > 0) {
     stop(paste(
@@ -999,7 +1011,7 @@ process_methods <- function(methods, NuPa, K) {
       paste(empty_nupas, collapse = ", "), "\nPlease provide at least one valid method for each NuPa"
     ))
   }
-
+  
   return(result)
 }
 

@@ -51,7 +51,7 @@ methods = list(
  "plasso" = create_method("plasso"),
  "forest_grf" = create_method("forest_grf"),
  "logit" = create_method("logit", multinomial = "multiclass"),
- "ranger" = create_method("ranger", multinomial = "one-vs-one"),
+ "ranger_prop" = create_method("ranger_prop", multinomial = "one-vs-one"),
  "logit_nnet" = create_method("logit_nnet", multinomial = "one-vs-rest"),
  "prob_forest" = create_method("prob_forest", multinomial = "multiclass")
  )

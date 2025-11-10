@@ -220,7 +220,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
 
   # check smoother weights
   object <- readRDS(file.path(path, "nuisance_models.RDS"))
-  w = OutcomeWeights::get_smoother_weights(object = object, NuPa = "Y.hat")$Y.hat.d[[1]]
+  w = OutcomeWeights::get_smoother_weights(object = object, NuPa = "Y.hat.d")$Y.hat.d[[1]]
   expect_equal(np_m_short_w[["nuisance_parameters"]][["Y.hat.d"]][, 1], as.vector(w %*% Y), tolerance = 1e-3)
 
   unlink(paste0(path, "/*"))
@@ -264,7 +264,8 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   expect_identical(dim(np_m_standard_w$nuisance_parameters$Y.hat.d), dim(np_m_standard_w$numbers$d_mat))
 
   # check smoother weights
-  w = OutcomeWeights::get_smoother_weights(object = file.path(path, "nuisance_models.RDS"), NuPa = "Y.hat.d")$Y.hat.d[[1]]
+  object <- readRDS(file.path(path, "nuisance_models.RDS"))
+  w = OutcomeWeights::get_smoother_weights(object = object, NuPa = "Y.hat.d")$Y.hat.d[[1]]
   expect_equal(np_m_standard_w[["nuisance_parameters"]][["Y.hat.d"]][, 1], as.vector(w %*% Y), tolerance = 1e-3)
   
   unlink(paste0(path, "/*"))

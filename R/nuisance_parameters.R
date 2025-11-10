@@ -129,6 +129,7 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
   ## Preps
   N <- nrow(X)
   K <- length(unique(D))
+  M <- length(unique(Y))
   d_mat <- if (!is.null(D)) prep_indicator_mat(D) else NULL
   z_mat <- if (!is.null(Z)) prep_indicator_mat(Z) else NULL
   if (is.null(cf_mat)) {
@@ -179,7 +180,7 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
     } else { colnames(D.hat.z) <- colnames(z_mat) }
   }
 
-  methods <- process_methods(methods = methods, NuPa = NuPa, K = K)
+  methods <- process_methods(methods = methods, NuPa = NuPa, K = K, M = M)
 
   # Create progress bar
   pb <- if (isFALSE(quiet)) {

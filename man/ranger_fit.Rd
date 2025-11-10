@@ -2,14 +2,14 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{ranger_fit}
 \alias{ranger_fit}
-\title{Fit Probability Forest using \code{ranger}}
+\title{Fit Random Forest for continuous outcomes using \code{ranger}}
 \usage{
 ranger_fit(X, Y, arguments = list())
 }
 \arguments{
 \item{X}{Covariate matrix of training sample.}
 
-\item{Y}{Vector of outcomes of training sample.}
+\item{Y}{Vector of continuous outcomes of training sample.}
 
 \item{arguments}{List of arguments passed to \code{ranger::ranger()}.}
 }
@@ -17,6 +17,10 @@ ranger_fit(X, Y, arguments = list())
 An object of class \code{ranger} containing the fitted model.
 }
 \description{
-Fits a Probability Forest model using the \code{ranger} package.
+Fits a Random Forest model using the \code{ranger} package for continuous outcomes.
+}
+\details{
+For successful smoother extraction in the \pkg{OutcomeWeights} package, 
+\code{keep.inbag = TRUE} is set.
 }
 \keyword{internal}

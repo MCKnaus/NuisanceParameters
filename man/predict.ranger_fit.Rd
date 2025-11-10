@@ -2,7 +2,7 @@
 % Please edit documentation in R/ml_wrapper.R
 \name{predict.ranger_fit}
 \alias{predict.ranger_fit}
-\title{Predict method for Probability Forest fits}
+\title{Predict method for Random Forest continuous outcome fits}
 \usage{
 \method{predict}{ranger_fit}(object, Xnew = NULL, ...)
 }
@@ -14,13 +14,9 @@
 \item{...}{Ignored additional arguments.}
 }
 \value{
-Predicted probabilities:
-  \describe{
-    \item{Binary outcome}{A numeric vector of probabilities for the positive class.}
-    \item{Multiclass outcome}{A numeric matrix with one column per class.}
-  }
+A numeric vector of predicted continuous outcomes.
 }
 \description{
-Generates predicted class probabilities from fitted Probability Forest models.
+Generates predicted values from fitted Random Forest models for continuous outcomes.
 }
 \keyword{internal}

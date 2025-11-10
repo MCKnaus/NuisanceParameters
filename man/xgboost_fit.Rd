@@ -21,17 +21,15 @@ An object of class \code{xgboost_fit} containing the fitted
 Fits an XGBoost model using the \code{xgboost} package.
 }
 \details{
-Parameter restrictions for the smoother matrix multiplied by the outcome
-vector to be (roughly) equivalent to the outcome nuisance vector
+For successful smoother extraction in \pkg{OutcomeWeights}, certain parameter
+restrictions are recommended. If not specified by the user, the following
+values are suggested:
 \itemize{
-  \item \strong{Restricted}: \code{reg_alpha = 0}, \code{subsample = 1},
-        \code{max_delta_step = 0}, \code{base_score = 0}.
-  \item \strong{Free}: \code{nrounds}, \code{eta}, \code{gamma}, \code{max_depth},
-        \code{min_child_weight}, \code{sampling_method}, \code{colsample_bytree},
-        \code{colsample_bylevel}, \code{colsample_bynode}, \code{lambda},
-        \code{tree_method}, \code{refresh_leaf}, \code{grow_policy},
-        \code{max_leaves}, \code{max_bin}
-  \item \strong{Grey zone}: All other parameters (equivalence not guaranteed)
+  \item \code{max_delta_step = 0}
+  \item \code{base_score = mean(Y)} 
+  \item \code{subsample = 1} 
+  \item \code{alpha = 0}
 }
+User-specified values in \code{arguments} take precedence over suggestions.
 }
 \keyword{internal}

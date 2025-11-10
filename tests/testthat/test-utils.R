@@ -212,7 +212,7 @@ test_that("process_methods replicates a simple methods list across NuPas", {
   methods <- list(fake_method("ols"), fake_method("ridge"))
   NuPa <- c("Y.hat", "D.hat")
   
-  result <- process_methods(methods, NuPa, K = 2)
+  result <- process_methods(methods, NuPa, K = 2, M = 10)
   
   expect_type(result, "list")
   expect_named(result, NuPa)
@@ -228,19 +228,19 @@ test_that("process_methods applies NuPa-specific methods", {
   )
   NuPa <- c("Y.hat", "D.hat")
   
-  result <- process_methods(methods, NuPa, K = 2)
+  result <- process_methods(methods, NuPa, K = 2, M = 10)
   
   expect_equal(result$Y.hat[[1]]$method, "ols")
   expect_equal(result$D.hat[[1]]$method, "ridge")
 })
 
 test_that("process_methods filters out multiclass methods for Y.hat NuPa", {
-  methods <- list(fake_method("ols"), fake_method("svm")) # svm is multiclass
+  methods <- list(fake_method("ols"), fake_method("ranger_prop")) # svm is multiclass
   NuPa <- "Y.hat"
   
   expect_message(
-    result <- process_methods(methods, NuPa, K = 2),
-    "Multiclass methods incompatible with NuPa"
+    result <- process_methods(methods, NuPa, K = 3, M = 10),
+    "Classification methods incompatible with"
   )
   
   expect_equal(length(result$Y.hat), 1)
@@ -252,7 +252,7 @@ test_that("process_methods filters out base methods for D.hat when K > 2", {
   NuPa <- "D.hat"
   
   expect_error(
-    process_methods(methods, NuPa, K = 3),
+    process_methods(methods, NuPa, K = 3, M = 10),
     "The following nuisance parameters have empty methods lists"
   )
 })
@@ -261,7 +261,7 @@ test_that("process_methods allows base methods for D.hat when K = 2", {
   methods <- list(fake_method("ols"), fake_method("ridge"))
   NuPa <- "D.hat"
   
-  result <- process_methods(methods, NuPa, K = 2)
+  result <- process_methods(methods, NuPa, K = 2, M = 10)
   
   expect_equal(length(result$D.hat), 2)
 })
@@ -274,8 +274,8 @@ test_that("process_methods NuPa-specific filtering works", {
   NuPa <- c("Y.hat", "D.hat")
   
   expect_message(
-    result <- process_methods(methods, NuPa, K = 3),
-    "Multiclass methods incompatible with NuPa"
+    result <- process_methods(methods, NuPa, K = 3, M = 10),
+    "Classification methods incompatible with"
   )
   expect_equal(result$Y.hat[[1]]$method, "ols")
 })
@@ -285,7 +285,268 @@ test_that("process_methods errors if any NuPa has no valid methods", {
   NuPa <- "Y.hat"
   
   expect_error(
-    process_methods(methods, NuPa, K = 2),
+    process_methods(methods, NuPa, K = 3, M = 10),
     "The following nuisance parameters have empty methods lists"
   )
+})
+
+test_that("process_methods accepts all methods for binary treatment and binary outcome", {
+  methods <- list(
+    "ols" = create_method("ols"),
+    "ridge" = create_method("ridge"),
+    "ranger" = create_method("ranger"),
+    "logit" = create_method("logit"),
+    "glm" = create_method("glm")
+  )
+  
+  NuPa <- c("Y.hat", "D.hat")
+  K <- 2
+  M <- 2
+  
+  result <- process_methods(methods, NuPa, K, M)
+  
+  expect_type(result, "list")
+  expect_named(result, NuPa)
+  expect_length(result$Y.hat, 5)
+  expect_length(result$D.hat, 5)
+  expect_equal(names(result$Y.hat), c("ols", "ridge", "ranger", "logit", "glm"))
+  expect_equal(names(result$D.hat), c("ols", "ridge", "ranger", "logit", "glm"))
+})
+
+test_that("process_methods filters classification methods from continuous outcomes with M > 2", {
+  methods <- list(
+    "ols" = create_method("ols"),
+    "logit" = create_method("logit"),
+    "xgboost" = create_method("xgboost"),
+    "prob_forest" = create_method("prob_forest")
+  )
+  
+  NuPa <- c("Y.hat", "Y.hat.d")
+  M <- 100  # continuous outcome
+  
+  expect_message(
+    result <- process_methods(methods, NuPa, K = 2, M),
+    "Classification methods incompatible with continuous outcome"
+  )
+  
+  expect_length(result$Y.hat, 2)  # Only ols and xgboost should remain
+  expect_length(result$Y.hat.d, 2)
+  expect_true(all(sapply(result$Y.hat, function(x) x$method) %in% c("ols", "xgboost")))
+})
+
+test_that("process_methods filters regression methods from multiclass treatment with K > 2", {
+  methods <- list(
+    "ols" = create_method("ols"),
+    "logit" = create_method("logit"),
+    "ridge" = create_method("ridge"),
+    "ranger" = create_method("ranger")
+  )
+  
+  NuPa <- c("D.hat", "D.hat.z")
+  K <- 3  # Multiclass treatment
+  M <- 100
+  
+  expect_message(
+    result <- process_methods(methods, NuPa, K, M),
+    "Regression methods incompatible with multiclass NuPa"
+  )
+  
+  expect_length(result$D.hat, 1)  # Only logit should remain
+  expect_length(result$D.hat.z, 1)
+  expect_equal(result$D.hat[[1]]$method, "logit")
+})
+
+test_that("process_methods works with NuPa-specific methods list", {
+  methods <- list(
+    "Y.hat" = list(
+      "ols" = create_method("ols"),
+      "ridge" = create_method("ridge")
+    ),
+    "D.hat" = list(
+      "logit" = create_method("logit"),
+      "prob_forest" = create_method("prob_forest")
+    )
+  )
+  
+  NuPa <- c("Y.hat", "D.hat")
+  K <- 2
+  M <- 100
+  
+  result <- process_methods(methods, NuPa, K, M)
+  
+  expect_named(result, c("Y.hat", "D.hat"))
+  expect_length(result$Y.hat, 2)
+  expect_length(result$D.hat, 2)
+  expect_equal(names(result$Y.hat), c("ols", "ridge"))
+  expect_equal(names(result$D.hat), c("logit", "prob_forest"))
+})
+
+test_that("process_methods filters classification methods in NuPa-specific lists", {
+  methods <- list(
+    "Y.hat" = list(
+      "ols" = create_method("ols"),
+      "logit" = create_method("logit"),  # Should be filtered
+      "ridge" = create_method("ridge")
+    ),
+    "Y.hat.d" = list(
+      "xgboost" = create_method("xgboost"),
+      "prob_forest" = create_method("prob_forest")  # Should be filtered
+    )
+  )
+  
+  NuPa <- c("Y.hat", "Y.hat.d")
+  K <- 3
+  M <- 100
+  
+  expect_message(
+    result <- process_methods(methods, NuPa, K, M),
+    "Classification methods incompatible with continuous"
+  )
+  
+  expect_length(result$Y.hat, 2)  # ols and ridge remain
+  expect_length(result$Y.hat.d, 1)  # xgboost remains
+  expect_equal(names(result$Y.hat), c("ols", "ridge"))
+  expect_equal(names(result$Y.hat.d), "xgboost")
+})
+
+test_that("process_methods filters regression methods from multiclass treatment in NuPa-specific lists", {
+  methods <- list(
+    "D.hat" = list(
+      "logit" = create_method("logit"),
+      "ols" = create_method("ols"),  # Should be filtered
+      "prob_forest" = create_method("prob_forest")
+    ),
+    "D.hat.z" = list(
+      "ridge" = create_method("ridge"),  # Should be filtered
+      "logit" = create_method("logit")
+    )
+  )
+  
+  NuPa <- c("D.hat", "D.hat.z")
+  K <- 3
+  M <- 100
+  
+  expect_message(
+    result <- process_methods(methods, NuPa, K, M),
+    "Regression methods incompatible with multiclass NuPa"
+  )
+  
+  expect_length(result$D.hat, 2)  # logit and prob_forest remain
+  expect_length(result$D.hat.z, 1)  # logit remains
+  expect_equal(names(result$D.hat), c("logit", "prob_forest"))
+  expect_equal(names(result$D.hat.z), "logit")
+})
+
+test_that("process_methods handles all available NuPa parameters", {
+  methods <- list(
+    "ols" = create_method("ols"),
+    "ranger" = create_method("ranger")
+  )
+  
+  NuPa <- c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat")
+  K <- 2
+  M <- 100
+  
+  result <- process_methods(methods, NuPa, K, M)
+  
+  expect_named(result, NuPa)
+  for (nupa in NuPa) {
+    expect_length(result[[nupa]], 2)
+  }
+})
+
+test_that("process_methods throws error when methods list becomes empty after filtering", {
+  # Only classification methods for continuous outcome
+  methods <- list(
+    "logit" = create_method("logit"),
+    "prob_forest" = create_method("prob_forest")
+  )
+  
+  NuPa <- c("Y.hat")
+  K <- 3
+  M <- 100
+  
+  expect_error(
+    process_methods(methods, NuPa, K, M),
+    "The following nuisance parameters have empty methods lists: Y.hat"
+  )
+})
+
+test_that("process_methods works with complex method configurations", {
+  methods <- list(
+    "ols" = create_method("ols", x_select = TRUE, arguments = list(intercept = TRUE)),
+    "ridge" = create_method("ridge", tuning = "fold", arguments = list(lambda = 0.1)),
+    "logit" = create_method("logit", multinomial = "one-vs-rest", parallel = TRUE),
+    "ranger" = create_method("ranger", arguments = list(num.trees = 500))
+  )
+  
+  NuPa <- c("Y.hat", "D.hat")
+  K <- 2
+  M <- 100
+  
+  result <- process_methods(methods, NuPa, K, M)
+  
+  # Check that method configurations are preserved
+  expect_equal(result$Y.hat$ols$x_select, TRUE)
+  expect_equal(result$D.hat$ridge$tuning, "fold")
+  expect_equal(result$D.hat$logit$multinomial, "one-vs-rest")
+  expect_equal(result$Y.hat$ranger$arguments$num.trees, 500)
+})
+
+test_that("process_methods correctly identifies simple vs NuPa-specific lists", {
+  # Simple list (no names matching available_NuPa)
+  simple_methods <- list(
+    "method1" = create_method("ols"),
+    "method2" = create_method("ridge")
+  )
+  
+  # NuPa-specific list
+  nupa_methods <- list(
+    "Y.hat" = list("ols" = create_method("ols")),
+    "D.hat" = list("logit" = create_method("logit"))
+  )
+  
+  NuPa <- c("Y.hat", "D.hat")
+  K <- 2
+  M <- 100
+  
+  simple_result <- process_methods(simple_methods, NuPa, K, M)
+  nupa_result <- process_methods(nupa_methods, NuPa, K, M)
+  
+  # Both should produce same structure but different content
+  expect_named(simple_result, NuPa)
+  expect_named(nupa_result, NuPa)
+  expect_length(simple_result$Y.hat, 2)
+  expect_length(nupa_result$Y.hat, 1)
+})
+
+test_that("process_methods handles mixed classification and regression methods appropriately", {
+  methods <- list(
+    "ols" = create_method("ols"),           # regression
+    "ridge" = create_method("ridge"),       # regression  
+    "logit" = create_method("logit"),       # classification
+    "xgboost" = create_method("xgboost"),   # regression
+    "prob_forest" = create_method("prob_forest")  # classification
+  )
+  
+  # Test with continuous outcome (M = 100)
+  NuPa_cont <- c("Y.hat", "Y.hat.d")
+  K <- 2
+  M <- 100
+  
+  expect_message(
+    result_cont <- process_methods(methods, NuPa_cont, K, M),
+    "Classification methods incompatible with continuous outcome"
+  )
+  
+  # Only regression methods should remain
+  expect_length(result_cont$Y.hat, 3)
+  expect_true(all(sapply(result_cont$Y.hat, function(x) x$method) %in% c("ols", "ridge", "xgboost")))
+  
+  # Test with binary outcome (M = 2) - no filtering
+  NuPa_binary <- c("Y.hat", "Y.hat.d")
+  M <- 2
+  
+  result_binary <- process_methods(methods, NuPa_binary, K, M)
+  expect_length(result_binary$Y.hat, 5)  # All methods should remain
 })

@@ -341,23 +341,22 @@ predict.forest_grf_fit <- function(object, Xnew = NULL, ...) {
 #' @param arguments List of arguments passed to \code{xgb.train}.
 #'
 #' @details
-#' Parameter restrictions for the smoother matrix multiplied by the outcome
-#' vector to be (roughly) equivalent to the outcome nuisance vector
+#' For successful smoother extraction in \pkg{OutcomeWeights}, certain parameter
+#' restrictions are recommended. If not specified by the user, the following
+#' values are suggested:
 #' \itemize{
-#'   \item \strong{Restricted}: \code{reg_alpha = 0}, \code{subsample = 1},
-#'         \code{max_delta_step = 0}, \code{base_score = 0}.
-#'   \item \strong{Free}: \code{nrounds}, \code{eta}, \code{gamma}, \code{max_depth},
-#'         \code{min_child_weight}, \code{sampling_method}, \code{colsample_bytree},
-#'         \code{colsample_bylevel}, \code{colsample_bynode}, \code{lambda},
-#'         \code{tree_method}, \code{refresh_leaf}, \code{grow_policy},
-#'         \code{max_leaves}, \code{max_bin}
-#'   \item \strong{Grey zone}: All other parameters (equivalence not guaranteed)
+#'   \item \code{max_delta_step = 0}
+#'   \item \code{base_score = mean(Y)} 
+#'   \item \code{subsample = 1} 
+#'   \item \code{alpha = 0}
 #' }
+#' User-specified values in \code{arguments} take precedence over suggestions.
 #'
 #' @return An object of class \code{xgboost_fit} containing the fitted
 #'   \code{xgb.Booster} model.
 #'
 #' @keywords internal
+#' 
 xgboost_fit <- function(X, Y, arguments = list()) {
   if (!requireNamespace("xgboost", quietly = TRUE)) {
     stop("The 'xgboost' package is not installed. This learner is optional (in Suggests).\n",
@@ -366,37 +365,13 @@ xgboost_fit <- function(X, Y, arguments = list()) {
     )
   }
 
-  free_params <- c(
-    "nrounds", "eta", "gamma", "max_depth", "min_child_weight", "sampling_method",
-    "colsample_bytree", "colsample_bylevel", "colsample_bynode", "lambda",
-    "tree_method", "refresh_leaf", "grow_policy", "max_leaves", "max_bin", "objective"
-  )
-
-  fixed <- list(
-    alpha          = 0,
-    subsample      = 1,
-    max_delta_step = 0,
-    base_score     = 0
-  )
-
-  # Sanitize parameters
-  for (nm in names(fixed)) {
-    if (!is.null(arguments[[nm]]) && !identical(arguments[[nm]], fixed[[nm]])) {
-      message("Resetting ", nm, " to ", fixed[[nm]], " (user value ignored).")
-    }
-    arguments[[nm]] <- fixed[[nm]]
-  }
-
-  # Grey zone check
-  grey <- setdiff(names(arguments), c(free_params, names(fixed)))
-  if (length(grey) > 0) {
-    message(
-      "xgboost_fit: detected grey-zone parameter(s): ",
-      paste(grey, collapse = ", "), ". S*Y = Y.hat is not guaranteed."
-    )
-  }
-
-  if (is.null(arguments$base_score)) arguments$base_score <- 0
+  # Set the defaults (for potential smoother to be extracted)
+  if (is.null(arguments$max_delta_step)) arguments$max_delta_step <- 0
+  if (is.null(arguments$base_score)) arguments$base_score <- mean(Y)
+  if (is.null(arguments$subsample)) arguments$subsample <- 1
+  if (is.null(arguments$alpha)) arguments$alpha <- 0
+  
+  # Repeat XGBoost default to be registered in the trained object 
   if (is.null(arguments$lambda)) arguments$lambda <- 1
   if (is.null(arguments$eta)) arguments$eta <- 0.3
 
@@ -543,6 +518,62 @@ predict.forest_drf_fit <- function(object, Xnew = NULL, functional = "mean", ...
   pred <- predict(object, newdata = Xnew, functional = functional)
   fit <- as.vector(pred[[functional]])
 
+  return(fit)
+}
+
+
+#' Fit Random Forest for continuous outcomes using \code{ranger}
+#'
+#' Fits a Random Forest model using the \code{ranger} package for continuous outcomes.
+#'
+#' @param X Covariate matrix of training sample.
+#' @param Y Vector of continuous outcomes of training sample.
+#' @param arguments List of arguments passed to \code{ranger::ranger()}.
+#'
+#' @details
+#' For successful smoother extraction in the \pkg{OutcomeWeights} package, 
+#' \code{keep.inbag = TRUE} is set.
+#'
+#' @return An object of class \code{ranger} containing the fitted model.
+#'
+#' @keywords internal
+ranger_fit <- function(X, Y, arguments = list()) {
+  if (!requireNamespace("ranger", quietly = TRUE)) {
+    stop("The 'ranger' package is not installed. Random Forest is optional (in Suggests).\n",
+         "Install it with: install.packages('ranger')",
+         call. = FALSE
+    )
+  }
+  
+  data <- data.frame(Y = Y, X)
+  
+  model <- do.call(ranger::ranger, c(list(data = data, formula = Y ~ ., keep.inbag = TRUE), arguments))
+  
+  return(model)
+}
+
+
+#' Predict method for Random Forest continuous outcome fits
+#'
+#' Generates predicted values from fitted Random Forest models for continuous outcomes.
+#'
+#' @param object Output of \code{\link{ranger_fit}}.
+#' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
+#' @param ... Ignored additional arguments.
+#'
+#' @return A numeric vector of predicted continuous outcomes.
+#'
+#' @method predict ranger_fit
+#' @keywords internal
+#' @exportS3Method
+predict.ranger_fit <- function(object, Xnew = NULL, ...) {
+  if (is.null(Xnew)) Xnew <- object$call$data
+  
+  data <- as.data.frame(Xnew)
+  data$Y <- 0
+  
+  fit <- predict(object, data = data)$predictions
+  
   return(fit)
 }
 
@@ -1130,9 +1161,9 @@ predict.knn_prop_fit <- function(object, Xnew = NULL, ...) {
 }
 
 
-#' Fit Probability Forest using \code{ranger}
+#' Fit Probability Forest for propensity scores using \code{ranger}
 #'
-#' Fits a Probability Forest model using the \code{ranger} package.
+#' Fits a Probability Forest model using the \code{ranger} package for propensity score estimation.
 #'
 #' @param X Covariate matrix of training sample.
 #' @param Y Vector of outcomes of training sample.
@@ -1141,27 +1172,27 @@ predict.knn_prop_fit <- function(object, Xnew = NULL, ...) {
 #' @return An object of class \code{ranger} containing the fitted model.
 #'
 #' @keywords internal
-ranger_fit <- function(X, Y, arguments = list()) {
+ranger_prop_fit <- function(X, Y, arguments = list()) {
   if (!requireNamespace("ranger", quietly = TRUE)) {
     stop("The 'ranger' package is not installed. Probability Forest is optional (in Suggests).\n",
-      "Install it with: install.packages('ranger')",
-      call. = FALSE
+         "Install it with: install.packages('ranger')",
+         call. = FALSE
     )
   }
-
+  
   data <- data.frame(Y = as.factor(Y), X)
-
+  
   model <- do.call(ranger::ranger, c(list(data = data, formula = Y ~ ., probability = TRUE), arguments))
-
+  
   return(model)
 }
 
 
-#' Predict method for Probability Forest fits
+#' Predict method for Probability Forest propensity score fits
 #'
-#' Generates predicted class probabilities from fitted Probability Forest models.
+#' Generates predicted class probabilities from fitted Probability Forest models for propensity scores.
 #'
-#' @param object Output of \code{\link{ranger_fit}}.
+#' @param object Output of \code{\link{ranger_prop_fit}}.
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
 #' @param ... Ignored additional arguments.
 #'
@@ -1172,15 +1203,15 @@ ranger_fit <- function(X, Y, arguments = list()) {
 #'   }
 #'
 #' @keywords internal
-predict.ranger_fit <- function(object, Xnew = NULL, ...) {
+predict.ranger_prop_fit <- function(object, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- object$call$data
-
+  
   data <- as.data.frame(Xnew)
   data$Y <- as.factor(0)
-
+  
   fit <- predict(object, data = data)$predictions
-
+  
   if (ncol(fit) == 2) fit <- fit[, 2, drop = TRUE]
-
+  
   return(fit)
 }

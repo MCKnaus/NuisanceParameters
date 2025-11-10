@@ -103,30 +103,31 @@ See our vignettes to learn more:
 
 ### Supported Methods
 
-Base learners can be adjusted by providing method-specific arguments in `create_method`. Some learners are not implemented for certain nuisance parameters and will be filtered out; see the table:
+Base learners can be adjusted by providing method-specific arguments in `create_method`. For binary outcomes, binary treatments, and any instrument, all learners are available. Some learners are not implemented for certain nuisance parameters and will be filtered out: restrictions apply for continuous outcomes (column 3) and multivalued treatments (column 4):
 
-| Method | Description | Outcome NuPa | D/Z Capability |
-|------------------|------------------|------------------|------------------|
-| `mean` | Mean difference. | Yes | Binary |
-| `ols` | Ordinary Least Squares. | Yes | Binary |
-| `ridge` | Ridge regression via `glmnet` with 10-fold CV to select λ. | Yes | Binary |
-| `plasso` | Post-Lasso via `plasso` (built on `glmnet`), same tuning as Ridge. | Yes | Binary |
-| `lasso` | Lasso via `glmnet`, same tuning as Ridge. | Yes | Binary |
-| `rlasso` | (Post-) Lasso via `hdm` with theory-based penalty. Defaults: $c = 1.1$, $\gamma = 0.1 / \log(n)$. | Yes | Binary |
-| `forest_grf` | Regression forest via `grf` (2000 trees, honesty = TRUE). Supports full-sample & fold tuning using grf’s tuning routines. | Yes | Binary |
-| `xgboost` | Gradient boosting via `xgboost` (100 rounds; some hyperparameters are fixed - see `?create_method`). Supports full-sample & fold tuning (see `?tune_xgb_hyperband`) | Yes | Binary |
-| `knn` | k-Nearest Neighbors via `FastKNN` (default k = 10). | Yes | Binary |
-| `forest_drf` | Distributional random forest via `drf` (2000 trees, FourierMMD splits). | Yes | Binary |
-| `glm` | Logit and probit via `glm`. | No | Binary |
-| `logit` | Logistic regression via `glmnet`. Uses `family = "binomial"` for binary outcomes, `family = "multinomial"` for multiclass outcomes. | No | Binary & Multiclass-Native |
-| `logit_nnet` | Logistic regression via `nnet::multinom()`. | No | Binary & Multiclass-Native |
-| `nb_gaussian` | Gaussian Naive Bayes via `naivebayes::gaussian_naive_bayes()`. | No | Binary & Multiclass-Native |
-| `nb_bernoulli` | Bernoulli Naive Bayes via `naivebayes::naive_bayes()`. | No | Binary & Multiclass-Native |
-| `xgboost_prop` | Gradient boosting for propensity scores via `xgboost`. Uses `objective = "binary:logistic"` or `objective = "multi:softprob"`. Default 100 rounds. | No | Binary & Multiclass-Native |
-| `svm` | SVM via `e1071::svm()` (radial kernel). | No | Binary & Multiclass-Wrapper |
-| `prob_forest` | Probability forest via `grf` (2000 trees). | No | Binary & Multiclass-Native |
-| `ranger` | Random forest classifier via `ranger` (500 trees). | No | Binary & Multiclass-Native |
-| `knn_prop` | k-NN classifier via `kknn::train.kknn()` with leave-one-out cross-validation of k. | No | Binary & Multiclass-Native |
+| Method | Description | Outcome NuPa | Treatment NuPa |
+|----|----|----|----|
+| `mean` | Mean difference. | Cont. & Binary | Binary |
+| `ols` | Ordinary Least Squares. | Cont. & Binary | Binary |
+| `ridge` | Ridge regression via `glmnet`. | Cont. & Binary | Binary |
+| `plasso` | Post-Lasso via `plasso` (built on `glmnet`). | Cont. & Binary | Binary |
+| `lasso` | Lasso via `glmnet`. | Cont. & Binary | Binary |
+| `rlasso` | (Post-) Lasso via `hdm` with theory-based penalty. | Cont. & Binary | Binary |
+| `forest_grf` | Regression forest via `grf`. Supports full-sample & fold tuning using grf’s tuning routines. | Cont. & Binary | Binary |
+| `ranger_fit` | Regression forest via `ranger` (`keep.inbag = TRUE`). | Cont. & Binary | Binary |
+| `xgboost` | Gradient boosting via `xgboost` (100 rounds); `alpha = 0`, `subsample = 1`, `max_delta_step = 0`, and `base_score = mean(Y)` are suggested as defaults but can be overwritten (see `?create_method` for details). Supports full-sample & fold tuning (see `?tune_xgb_hyperband`). | Cont. & Binary | Binary |
+| `knn` | k-Nearest Neighbors via `FastKNN`. | Cont. & Binary | Binary |
+| `forest_drf` | Distributional random forest via `drf` (uses FourierMMD splits). | Cont. & Binary | Binary |
+| `glm` | Logit and probit via `glm`. | Binary | Binary |
+| `logit` | Logistic regression via `glmnet`. Uses `family = "binomial"` for binary outcomes, `family = "multinomial"` for multiclass outcomes. | Binary | Binary & Multiclass-Native |
+| `logit_nnet` | Logistic regression via `nnet::multinom()`. | Binary | Binary & Multiclass-Native |
+| `nb_gaussian` | Gaussian Naive Bayes via `naivebayes::gaussian_naive_bayes()`. | Binary | Binary & Multiclass-Native |
+| `nb_bernoulli` | Bernoulli Naive Bayes via `naivebayes::naive_bayes()`. | Binary | Binary & Multiclass-Native |
+| `xgboost_prop` | Gradient boosting for propensity scores via `xgboost`. Uses `objective = "binary:logistic"` for binary and `objective = "multi:softprob"`. for multiclass treatments. Defaults to 100 rounds. | Binary | Binary & Multiclass-Native |
+| `svm` | SVM via `e1071::svm()` (radial kernel). | Binary | Binary & Multiclass-Wrapper |
+| `prob_forest` | Probability forest via `grf`. | Binary | Binary & Multiclass-Native |
+| `ranger_prop` | Random forest classifier via `ranger` (`probability = TRUE`). | Binary | Binary & Multiclass-Native |
+| `knn_prop` | k-NN classifier via `kknn::train.kknn()`. | Binary | Binary & Multiclass-Native |
 
 ### Bug reports & support
 

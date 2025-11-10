@@ -4,7 +4,7 @@
 \alias{process_methods}
 \title{Method creation for ensemble (internal version)}
 \usage{
-process_methods(methods, NuPa, K)
+process_methods(methods, NuPa, K, M)
 }
 \arguments{
 \item{methods}{Either:
@@ -15,7 +15,9 @@ process_methods(methods, NuPa, K)
 
 \item{NuPa}{Character vector of nuisance parameters to be estimated}
 
-\item{K}{Number of unique treatment statuses (default is 2, binary treatment)}
+\item{K}{Number of unique treatment statuses}
+
+\item{M}{Number of unique outcome values}
 }
 \value{
 Nested list object organized by nuisance parameter that will be passed as input to \code{\link{ensemble}}

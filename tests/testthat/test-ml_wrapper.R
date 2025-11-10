@@ -3,7 +3,7 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   skip_if_not_installed("OutcomeWeights")
   
   n = 1000
-  n_test = 25
+  n_test = 50
   p = 12
   p_act = 4
 
@@ -13,6 +13,10 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   X = mvtnorm::rmvnorm(n = n, mean = rep(0, p), sigma = cov_mat)
   Xnew = mvtnorm::rmvnorm(n = n_test, mean = rep(0, p), sigma = cov_mat)
   Y = as.vector(X %*% pi + rnorm(n, 0, 1))
+  
+  cn <- paste0("x", seq_len(p))
+  colnames(X)    <- cn
+  colnames(Xnew) <- cn
 
   w_rows = rep(1, n_test)
 
@@ -90,6 +94,13 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   w = OutcomeWeights:::weights.xgboost_fit(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(p, p_s, tolerance = 1e-6)
+  
+  # ranger
+  m = ranger_fit(X = X, Y = Y)
+  p = predict.ranger_fit(m, Xnew = Xnew)
+  w = OutcomeWeights:::weights.ranger_fit(m, Xnew = Xnew)
+  p_s = as.vector(w %*% Y)
+  expect_equal(p, p_s, tolerance = 1e-9)
 })
 
 
@@ -372,9 +383,18 @@ test_that("knn_prop_fit and predict.knn_prop_fit work", {
 
 test_that("ranger_fit and predict.ranger_fit work", {
   skip_if_not_installed("ranger")
-  fit <- ranger_fit(X, Y_multi)
+  fit <- ranger_fit(X, Y_reg)
   pred <- predict.ranger_fit(fit, X)
   pred_no_Xnew <- predict.ranger_fit(fit, Xnew = NULL)
+  expect_equal(pred, pred_no_Xnew)
+  expect_equal(length(pred), nrow(X))
+})
+
+test_that("ranger_prop_fit and predict.ranger_prop_fit work", {
+  skip_if_not_installed("ranger")
+  fit <- ranger_prop_fit(X, Y_multi)
+  pred <- predict.ranger_prop_fit(fit, X)
+  pred_no_Xnew <- predict.ranger_prop_fit(fit, Xnew = NULL)
   expect_equal(pred, pred_no_Xnew)
   expect_true(is.matrix(pred) || is.data.frame(pred))
 })
