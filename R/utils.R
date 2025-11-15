@@ -775,7 +775,7 @@ setup_pb <- function(NuPa,
 #'   to ensure smoother extraction in the \pkg{OutcomeWeights} package: \code{alpha = 0}, 
 #'   \code{subsample = 1}, \code{max_delta_step = 0}, and \code{base_score = mean(Y)}. 
 #'   Supports the same tuning logic as regression forests. The Hyperband-like tuning 
-#'   routine and tunable hyperparameters are described in \code{?tune_xgb_hyperband}.
+#'   routine and tunable hyperparameters are described in \code{?xgboost_tune}.
 #'
 #'   \item \code{"knn"}: k-Nearest Neighbors via \code{FastKNN}, with
 #'   \eqn{k = 10} neighbors by default.
@@ -815,10 +815,10 @@ setup_pb <- function(NuPa,
 #'   \code{grf::probability_forest()}. Grows 2000 trees by default.
 #'
 #'   \item \code{"ranger_prop"}: Random forest classifier via \code{ranger} for 
-#'   propensity scores. Grows 500 trees by default.
+#'   propensity scores. Grows 500 trees by default. Supports tuning.
 #'   
 #'   \item \code{"ranger"}: Random forest regressor via \code{ranger} 
-#'   for continuous outcomes. Grows 500 trees by default.
+#'   for continuous outcomes. Grows 500 trees by default. Supports tuning.
 #'
 #'   \item \code{"knn_prop"}: k-Nearest Neighbors classifier via
 #'   \code{kknn::train.kknn()}.
@@ -950,7 +950,7 @@ process_methods <- function(methods, NuPa, K, M) {
       if (nupa %in% filter_classif) {
         result[[nupa]] <- methods[!method_types %in% classif_method]
       } else if (nupa %in% filter_regr) {
-        result[[nupa]] <- methods[!method_types %in% regr_method]
+        result[[nupa]] <- methods[!(method_types %in% c(regr_method, "glm"))]
       } else {
         result[[nupa]] <- methods
       }
@@ -997,7 +997,7 @@ process_methods <- function(methods, NuPa, K, M) {
       if ((nupa %in% c("Y.hat", "Y.hat.d", "Y.hat.z") & M > 2)) {
         result[[nupa]] <- methods[[nupa]][!method_types %in% classif_method]
       } else if (nupa %in% c("D.hat", "D.hat.z") && K > 2) {
-        result[[nupa]] <- methods[[nupa]][!method_types %in% regr_method]
+        result[[nupa]] <- methods[[nupa]][!(method_types %in% c(regr_method, "glm"))]
       } else {
         result[[nupa]] <- methods[[nupa]]
       }
@@ -1189,188 +1189,4 @@ one_hot <- function(Y) {
   colnames(out) <- uY
   
   return(out)
-}
-
-
-#' Hyperparameter Tuning for XGBoost via Hyperband
-#'
-#' Implements the Hyperband multi-armed bandit for hyperparameter optimization.
-#' Progressively allocates resources (boosting rounds)
-#' to the most promising configurations across successive rungs of evaluation.
-#'
-#' @param X Covariate matrix.
-#' @param Y Numeric vector containing the outcome variable.
-#' @param max_rounds Maximum number of boosting rounds for final evaluation. Default is 100.
-#' @param n_configs Initial number of random hyperparameter configurations to sample. Default is 50.
-#' @param eta_downfactor Downsampling factor between rungs (η in Hyperband terminology). Default is 3.
-#' @param nfold Number of cross-validation folds. Default is 5.
-#' @param metrics Evaluation metric for early stopping. Options include "rmse", "mae",
-#'                "logloss", "error", etc. Default is "rmse".
-#' @param seed Random seed for reproducibility. Default is 123.
-#'
-#' @return A list with two components:
-#' \itemize{
-#'   \item{\code{params}}: Named list of optimal hyperparameter values
-#'   \item{\code{best_score}}: The best cross-validation score achieved (minimum test error)
-#' }
-#'
-#' @details
-#' The function implements the Hyperband algorithm with three resource levels (rungs):
-#' \enumerate{
-#'   \item \strong{First rung:} 10 boosting rounds - evaluate all `n_configs` configurations
-#'   \item \strong{Second rung:} 30 boosting rounds - keep top 1/η configurations
-#'   \item \strong{Final rung:} `max_rounds` boosting rounds - keep top configuration
-#' }
-#'
-#' Tunable hyperparameters include the learning rate (\code{eta}), tree depth (\code{max_depth}),
-#' minimum child weight (\code{min_child_weight}), \code{gamma}, column subsampling fractions
-#' (\code{colsample_bytree}, \code{colsample_bylevel}, \code{colsample_bynode}),
-#' L2 regularization (\code{lambda}), \code{grow_policy}, \code{max_leaves}, and \code{max_bin}.
-#' The search space uses log-uniform sampling for \code{eta} and \code{lambda},
-#' and uniform or discrete sampling for the others. Parameters kept fixed are:
-#' \code{subsample = 1}, \code{alpha = 0}, \code{max_delta_step = 0},
-#' \code{tree_method = "hist"}, \code{objective = "reg:squarederror"},
-#' and \code{base_score = mean(Y)}.
-#'
-#' @keywords internal
-tune_xgb_hyperband <- function(X, Y,
-                               max_rounds = 100, 
-                               n_configs = 50,
-                               eta_downfactor = 3, 
-                               nfold = 5,
-                               metrics = "rmse", 
-                               seed = 123) {
-  set.seed(seed)
-  
-  sample_params <- function() {
-    list(
-      eta = 10^stats::runif(1, log10(0.01), log10(0.3)),
-      max_depth = sample(2:10, 1),
-      min_child_weight = stats::runif(1, 0, 10),
-      gamma = stats::runif(1, 0, 10),
-      colsample_bytree = stats::runif(1, 0.5, 1),
-      colsample_bylevel = stats::runif(1, 0.5, 1),
-      colsample_bynode = stats::runif(1, 0.5, 1),
-      lambda = 10^stats::runif(1, log10(1e-3), log10(10)),
-      max_leaves = sample(0:10, 1),
-      max_bin = sample(10:256, 1),
-      tree_method = "hist",
-      ## Must be fixed:
-      objective = "reg:squarederror",
-      subsample = 1,
-      alpha = 0,
-      max_delta_step = 0,
-      base_score = mean(Y)
-    )
-  }
-
-  configs <- replicate(n_configs, sample_params(), simplify = FALSE)
-  budgets <- c(15, 35, max_rounds)
-
-  best_score <- Inf
-  best_params <- NULL
-
-  for (budget in budgets) {
-    scores <- numeric(length(configs))
-
-    for (i in seq_along(configs)) {
-      params <- configs[[i]]
-      cv <- tryCatch(
-        xgboost::xgb.cv(
-          data = as.matrix(X),
-          label = Y,
-          params = params,
-          nfold = nfold,
-          nrounds = budget,
-          metrics = metrics,
-          verbose = FALSE,
-          early_stopping_rounds = 10
-        ),
-        error = function(e) NULL
-      )
-      scores[i] <- if (!is.null(cv)) 
-        min(cv$evaluation_log[[paste0("test_", metrics, "_mean")]]) 
-      else NA
-    }
-
-    # Remove configs with NA scores
-    valid_idx <- which(!is.na(scores))
-    if (length(valid_idx) == 0) break
-    scores <- scores[valid_idx]
-    configs <- configs[valid_idx]
-
-    # Update best params from this rung
-    rung_best_idx <- which.min(scores)
-    if (scores[rung_best_idx] < best_score) {
-      best_score <- scores[rung_best_idx]
-      best_params <- configs[[rung_best_idx]]
-    }
-
-    # Keep top configs for next rung
-    keep_n <- max(1, floor(length(configs) / eta_downfactor))
-    top_idx <- order(scores)[1:keep_n]
-    configs <- configs[top_idx]
-  }
-  
-  # Important for standard stacking 
-  best_params$base_score <- NULL
-  
-  return(list("params" = best_params, "best_score" = best_score))
-}
-
-
-#' Tune learner hyperparameters
-#'
-#' Tunes hyperparameters for specified learners in a \code{methods} list
-#'
-#' @param type Tuning type, either "\code{full_sample}" or "\code{fold}".
-#' @param methods List of methods for ensemble estimation.
-#' @param X Covariate matrix.
-#' @param Y Numeric vector containing the outcome variable.
-#'
-#' @return Modified methods list with tuned parameters.
-#'
-#' @keywords internal
-#'
-tune_learners <- function(type = c("full_sample", "fold"),
-                          methods,
-                          X, Y) {
-  type <- match.arg(type)
-  
-  # Process each method in the list
-  for (i in seq_along(methods)) {
-    mtd <- methods[[i]]
-    
-    if (mtd$tuning == "no" || !identical(type, mtd$tuning)) {
-      next
-    }
-    
-    if (is.null(mtd$x_select)) {
-      X_sub <- X
-    } else {
-      X_sub <- X[, mtd$x_select, drop = FALSE]
-    }
-    
-    # grf's random forest tuning
-    if (identical(mtd$method, "forest_grf")) {
-      tuned_forest <- grf::regression_forest(
-        X = X_sub,
-        Y = Y,
-        tune.parameters = "all",
-        num.trees = 50
-      )
-      
-      # Merge with existing arguments
-      tuned_params <- tuned_forest[["tunable.params"]]
-      methods[[i]][["arguments"]] <- utils::modifyList(methods[[i]][["arguments"]], tuned_params)
-    }
-    
-    # XGBoost tuning using hyperband
-    else if (identical(mtd$method, "xgboost")) {
-      tuned_xgb <- tune_xgb_hyperband(X = X_sub, Y = Y)
-      methods[[i]][["arguments"]] <- tuned_xgb[["params"]]
-    }
-  }
-  
-  return(methods)
 }

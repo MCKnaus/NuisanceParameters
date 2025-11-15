@@ -90,7 +90,7 @@ Supported methods include:
   to ensure smoother extraction in the \pkg{OutcomeWeights} package: \code{alpha = 0}, 
   \code{subsample = 1}, \code{max_delta_step = 0}, and \code{base_score = mean(Y)}. 
   Supports the same tuning logic as regression forests. The Hyperband-like tuning 
-  routine and tunable hyperparameters are described in \code{?tune_xgb_hyperband}.
+  routine and tunable hyperparameters are described in \code{?xgboost_tune}.
 
   \item \code{"knn"}: k-Nearest Neighbors via \code{FastKNN}, with
   \eqn{k = 10} neighbors by default.
@@ -130,10 +130,10 @@ Supported methods include:
   \code{grf::probability_forest()}. Grows 2000 trees by default.
 
   \item \code{"ranger_prop"}: Random forest classifier via \code{ranger} for 
-  propensity scores. Grows 500 trees by default.
+  propensity scores. Grows 500 trees by default. Supports tuning.
   
   \item \code{"ranger"}: Random forest regressor via \code{ranger} 
-  for continuous outcomes. Grows 500 trees by default.
+  for continuous outcomes. Grows 500 trees by default. Supports tuning.
 
   \item \code{"knn_prop"}: k-Nearest Neighbors classifier via
   \code{kknn::train.kknn()}.

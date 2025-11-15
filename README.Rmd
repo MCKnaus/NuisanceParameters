@@ -63,7 +63,7 @@ set.seed(123)
 idx <- sample(nrow(pension), size = round(0.5 * nrow(pension)))
 sub <- pension[idx, ]
 
-# Find dataset description if you type ?pension in console
+# Find dataset description by typing ?pension in console
 Y <- sub$net_tfa
 D <- sub$p401
 Z <- sub$e401
@@ -106,16 +106,16 @@ See our vignettes to learn more:
 Base learners can be adjusted by providing method-specific arguments in `create_method`. For binary outcomes, binary treatments, and any instrument, all learners are available. Some learners are not implemented for certain nuisance parameters and will be filtered out: restrictions apply for continuous outcomes (column 3) and multivalued treatments (column 4):
 
 | Method | Description | Outcome NuPa | Treatment NuPa |
-|----|----|----|----|
+|------------------|------------------|------------------|------------------|
 | `mean` | Mean difference. | Cont. & Binary | Binary |
 | `ols` | Ordinary Least Squares. | Cont. & Binary | Binary |
 | `ridge` | Ridge regression via `glmnet`. | Cont. & Binary | Binary |
 | `plasso` | Post-Lasso via `plasso` (built on `glmnet`). | Cont. & Binary | Binary |
 | `lasso` | Lasso via `glmnet`. | Cont. & Binary | Binary |
 | `rlasso` | (Post-) Lasso via `hdm` with theory-based penalty. | Cont. & Binary | Binary |
-| `forest_grf` | Regression forest via `grf`. Supports full-sample & fold tuning using grf’s tuning routines. | Cont. & Binary | Binary |
-| `ranger_fit` | Regression forest via `ranger` (`keep.inbag = TRUE`). | Cont. & Binary | Binary |
-| `xgboost` | Gradient boosting via `xgboost` (100 rounds); `alpha = 0`, `subsample = 1`, `max_delta_step = 0`, and `base_score = mean(Y)` are suggested as defaults but can be overwritten (see `?create_method` for details). Supports full-sample & fold tuning (see `?tune_xgb_hyperband`). | Cont. & Binary | Binary |
+| `forest_grf` | Regression forest via `grf`. Can be tuned with grf’s tuning routines. | Cont. & Binary | Binary |
+| `ranger_fit` | Regression forest via `ranger` (`keep.inbag = TRUE`). Supports tuning via [`tuneRanger`](https://github.com/PhilippPro/tuneRanger?tab=readme-ov-file). | Cont. & Binary | Binary |
+| `xgboost` | Gradient boosting via `xgboost` (100 rounds); `alpha = 0`, `subsample = 1`, `max_delta_step = 0`, and `base_score = mean(Y)` are suggested as defaults but can be overwritten (see `?create_method` for details). Supports tuning (see `?xgboost_tune`). | Cont. & Binary | Binary |
 | `knn` | k-Nearest Neighbors via `FastKNN`. | Cont. & Binary | Binary |
 | `forest_drf` | Distributional random forest via `drf` (uses FourierMMD splits). | Cont. & Binary | Binary |
 | `glm` | Logit and probit via `glm`. | Binary | Binary |
@@ -126,7 +126,7 @@ Base learners can be adjusted by providing method-specific arguments in `create_
 | `xgboost_prop` | Gradient boosting for propensity scores via `xgboost`. Uses `objective = "binary:logistic"` for binary and `objective = "multi:softprob"`. for multiclass treatments. Defaults to 100 rounds. | Binary | Binary & Multiclass-Native |
 | `svm` | SVM via `e1071::svm()` (radial kernel). | Binary | Binary & Multiclass-Wrapper |
 | `prob_forest` | Probability forest via `grf`. | Binary | Binary & Multiclass-Native |
-| `ranger_prop` | Random forest classifier via `ranger` (`probability = TRUE`). | Binary | Binary & Multiclass-Native |
+| `ranger_prop` | Random forest classifier via `ranger` (`probability = TRUE`). Supports tuning via [`tuneRanger`](https://github.com/PhilippPro/tuneRanger?tab=readme-ov-file). | Binary | Binary & Multiclass-Native |
 | `knn_prop` | k-NN classifier via `kknn::train.kknn()`. | Binary | Binary & Multiclass-Native |
 
 ### Bug reports & support

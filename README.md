@@ -87,7 +87,7 @@ set.seed(123)
 idx <- sample(nrow(pension), size = round(0.5 * nrow(pension)))
 sub <- pension[idx, ]
 
-# Find dataset description if you type ?pension in console
+# Find dataset description by typing ?pension in console
 Y <- sub$net_tfa
 D <- sub$p401
 Z <- sub$e401
@@ -113,28 +113,28 @@ lapply(np$nuisance_parameters, head)
 ```
 
     ## $Y.hat
-    ## [1]  6009.854 -4575.957  3437.862 14168.764  5993.148 33811.825
+    ## [1]  5969.990 -4669.972  3435.684 14776.976  6007.888 32605.119
     ## 
     ## $Y.hat.d
     ##               0         1
-    ## [1,]  1832.7005 22391.548
-    ## [2,] -2039.6889 -2530.582
-    ## [3,]  1096.0878 12711.518
-    ## [4,] 11063.2579 34638.079
-    ## [5,]   517.2776 13682.718
-    ## [6,] 22420.5076 38720.661
+    ## [1,]  2648.0503 22661.899
+    ## [2,] -2056.3953 -2534.668
+    ## [3,]  1115.4664 12684.022
+    ## [4,] 11164.6510 34435.515
+    ## [5,]   776.5629 13657.614
+    ## [6,] 23535.1625 38637.563
     ## 
     ## $Y.hat.z
-    ##              0         1
-    ## [1,]  3536.709 16492.263
-    ## [2,] -3346.530 -4988.276
-    ## [3,]  1201.548 10706.441
-    ## [4,] 10834.829 29859.396
-    ## [5,]  1679.534 13203.072
-    ## [6,] 30257.424 37035.402
+    ##              0        1
+    ## [1,]  3536.709 16980.52
+    ## [2,] -3346.530 -5122.62
+    ## [3,]  1201.548 10641.86
+    ## [4,] 10834.829 30117.62
+    ## [5,]  1679.534 13143.54
+    ## [6,] 30257.424 36523.94
     ## 
     ## $D.hat
-    ## [1] 0.14332452 0.03899012 0.13601290 0.27249500 0.30314992 0.44431399
+    ## [1] 0.14282537 0.03935637 0.14297639 0.26590898 0.30163428 0.44153960
     ## 
     ## $D.hat.z
     ## [1] "This nuisance parameter was not specified and is therefore empty."
@@ -179,9 +179,9 @@ treatments (column 4):
 | `plasso` | Post-Lasso via `plasso` (built on `glmnet`). | Cont. & Binary | Binary |
 | `lasso` | Lasso via `glmnet`. | Cont. & Binary | Binary |
 | `rlasso` | (Post-) Lasso via `hdm` with theory-based penalty. | Cont. & Binary | Binary |
-| `forest_grf` | Regression forest via `grf`. Supports full-sample & fold tuning using grf’s tuning routines. | Cont. & Binary | Binary |
-| `ranger_fit` | Regression forest via `ranger` (`keep.inbag = TRUE`). | Cont. & Binary | Binary |
-| `xgboost` | Gradient boosting via `xgboost` (100 rounds); `alpha = 0`, `subsample = 1`, `max_delta_step = 0`, and `base_score = mean(Y)` are suggested as defaults but can be overwritten (see `?create_method` for details). Supports full-sample & fold tuning (see `?tune_xgb_hyperband`). | Cont. & Binary | Binary |
+| `forest_grf` | Regression forest via `grf`. Can be tuned with grf’s tuning routines. | Cont. & Binary | Binary |
+| `ranger_fit` | Regression forest via `ranger` (`keep.inbag = TRUE`). Supports tuning via [`tuneRanger`](https://github.com/PhilippPro/tuneRanger?tab=readme-ov-file). | Cont. & Binary | Binary |
+| `xgboost` | Gradient boosting via `xgboost` (100 rounds); `alpha = 0`, `subsample = 1`, `max_delta_step = 0`, and `base_score = mean(Y)` are suggested as defaults but can be overwritten (see `?create_method` for details). Supports tuning (see `?xgboost_tune`). | Cont. & Binary | Binary |
 | `knn` | k-Nearest Neighbors via `FastKNN`. | Cont. & Binary | Binary |
 | `forest_drf` | Distributional random forest via `drf` (uses FourierMMD splits). | Cont. & Binary | Binary |
 | `glm` | Logit and probit via `glm`. | Binary | Binary |
@@ -192,7 +192,7 @@ treatments (column 4):
 | `xgboost_prop` | Gradient boosting for propensity scores via `xgboost`. Uses `objective = "binary:logistic"` for binary and `objective = "multi:softprob"`. for multiclass treatments. Defaults to 100 rounds. | Binary | Binary & Multiclass-Native |
 | `svm` | SVM via `e1071::svm()` (radial kernel). | Binary | Binary & Multiclass-Wrapper |
 | `prob_forest` | Probability forest via `grf`. | Binary | Binary & Multiclass-Native |
-| `ranger_prop` | Random forest classifier via `ranger` (`probability = TRUE`). | Binary | Binary & Multiclass-Native |
+| `ranger_prop` | Random forest classifier via `ranger` (`probability = TRUE`). Supports tuning via [`tuneRanger`](https://github.com/PhilippPro/tuneRanger?tab=readme-ov-file). | Binary | Binary & Multiclass-Native |
 | `knn_prop` | k-NN classifier via `kknn::train.kknn()`. | Binary | Binary & Multiclass-Native |
 
 ### Bug reports & support
