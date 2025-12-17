@@ -22,7 +22,7 @@ It covers:
 1.  Data preprocessing and base learner setup
 2.  Estimation with multiple machine learners using short-stacking
 3.  Adding or replacing nuisance parameters ex-post
-4.  Target parameter estimation and smoother matrix extraction (will be delegated to other packages in the trilogy)
+4.  Smoother matrix extraction
 
 Find more advanced topics in the *Stacking*, *Hyperparameter Tuning*, and *Multivalued Treatment* vignettes.
 
@@ -116,17 +116,6 @@ Along with the ensemble weights in the short-stacking procedure. By default, the
 
 ```{r}
 plot(np$numbers$ens_weights)
-```
-
-Now, let's estimate some target parameters using the early `MLeffect` function (to be outsourced).
-
-```{r}
-TargetParam <- MLeffect(Y, D, X, Z, 
-                        NuPa.hat = np$nuisance_parameters,
-                        estimators = c("PLR","PLR_IV","AIPW_ATE"))
-
-summary(TargetParam)
-plot(TargetParam)
 ```
 
 ## Adding nuisance parameters ex-post

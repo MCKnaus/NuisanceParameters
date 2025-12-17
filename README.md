@@ -197,8 +197,7 @@ treatments (column 4):
 
 ### Bug reports & support
 
-The development version will soon be available using the `devtools`
-package:
+The development version is available using the `devtools` package:
 
 ``` r
 library(devtools)
