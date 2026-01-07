@@ -367,11 +367,10 @@ xgboost_fit <- function(X, Y, arguments = list()) {
 
   # Set the defaults (for potential smoother to be extracted)
   if (is.null(arguments$max_delta_step)) arguments$max_delta_step <- 0
-  if (is.null(arguments$base_score)) arguments$base_score <- mean(Y)
   if (is.null(arguments$subsample)) arguments$subsample <- 1
   if (is.null(arguments$alpha)) arguments$alpha <- 0
   
-  # Repeat XGBoost default to be registered in the trained object 
+  # XGBoost defaults to be registered in the trained object 
   if (is.null(arguments$lambda)) arguments$lambda <- 1
   if (is.null(arguments$eta)) arguments$eta <- 0.3
 
@@ -379,6 +378,10 @@ xgboost_fit <- function(X, Y, arguments = list()) {
   arguments[["nrounds"]] <- NULL
 
   dtrain <- xgboost::xgb.DMatrix(data = as.matrix(X), label = Y)
+  
+  # [Smoother] Fix for floating-point precision mismatch (XGBoost -> float32, mean(Y) -> float64)
+  if (is.null(arguments$base_score)) arguments$base_score <- mean(xgboost::getinfo(dtrain, "label"))
+  
   xgb <- do.call(xgboost::xgb.train, c(list(data = dtrain, nrounds = nrounds, params = arguments)))
 
   xgb$X <- X

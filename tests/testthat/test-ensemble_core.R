@@ -21,7 +21,7 @@ test_that("check prediction and weights method of ensemble_core", {
 
   ens_core_a = ensemble_core(methods_a, X_tr = X_tr, Y_tr = Y_tr)
   pred_a = predict(ens_core_a, methods_a, X_tr, X_te)
-  weights_a = OutcomeWeights:::weights.ensemble_core(ens_core_a, methods_a, X_tr, X_te)
+  weights_a = OutcomeWeights:::get_smoother_weights.ensemble_core(ens_core_a, methods_a, X_tr, X_te)
   expect_equal(dim(weights_a), c(nrow(X_te), nrow(X_tr), length(methods_a)))
 
   pred_s_a = sapply(1:length(methods_a), function(i) weights_a[, , i] %*% Y_tr)
@@ -40,7 +40,7 @@ test_that("check prediction and weights method of ensemble_core", {
 
   ens_core_b = ensemble_core(methods_b, X_tr = X_tr, Y_tr = Y_tr)
   pred_b = predict(ens_core_b, methods_b, X_tr, X_te)
-  weights_b = OutcomeWeights:::weights.ensemble_core(ens_core_b, methods_b, X_tr, X_te)
+  weights_b = OutcomeWeights:::get_smoother_weights.ensemble_core(ens_core_b, methods_b, X_tr, X_te)
   expect_equal(dim(weights_b), c(nrow(X_te), nrow(X_tr), length(methods_b)))
 
   pred_s_b = sapply(1:length(methods_b), function(i) weights_b[, , i] %*% Y_tr)

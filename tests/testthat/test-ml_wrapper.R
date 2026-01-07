@@ -23,7 +23,7 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   # mean
   m = mean_fit(X = X, Y = Y)
   p = predict.mean_fit(m, Xnew = Xnew)
-  w = OutcomeWeights:::weights.mean_fit(m, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.mean_fit(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_true(all(w >= 0 & w <= 1))
@@ -32,7 +32,7 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   # ols
   m = ols_fit(X = X, Y = Y)
   p = predict.ols_fit(m, Xnew = Xnew)
-  w = OutcomeWeights:::weights.ols_fit(m, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.ols_fit(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_equal(p, p_s, tolerance = 1e-9)
@@ -40,7 +40,7 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   # ridge
   m = ridge_fit(X = X, Y = Y)
   p = predict.ridge_fit(m, Xnew = Xnew)
-  w = OutcomeWeights:::weights.ridge_fit(m, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.ridge_fit(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_equal(p, p_s, tolerance = 0.001)
@@ -48,7 +48,7 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   # plasso
   m = plasso_fit(X = X, Y = Y)
   p = predict.plasso_fit(m, Xnew = Xnew)
-  w = OutcomeWeights:::weights.plasso_fit(m, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.cv.plasso(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_equal(p, p_s, tolerance = 1e-9)
@@ -56,7 +56,7 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   # rlasso
   m = rlasso_fit(X = X, Y = Y)
   p = predict.rlasso_fit(m, Xnew = Xnew)
-  w = OutcomeWeights:::weights.rlasso_fit(m, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.rlasso(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_equal(p, p_s, tolerance = 1e-9)
@@ -64,7 +64,7 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   # random forest
   m = forest_grf_fit(X = X, Y = Y)
   p = predict.forest_grf_fit(m, Xnew = Xnew)
-  w = OutcomeWeights:::weights.forest_grf_fit(m, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.regression_forest(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_true(all(w >= 0 & w <= 1))
@@ -73,7 +73,7 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   # knn
   m = knn_fit(X = X, Y = Y, arguments = list("k" = 3))
   p = predict.knn_fit(m, Xnew = Xnew)
-  w = OutcomeWeights:::weights.knn_fit(m, X = X, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.knn_fit(m, X = X, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_true(all(w >= 0 & w <= 1))
@@ -82,7 +82,7 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   # distributional random forest
   m = forest_drf_fit(X = X, Y = Y)
   p = predict.forest_drf_fit(m, Xnew = Xnew)
-  w = OutcomeWeights:::weights.forest_drf_fit(m, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.drf(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(Matrix::rowSums(w), w_rows, tolerance = 1e-9)
   expect_true(all(w >= 0 & w <= 1))
@@ -91,14 +91,14 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   # xgboost
   m = xgboost_fit(X = X, Y = Y)
   p = predict.xgboost_fit(m, Xnew = Xnew)
-  w = OutcomeWeights:::weights.xgboost_fit(m, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.xgb.Booster(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(p, p_s, tolerance = 1e-6)
   
   # ranger
   m = ranger_fit(X = X, Y = Y)
   p = predict.ranger_fit(m, Xnew = Xnew)
-  w = OutcomeWeights:::weights.ranger_fit(m, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.ranger(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(p, p_s, tolerance = 1e-9)
 })
@@ -132,7 +132,7 @@ test_that("knn mickey mouse check", {
   ) / k
 
   m = knn_fit(X = X, Y = Y, arguments = list("k" = k))
-  w = OutcomeWeights:::weights.knn_fit(m, X = X, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.knn_fit(m, X = X, Xnew = Xnew)
 
   expect_identical(w_exp, w)
 
@@ -163,7 +163,7 @@ test_that("knn weight matrix plausibility check", {
   p = predict.knn_fit(m, Xnew = Xnew)
   expect_true(all(p >= min(Y) & p <= max(Y)))
 
-  w = OutcomeWeights:::weights.knn_fit(m, X = X, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.knn_fit(m, X = X, Xnew = Xnew)
   w_vals = unique(as.vector(as.matrix(w[-1])))
   expect_identical(sort(w_vals), c(0, 1/k))
 

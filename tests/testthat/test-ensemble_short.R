@@ -20,7 +20,7 @@ test_that("check predictions and smoother weights of ensemble_short function", {
 
   ens = ensemble_short(methods, X = X, Y = Y, cf_mat = cf_mat, store_models = "memory")
   pred = predict(ens)
-  weights_mat = OutcomeWeights:::weights.ensemble_short(ens, methods = methods, X = X, Y = Y, cf_mat = cf_mat)
+  weights_mat = OutcomeWeights:::get_smoother_weights.ensemble_short(ens, methods = methods, X = X, Y = Y, cf_mat = cf_mat)
   pred_s = as.vector(weights_mat %*% Y)
 
   weights_rows = rep(1, n)
