@@ -547,10 +547,8 @@ ranger_fit <- function(X, Y, arguments = list()) {
          call. = FALSE
     )
   }
-  
-  data <- data.frame(Y = Y, X)
-  
-  model <- do.call(ranger::ranger, c(list(data = data, formula = Y ~ ., keep.inbag = TRUE), arguments))
+
+  model <- do.call(ranger::ranger, c(list(x = X, y = Y, keep.inbag = TRUE), arguments))
   
   return(model)
 }
@@ -570,12 +568,9 @@ ranger_fit <- function(X, Y, arguments = list()) {
 #' @keywords internal
 #' @exportS3Method
 predict.ranger_fit <- function(object, Xnew = NULL, ...) {
-  if (is.null(Xnew)) Xnew <- object$call$data
+  if (is.null(Xnew)) Xnew <- object$call$x
   
-  data <- as.data.frame(Xnew)
-  data$Y <- 0
-  
-  fit <- predict(object, data = data)$predictions
+  fit <- predict(object, data = Xnew)$predictions
   
   return(fit)
 }
