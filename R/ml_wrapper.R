@@ -364,30 +364,29 @@ xgboost_fit <- function(X, Y, arguments = list()) {
       call. = FALSE
     )
   }
-
+  
   # Set the defaults (for potential smoother to be extracted)
   if (is.null(arguments$max_delta_step)) arguments$max_delta_step <- 0
   if (is.null(arguments$subsample)) arguments$subsample <- 1
   if (is.null(arguments$alpha)) arguments$alpha <- 0
   
-  # XGBoost defaults to be registered in the trained object 
-  if (is.null(arguments$lambda)) arguments$lambda <- 1
-  if (is.null(arguments$eta)) arguments$eta <- 0.3
-
-  nrounds <- if (is.null(arguments[["nrounds"]])) 100 else arguments[["nrounds"]]
-  arguments[["nrounds"]] <- NULL
+  nrounds <- if (is.null(arguments$nrounds)) 100 else arguments$nrounds
+  arguments$nrounds <- NULL
 
   dtrain <- xgboost::xgb.DMatrix(data = as.matrix(X), label = Y)
   
   # [Smoother] Fix for floating-point precision mismatch (XGBoost -> float32, mean(Y) -> float64)
   if (is.null(arguments$base_score)) arguments$base_score <- mean(xgboost::getinfo(dtrain, "label"))
   
-  xgb <- do.call(xgboost::xgb.train, c(list(data = dtrain, nrounds = nrounds, params = arguments)))
+  booster <- do.call(xgboost::xgb.train, c(list(data = dtrain, nrounds = nrounds, params = arguments)))
 
-  xgb$X <- X
-  xgb$Y <- Y
+  xgb <- list(
+    booster = booster,
+    X = X,
+    Y = Y
+  )
 
-  class(xgb) <- c(class(xgb), "xgboost_fit")
+  class(xgb) <- c("xgboost_fit")
   return(xgb)
 }
 
@@ -409,8 +408,10 @@ xgboost_fit <- function(X, Y, arguments = list()) {
 predict.xgboost_fit <- function(object, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- object$X
 
+  xgb <- object$booster
   dtest <- xgboost::xgb.DMatrix(data = as.matrix(Xnew))
-  fit <- predict(object, newdata = dtest)
+  
+  fit <- predict(object = xgb, newdata = dtest)
 
   return(fit)
 }
@@ -518,8 +519,7 @@ forest_drf_fit <- function(X, Y, arguments = list()) {
 predict.forest_drf_fit <- function(object, Xnew = NULL, functional = "mean", ...) {
   if (is.null(Xnew)) Xnew <- object$X.orig
 
-  pred <- predict(object, newdata = Xnew, functional = functional)
-  fit <- as.vector(pred[[functional]])
+  fit <- as.vector(predict(object, newdata = Xnew, functional = functional))
 
   return(fit)
 }
@@ -949,22 +949,41 @@ xgboost_prop_fit <- function(X, Y, arguments = list()) {
   }
 
   K <- length(unique(Y))
-  if (is.null(arguments$nrounds)) arguments$nrounds <- 100
-
+  dtrain <- xgboost::xgb.DMatrix(data = X, label = Y)
+  
+  nrounds <- if (is.null(arguments$nrounds)) 100 else arguments$nrounds
+  arguments$nrounds <- NULL
+  
   if (K == 2) {
-    model <- do.call(xgboost::xgboost, c(list(
-      data = X, label = Y, verbose = 0, objective = "binary:logistic",
+    # Binary classification
+    params <- list(
+      objective = "binary:logistic",
       eval_metric = "logloss"
-    ), arguments))
+    )
   } else {
     if (min(Y) == 1) Y <- Y - 1
-    model <- do.call(xgboost::xgboost, c(list(
-      data = X, label = Y, num_class = K, verbose = 0, objective = "multi:softprob",
+    # Multi-class classification
+    params <- list(
+      objective = "multi:softprob",
+      num_class = K,
       eval_metric = "mlogloss"
-    ), arguments))
+    )
   }
-  model$Y <- Y
-  model$X <- X
+  
+  # Defaults override user arguments
+  params <- utils::modifyList(params, arguments)
+  
+  booster <- xgboost::xgb.train(
+    params = params,
+    data = dtrain,
+    nrounds = nrounds
+  )
+  
+  model <- list(
+    booster = booster,
+    X = X,
+    Y = Y
+  )
 
   return(model)
 }
@@ -987,9 +1006,11 @@ xgboost_prop_fit <- function(X, Y, arguments = list()) {
 #' @keywords internal
 predict.xgboost_prop_fit <- function(object, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- object$X
+  
   Y <- object$Y
+  xgb <- object$booster
 
-  fit <- predict(object, newdata = Xnew, type = "prob")
+  fit <- predict(object = xgb, newdata = Xnew, type = "prob")
 
   if (length(unique(Y)) > 2) {
     fit <- matrix(fit, nrow = nrow(Xnew), ncol = length(unique(Y)), byrow = TRUE)

@@ -410,7 +410,7 @@ nuisance_cf <- function(methods,
 
       # On-the-fold hyperparameter tuning
       mtd_tuned_fold <- tune_learners(type = "fold", X = X_tr, Y = Y_tr, methods = mtd_tuned)
-
+      
       ens <- ensemble(
         methods = mtd_tuned_fold, X = X_tr, Y = Y_tr, nfolds = cv,
         ensemble_type = ensemble_type, quiet = quiet, pb = pb, pb_np = pb_np, pb_cf = i)

@@ -91,7 +91,14 @@ test_that("smoother weights lead to correct prediction of fitted values", {
   # xgboost
   m = xgboost_fit(X = X, Y = Y)
   p = predict.xgboost_fit(m, Xnew = Xnew)
-  w = OutcomeWeights:::get_smoother_weights.xgb.Booster(m, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.xgboost_fit(m, Xnew = Xnew)
+  p_s = as.vector(w %*% Y)
+  expect_equal(p, p_s, tolerance = 1e-6)
+  
+  # xgboost with custom learning rate
+  m = xgboost_fit(X = X, Y = Y, arguments = list("learning_rate" = 2))
+  p = predict.xgboost_fit(m, Xnew = Xnew)
+  w = OutcomeWeights:::get_smoother_weights.xgboost_fit(m, Xnew = Xnew)
   p_s = as.vector(w %*% Y)
   expect_equal(p, p_s, tolerance = 1e-6)
   

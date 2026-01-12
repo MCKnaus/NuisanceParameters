@@ -250,6 +250,11 @@ xgboost_tune <- function(X, Y,
   best_score <- Inf
   best_params <- NULL
   
+  dtrain <- xgboost::xgb.DMatrix(
+    data = as.matrix(X),
+    label = Y
+  )
+  
   for (budget in budgets) {
     scores <- numeric(length(configs))
     
@@ -257,8 +262,7 @@ xgboost_tune <- function(X, Y,
       params <- configs[[i]]
       cv <- tryCatch(
         xgboost::xgb.cv(
-          data = as.matrix(X),
-          label = Y,
+          data = dtrain,
           params = params,
           nfold = nfold,
           nrounds = budget,
