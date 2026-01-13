@@ -23,7 +23,7 @@ Suggests:
     doParallel, 
     drf, 
     grf, 
-    xgboost, 
+    xgboost (>=3.1.2.1), 
     plasso, 
     nnet, 
     naivebayes, 
