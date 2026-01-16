@@ -25,15 +25,18 @@ tune_learners <- function(type = c("full_sample", "fold"),
     mtd <- methods[[i]]
     X_sub <- if (is.null(mtd$x_select)) X else X[, mtd$x_select, drop = FALSE]
     
-    fun_name <- paste0(mtd$method, "_tune")
-    wrapper  <- get0(fun_name, mode = "function", inherits = TRUE)
+    tuner_name <- paste0(mtd$method, "_tune")
+    tuner <- get0(tuner_name, 
+                  envir = asNamespace("NuisanceParameters"), 
+                  mode = "function", 
+                  inherits = FALSE)
     
-    if (is.null(wrapper)) {
+    if (is.null(tuner)) {
       warning("No tuner found for method '", mtd$method, "'. Skipping.")
       next
     }
     
-    tuned_params <- wrapper(X = X_sub, Y = Y)
+    tuned_params <- tuner(X = X_sub, Y = Y)
     
     args <- methods[[i]][["arguments"]]
     if (is.null(args)) args <- list()
