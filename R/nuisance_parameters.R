@@ -38,12 +38,38 @@
 #'             later processing (saved as a list of models).
 #' @param quiet Logical. If \code{FALSE}, progress output is printed to the console.
 #'
-#' @return A list containing:
-#' \itemize{
-#'   \item \code{nuisance_parameters}: Requested nuisance parameter estimates
-#'   \item \code{models} (optional): \code{\link{ensemble}} objects (individual models)
-#'   \item \code{numbers}: Additional objects used for downstream processing in
-#'                         smoother matrices and outcome weights extraction
+#' @return An object of class \code{NuisanceParameters}: a list with three slots
+#' (\code{nuisance_parameters}, \code{models}, \code{numbers}).
+#'
+#' \strong{\code{nuisance_parameters}} — a named list of cross-fitted, out-of-sample
+#' predictions, one entry per element of \code{NuPa}. Entries that were not
+#' requested contain a placeholder string. For a sample of size \eqn{N} with
+#' \eqn{K} levels of \eqn{D} and \eqn{L} levels of \eqn{Z}:
+#' \describe{
+#'   \item{\code{Y.hat}}{Numeric vector of length \eqn{N}: \eqn{\hat{E}[Y \mid X]}.}
+#'   \item{\code{Y.hat.d}}{\eqn{N \times K} matrix: \eqn{\hat{E}[Y \mid X, D = d]}; columns labelled by the levels of \eqn{D}.}
+#'   \item{\code{Y.hat.z}}{\eqn{N \times L} matrix: \eqn{\hat{E}[Y \mid X, Z = z]}; columns labelled by the levels of \eqn{Z}.}
+#'   \item{\code{D.hat}}{\eqn{N \times (K-1)} matrix of propensity scores \eqn{\hat{P}(D = d \mid X)}.}
+#'   \item{\code{D.hat.z}}{Conditional treatment probabilities \eqn{\hat{P}(D = d \mid X, Z = z)}: an \eqn{N \times L} matrix when \eqn{D} is binary, or an \eqn{N \times K \times L} array when \eqn{D} is multivalued.}
+#'   \item{\code{Z.hat}}{\eqn{N \times (L-1)} matrix of instrument propensities \eqn{\hat{P}(Z = z \mid X)}.}
+#' }
+#'
+#' \strong{\code{models}} — \code{NULL} unless \code{store_models = "memory"}, in
+#' which case a named list of fitted \code{ens.learner} objects (one slot per
+#' nuisance parameter) used for downstream smoother-matrix and outcome-weight
+#' extraction. With \code{store_models = "disk"} the same list is written to
+#' \code{nuisance_models.rds} under \code{path} and this slot is left \code{NULL}.
+#'
+#' \strong{\code{numbers}} — a named list of objects passed through for downstream
+#' tooling:
+#' \describe{
+#'   \item{\code{N}}{Sample size.}
+#'   \item{\code{cv}}{Number of within-fold CV folds (\code{1} for short stacking).}
+#'   \item{\code{cf_mat}}{\eqn{N \times} \code{cf} logical matrix of cross-fitting fold indicators.}
+#'   \item{\code{d_mat}, \code{z_mat}}{One-hot indicator matrices for \eqn{D} and \eqn{Z} (\code{NULL} if the variable was not supplied).}
+#'   \item{\code{methods}}{Processed list of methods actually used in estimation.}
+#'   \item{\code{X}, \code{Y}}{Inputs echoed back for re-use.}
+#'   \item{\code{ens_weights}}{Ensemble weights: a \code{data.frame} of class \code{ens_weights_short} (rows = learners, columns = nuisance parameters) under short stacking, or a named list of per-fold \code{data.frame}s of class \code{ens_weights_stand} under standard stacking.}
 #' }
 #' 
 #' @examples
