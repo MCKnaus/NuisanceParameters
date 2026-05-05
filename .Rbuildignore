@@ -7,3 +7,5 @@
 ^assets
 ^doc$
 ^Meta$
+^\.claude$
+^CLAUDE\.md$

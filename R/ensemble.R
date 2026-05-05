@@ -2,7 +2,7 @@
 #'
 #' Train an ensemble learner on the given training data using a short-stacking procedure.
 #'
-#' @param methods List of methods created with \code{\link{create_method}} to be 
+#' @param methods List of methods created with \code{\link{create_method}} to be  
 #'  used in the ensemble model.
 #' @param X Covariate matrix of the training sample.
 #' @param Y Vector of outcomes of the training sample.

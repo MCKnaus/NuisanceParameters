@@ -13,14 +13,14 @@ process_methods(methods, NuPa, K, M)
   \item{A named list where each name corresponds to a nuisance parameter and contains a list of methods for that parameter}
 }}
 
-\item{NuPa}{Character vector of nuisance parameters to be estimated}
+\item{NuPa}{Character vector of nuisance parameters to be estimated.}
 
-\item{K}{Number of unique treatment statuses}
+\item{K}{Number of unique treatment statuses.}
 
-\item{M}{Number of unique outcome values}
+\item{M}{Number of unique outcome values.}
 }
 \value{
-Nested list object organized by nuisance parameter that will be passed as input to \code{\link{ensemble}}
+Nested list object organized by nuisance parameter that will be passed as input to \code{\link{ensemble}}.
 }
 \description{
 Creates the methods to be actually used in the subsequent \code{\link{ensemble}} model,

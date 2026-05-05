@@ -611,7 +611,7 @@ plot.ens_weights_stand <- function(x,
 #' @param base_size Base font size for plot elements (default: 12)
 #' @param ... Additional arguments passed to ggplot
 #'
-#' @return A ggplot object showing learner weights as a stacked bar plot
+#' @return A ggplot object showing learner weights as a stacked bar plot.
 #'
 #' @examples
 #' \dontrun{
@@ -893,11 +893,11 @@ create_method <- function(method = c("mean", "ols", "ridge", "plasso", "forest_g
 #'   \item{A list of methods (like in \code{create_method}) that will be used for all nuisance parameters, or}
 #'   \item{A named list where each name corresponds to a nuisance parameter and contains a list of methods for that parameter}
 #' }
-#' @param NuPa Character vector of nuisance parameters to be estimated
-#' @param K Number of unique treatment statuses
-#' @param M Number of unique outcome values
+#' @param NuPa Character vector of nuisance parameters to be estimated.
+#' @param K Number of unique treatment statuses.
+#' @param M Number of unique outcome values.
 #'
-#' @return Nested list object organized by nuisance parameter that will be passed as input to \code{\link{ensemble}}
+#' @return Nested list object organized by nuisance parameter that will be passed as input to \code{\link{ensemble}}.
 #'
 #' @keywords internal
 process_methods <- function(methods, NuPa, K, M) {
@@ -1028,7 +1028,7 @@ process_methods <- function(methods, NuPa, K, M) {
 #' @param replace Logical indicating whether to replace existing parameters (TRUE)
 #'                or only fill empty slots (FALSE, default)
 #'
-#' @return A modified `NuisanceParameters` object with updated nuisance parameters and models
+#' @return A modified `NuisanceParameters` object with updated nuisance parameters and models.
 #'
 #' @export
 #'

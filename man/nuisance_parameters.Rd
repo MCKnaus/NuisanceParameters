@@ -50,23 +50,23 @@ treatment ratios from the full sample. Note: If cluster vector
 is provided, stratification is ignored due to computational
 constraints and randomization feasibility issues.}
 
-\item{cf}{Number of cross-fitting folds}
+\item{cf}{Number of cross-fitting folds.}
 
 \item{cf_mat}{Optional logical matrix of indicators representing the different
 cross-fitting folds, possibly from already estimated \code{NuisanceParameters} object.}
 
 \item{ensemble_type}{Method for calculating ensemble weights:
 \describe{
-  \item{\code{"nnls"}}{Non-negative least squares; weights sum to 1 (default)}
-  \item{\code{"bfgs"}}{BFGS optimization (for multivalued treatments only; falls to \code{nnls} otherwise)}
-  \item{\code{"singlebest"}}{Weight of 1 on the learner with the lowest RMSE}
-  \item{\code{"ols"}}{Ordinary least squares regression weights (falls to \code{nnls} for multivalued treatments)}
-  \item{\code{"average"}}{Equal weights for all learners}
+\item{\code{"nnls"}}{Non-negative least squares; weights sum to 1 (default)}
+\item{\code{"bfgs"}}{BFGS optimization (for multivalued treatments only; falls to \code{nnls} otherwise)}
+\item{\code{"singlebest"}}{Weight of 1 on the learner with the lowest RMSE}
+\item{\code{"ols"}}{Ordinary least squares regression weights (falls to \code{nnls} for multivalued treatments)}
+\item{\code{"average"}}{Equal weights for all learners}
 }}
 
 \item{store_models}{Character vector indicating whether to save individual
 models for future processing (default: "no").
-Supported options: \code{c("no", "memory", "disk")}}
+Supported options: \code{c("no", "memory", "disk")}.}
 
 \item{path}{Optional path to save the \code{\link{ensemble}} objects for
 later processing (saved as a list of models).}
@@ -74,12 +74,23 @@ later processing (saved as a list of models).}
 \item{quiet}{Logical. If \code{FALSE}, progress output is printed to the console.}
 }
 \value{
-A list containing:
+An object of class \code{NuisanceParameters}: a list with three slots:
+\enumerate{
+\item \code{nuisance_parameters} — a list of cross-fitted, out-of-sample
+predictions, one entry per element of \code{NuPa}.
+\item \code{models} — a list of fitted \code{ens.learner} objects, or \code{NULL} if \code{store_models = "none"}.
+If \code{store_models = "disk"}, the list is saved to \code{nupa_models.rds} under \code{path}.
+\item \code{numbers} — a list of objects for further reference:
 \itemize{
-  \item \code{nuisance_parameters}: Requested nuisance parameter estimates
-  \item \code{models} (optional): \code{\link{ensemble}} objects (individual models)
-  \item \code{numbers}: Additional objects used for downstream processing in
-                        smoother matrices and outcome weights extraction
+\item \code{N}: Sample size
+\item \code{cv}: Number of cross-validation folds within each cross-fitting fold (\code{1} for short stacking)
+\item \code{cf_mat}: Logical matrix of cross-fitting fold indicators
+\item \code{d_mat}, \code{z_mat}: One-hot indicator matrices for \eqn{D} and \eqn{Z}
+\item \code{methods}: Processed list of methods used in estimation
+\item \code{X}, \code{Y}: Data inputs
+\item \code{ens_weights}: Ensemble weights: a \code{data.frame} under short stacking or a
+list of per-fold \code{data.frame}s under standard stacking
+}
 }
 }
 \description{

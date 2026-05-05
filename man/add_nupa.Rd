@@ -18,7 +18,7 @@ If NULL (default), all available parameters from `np_new` will be used.}
 or only fill empty slots (FALSE, default)}
 }
 \value{
-A modified `NuisanceParameters` object with updated nuisance parameters and models
+A modified `NuisanceParameters` object with updated nuisance parameters and models.
 }
 \description{
 This function allows to add or replace nuisance parameters and their corresponding models
