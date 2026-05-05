@@ -2,6 +2,8 @@
 #'
 #' Estimates nuisance parameters using ensemble methods.
 #'
+#' @md
+#'
 #' @param NuPa Character vector specifying the nuisance parameters to estimate.
 #'             Currently supported options:
 #'             \code{c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat", "D.hat.z", "Z.hat")}
@@ -11,7 +13,7 @@
 #' @param D A numeric vector indicating the treatment variable.
 #' @param Z A numeric vector indicating the instrumental variable.
 #' @param X A numeric matrix of covariates, with rows as observations and columns as covariates; no intercept included.
-#' @param cf Number of cross-fitting folds
+#' @param cf Number of cross-fitting folds.
 #' @param cf_mat Optional logical matrix of indicators representing the different
 #'               cross-fitting folds, possibly from already estimated \code{NuisanceParameters} object.
 #' @param cluster Optional vector of cluster variables if cross-fitting should
@@ -25,7 +27,7 @@
 #'                 cross-fitting fold.
 #' @param store_models Character vector indicating whether to save individual
 #'                    models for future processing (default: "no").
-#'                    Supported options: \code{c("no", "memory", "disk")}
+#'                    Supported options: \code{c("no", "memory", "disk")}.
 #' @param ensemble_type Method for calculating ensemble weights:
 #'   \describe{
 #'     \item{\code{"nnls"}}{Non-negative least squares; weights sum to 1 (default)}
@@ -38,39 +40,24 @@
 #'             later processing (saved as a list of models).
 #' @param quiet Logical. If \code{FALSE}, progress output is printed to the console.
 #'
-#' @return An object of class \code{NuisanceParameters}: a list with three slots
-#' (\code{nuisance_parameters}, \code{models}, \code{numbers}).
+#' @return An object of class `NuisanceParameters`: a list with three slots:
 #'
-#' \strong{\code{nuisance_parameters}} — a named list of cross-fitted, out-of-sample
-#' predictions, one entry per element of \code{NuPa}. Entries that were not
-#' requested contain a placeholder string. For a sample of size \eqn{N} with
-#' \eqn{K} levels of \eqn{D} and \eqn{L} levels of \eqn{Z}:
-#' \describe{
-#'   \item{\code{Y.hat}}{Numeric vector of length \eqn{N}: \eqn{\hat{E}[Y \mid X]}.}
-#'   \item{\code{Y.hat.d}}{\eqn{N \times K} matrix: \eqn{\hat{E}[Y \mid X, D = d]}; columns labelled by the levels of \eqn{D}.}
-#'   \item{\code{Y.hat.z}}{\eqn{N \times L} matrix: \eqn{\hat{E}[Y \mid X, Z = z]}; columns labelled by the levels of \eqn{Z}.}
-#'   \item{\code{D.hat}}{\eqn{N \times (K-1)} matrix of propensity scores \eqn{\hat{P}(D = d \mid X)}.}
-#'   \item{\code{D.hat.z}}{Conditional treatment probabilities \eqn{\hat{P}(D = d \mid X, Z = z)}: an \eqn{N \times L} matrix when \eqn{D} is binary, or an \eqn{N \times K \times L} array when \eqn{D} is multivalued.}
-#'   \item{\code{Z.hat}}{\eqn{N \times (L-1)} matrix of instrument propensities \eqn{\hat{P}(Z = z \mid X)}.}
-#' }
+#' 1. `nuisance_parameters` — a list of cross-fitted, out-of-sample
+#' predictions, one entry per element of `NuPa`.
 #'
-#' \strong{\code{models}} — \code{NULL} unless \code{store_models = "memory"}, in
-#' which case a named list of fitted \code{ens.learner} objects (one slot per
-#' nuisance parameter) used for downstream smoother-matrix and outcome-weight
-#' extraction. With \code{store_models = "disk"} the same list is written to
-#' \code{nuisance_models.rds} under \code{path} and this slot is left \code{NULL}.
+#' 2. `models` — a list of fitted `ens.learner` objects, or `NULL` if `store_models = "none"`.
+#' If `store_models = "disk"`, the list is saved to `nupa_models.rds` under `path`.
 #'
-#' \strong{\code{numbers}} — a named list of objects passed through for downstream
-#' tooling:
-#' \describe{
-#'   \item{\code{N}}{Sample size.}
-#'   \item{\code{cv}}{Number of within-fold CV folds (\code{1} for short stacking).}
-#'   \item{\code{cf_mat}}{\eqn{N \times} \code{cf} logical matrix of cross-fitting fold indicators.}
-#'   \item{\code{d_mat}, \code{z_mat}}{One-hot indicator matrices for \eqn{D} and \eqn{Z} (\code{NULL} if the variable was not supplied).}
-#'   \item{\code{methods}}{Processed list of methods actually used in estimation.}
-#'   \item{\code{X}, \code{Y}}{Inputs echoed back for re-use.}
-#'   \item{\code{ens_weights}}{Ensemble weights: a \code{data.frame} of class \code{ens_weights_short} (rows = learners, columns = nuisance parameters) under short stacking, or a named list of per-fold \code{data.frame}s of class \code{ens_weights_stand} under standard stacking.}
-#' }
+#' 3. `numbers` — a list of objects for further reference:
+#'
+#'     * `N`: Sample size
+#'     * `cv`: Number of cross-validation folds within each cross-fitting fold (`1` for short stacking)
+#'     * `cf_mat`: Logical matrix of cross-fitting fold indicators
+#'     * `d_mat`, `z_mat`: One-hot indicator matrices for \eqn{D} and \eqn{Z}
+#'     * `methods`: Processed list of methods used in estimation
+#'     * `X`, `Y`: Data inputs
+#'     * `ens_weights`: Ensemble weights: a `data.frame` under short stacking or a
+#'     list of per-fold `data.frame`s under standard stacking
 #' 
 #' @examples
 #' \donttest{
@@ -334,7 +321,7 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
   )
   
   if (store_models == "disk") {
-    models_path <- file.path(path, "nuisance_models.rds")
+    models_path <- file.path(path, "nupa_models.rds")
     saved_object <- list(models = models_list, numbers = nums_list)
     class(saved_object) <- c("NuisanceParameters")
     saveRDS(saved_object, file = models_path)
