@@ -17,7 +17,7 @@ ensemble_short(
 )
 }
 \arguments{
-\item{methods}{List of methods created with \code{\link{create_method}} to be 
+\item{methods}{List of methods created with \code{\link{create_method}} to be
 used in the ensemble model.}
 
 \item{X}{Covariate matrix of the training sample.}

@@ -36,7 +36,7 @@ test_that("check nuisance_parameters for Y.hat estimation", {
   t = Sys.time()
   np_standard_w = nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = 5, store_models = "disk", path = path)
   expect_true(file.exists(path))
-  object <- readRDS(file.path(path, "nuisance_models.RDS"))
+  object <- readRDS(file.path(path, "nupa_models.RDS"))
   w = OutcomeWeights::get_smoother_weights(object = object, NuPa = "Y.hat")$Y.hat
   t_standard_w = as.numeric(Sys.time() - t, units = "secs")
   fold = np_standard_w$numbers$cf_mat[, 1]
@@ -48,7 +48,7 @@ test_that("check nuisance_parameters for Y.hat estimation", {
   t = Sys.time()
   np_short_w = nuisance_parameters(NuPa="Y.hat", X, Y, methods = methods, cf = cf, stacking = "short", store_models = "disk", path = path)
   expect_true(file.exists(path))
-  object <- readRDS(file.path(path, "nuisance_models.RDS"))
+  object <- readRDS(file.path(path, "nupa_models.RDS"))
   w = OutcomeWeights::get_smoother_weights(object = object, NuPa = "Y.hat")$Y.hat
   t_short_w = as.numeric(Sys.time() - t, units = "secs")
   fold = np_short_w$numbers$cf_mat[, 1]
@@ -188,7 +188,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   expect_true(file.exists(path))
 
   # check if ensemble output contains correct info
-  complete_file = readRDS(file.path(path, "nuisance_models.RDS")) # open saved object
+  complete_file = readRDS(file.path(path, "nupa_models.RDS"))     # open saved object
   ens = complete_file[["models"]][["Y.hat.d_m"]][[1]]             # select saved model for Y.hat.d[[1]] only
   expect_length(ens, 2)
   expect_named(ens$ens_w)
@@ -209,7 +209,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   expect_true(file.exists(path))
   
   # check if ensemble output contains correct info
-  complete_file = readRDS(file.path(path, "nuisance_models.RDS")) # open saved object
+  complete_file = readRDS(file.path(path, "nupa_models.RDS"))     # open saved object
   ens = complete_file[["models"]][["Y.hat.d_m"]][[1]]             # select saved model for Y.hat.d[[1]] only
   expect_length(ens, 2)
   expect_named(ens$ens_w)
@@ -219,7 +219,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   expect_identical(dim(np_m_short_w$nuisance_parameters$Y.hat.d), dim(np_m_short_w$numbers$d_mat))
 
   # check smoother weights
-  object <- readRDS(file.path(path, "nuisance_models.RDS"))
+  object <- readRDS(file.path(path, "nupa_models.RDS"))
   w = OutcomeWeights::get_smoother_weights(object = object, NuPa = "Y.hat.d")$Y.hat.d[[1]]
   expect_equal(np_m_short_w[["nuisance_parameters"]][["Y.hat.d"]][, 1], as.vector(w %*% Y), tolerance = 1e-3)
 
@@ -235,7 +235,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   expect_true(file.exists(path))
   
   # check if ensemble output contains correct info
-  complete_file = readRDS(file.path(path, "nuisance_models.RDS")) # open saved object
+  complete_file = readRDS(file.path(path, "nupa_models.RDS"))     # open saved object
   ens = complete_file[["models"]][["Y.hat.d_m"]][[1]]             # select saved model for Y.hat.d[1] only
   expect_length(ens, 4) # cf = 4
   expect_named(ens[[1]]$ens_w)
@@ -255,7 +255,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   expect_true(file.exists(path))
   
   # check if ensemble output contains correct info
-  complete_file = readRDS(file.path(path, "nuisance_models.RDS")) # open saved object
+  complete_file = readRDS(file.path(path, "nupa_models.RDS"))     # open saved object
   ens = complete_file[["models"]][["Y.hat.d_m"]][[1]]             # select saved model for Y.hat.d[[1]] only
   expect_length(ens, 4) # cf = 4
   expect_named(ens[[1]]$ens_w)
@@ -264,7 +264,7 @@ test_that("check nuisance_parameters for Y.hat.d estimation", {
   expect_identical(dim(np_m_standard_w$nuisance_parameters$Y.hat.d), dim(np_m_standard_w$numbers$d_mat))
 
   # check smoother weights
-  object <- readRDS(file.path(path, "nuisance_models.RDS"))
+  object <- readRDS(file.path(path, "nupa_models.RDS"))
   w = OutcomeWeights::get_smoother_weights(object = object, NuPa = "Y.hat.d")$Y.hat.d[[1]]
   expect_equal(np_m_standard_w[["nuisance_parameters"]][["Y.hat.d"]][, 1], as.vector(w %*% Y), tolerance = 1e-3)
   

@@ -14,7 +14,7 @@
 \item{...}{Additional arguments passed to ggplot}
 }
 \value{
-A ggplot object showing learner weights as a stacked bar plot
+A ggplot object showing learner weights as a stacked bar plot.
 }
 \description{
 Plots single set of ensemble weights for short stacking,
