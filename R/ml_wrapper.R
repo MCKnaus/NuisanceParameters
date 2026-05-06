@@ -363,9 +363,13 @@ predict.forest_grf_fit <- function(object, Xnew = NULL, ...) {
 xgboost_fit <- function(X, Y, arguments = list()) {
   if (!requireNamespace("xgboost", quietly = TRUE)) {
     stop("The 'xgboost' package is not installed. This learner is optional (in Suggests).\n",
-      "Install it with: install.packages('xgboost')",
-      call. = FALSE
-    )
+         "Install it with: install.packages('xgboost')",
+         call. = FALSE)
+    }
+  
+  if (utils::packageVersion("xgboost") < "3.0.0") {
+    stop("Please install xgboost >= 3.0.0 (installed: ", utils::packageVersion("xgboost"), ")",
+         call. = FALSE)
   }
   
   # Set the defaults (for potential smoother to be extracted)
@@ -940,6 +944,11 @@ xgboost_prop_fit <- function(X, Y, arguments = list()) {
       "Install it with: install.packages('xgboost')",
       call. = FALSE
     )
+  }
+  
+  if (utils::packageVersion("xgboost") < "3.0.0") {
+    stop("Please install xgboost >= 3.0.0 (installed: ", utils::packageVersion("xgboost"), ")",
+         call. = FALSE)
   }
 
   K <- length(unique(Y))
