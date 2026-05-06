@@ -53,8 +53,6 @@ estimated or predicted (for progress bar updates).}
 \value{
 A list with class \code{"ensemble"} containing:
 \describe{
-  \item{cf_preds}{A matrix of dimension \code{nrow(X)} x \code{length(methods)} 
-   containing the cross-fitted predictions of the machine learning methods from the ensemble.}
   \item{ens_w}{A numeric vector of weights that each machine learning 
    method receives in the ensemble.}
   \item{ens_models}{A list of fitted machine learning models from the full sample.}

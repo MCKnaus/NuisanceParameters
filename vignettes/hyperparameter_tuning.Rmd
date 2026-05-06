@@ -30,7 +30,7 @@ In `NuisanceParameters`, it is supported by GRFs regression forest, XGBoost, and
 
 -   XGBoost is tuned via a hyperband-style multi-armed bandit approach: it progressively allocates resources (boosting rounds) to the most promising configurations across successive evaluation rungs (see `?xgboost_tune`).
 
--   Tuning for ranger is coming form the `tuneRanger` package (find details [here](https://github.com/PhilippPro/tuneRanger?tab=readme-ov-file)).
+-   Tuning for ranger is coming from the `tuneRanger` package (find details [here](https://github.com/PhilippPro/tuneRanger?tab=readme-ov-file)).
 
 See [Bach et al. (2024)](https://arxiv.org/abs/2402.04674) for a discussion of hyperparameter tuning in Double Machine Learning.
 

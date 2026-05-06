@@ -113,28 +113,28 @@ lapply(np$nuisance_parameters, head)
 ```
 
     ## $Y.hat
-    ## [1]  5969.990 -4669.972  3435.684 14776.976  6007.888 32605.119
+    ## [1]  7058.975 -4881.337  3455.096 15934.971  5986.686 30288.737
     ## 
     ## $Y.hat.d
-    ##               0         1
-    ## [1,]  2648.0503 22661.899
-    ## [2,] -2056.3953 -2534.668
-    ## [3,]  1115.4664 12684.022
-    ## [4,] 11164.6510 34435.515
-    ## [5,]   776.5629 13657.614
-    ## [6,] 23535.1625 38637.563
+    ##              0         1
+    ## [1,]  3526.154 23116.691
+    ## [2,] -2754.779 -5022.250
+    ## [3,]  1222.894 13258.026
+    ## [4,] 13519.835 32570.754
+    ## [5,]  1462.665  9434.402
+    ## [6,] 27618.794 40743.677
     ## 
     ## $Y.hat.z
-    ##              0        1
-    ## [1,]  3536.709 16980.52
-    ## [2,] -3346.530 -5122.62
-    ## [3,]  1201.548 10641.86
-    ## [4,] 10834.829 30117.62
-    ## [5,]  1679.534 13143.54
-    ## [6,] 30257.424 36523.94
+    ##              0         1
+    ## [1,]  3344.160 16684.341
+    ## [2,] -3490.358 -5045.121
+    ## [3,]  1130.550 10708.404
+    ## [4,] 10046.758 29714.784
+    ## [5,]  1491.874 13267.706
+    ## [6,] 32330.618 36662.476
     ## 
     ## $D.hat
-    ## [1] 0.14282537 0.03935637 0.14297639 0.26590898 0.30163428 0.44153960
+    ## [1] 0.15260967 0.04180766 0.14310949 0.25730060 0.30010843 0.44404818
     ## 
     ## $D.hat.z
     ## [1] "This nuisance parameter was not specified and is therefore empty."
@@ -180,9 +180,9 @@ treatments (column 4):
 | `lasso` | Lasso via `glmnet`. | Cont. & Binary | Binary |
 | `rlasso` | (Post-) Lasso via `hdm` with theory-based penalty. | Cont. & Binary | Binary |
 | `forest_grf` | Regression forest via `grf`. Can be tuned with grf’s tuning routines. | Cont. & Binary | Binary |
-| `ranger_fit` | Regression forest via `ranger` (`keep.inbag = TRUE`). Supports tuning via [`tuneRanger`](https://github.com/PhilippPro/tuneRanger?tab=readme-ov-file). | Cont. & Binary | Binary |
+| `ranger` | Regression forest via `ranger` (`keep.inbag = TRUE`). Supports tuning via [`tuneRanger`](https://github.com/PhilippPro/tuneRanger?tab=readme-ov-file). | Cont. & Binary | Binary |
 | `xgboost` | Gradient boosting via `xgboost` (100 rounds); `alpha = 0`, `subsample = 1`, `max_delta_step = 0`, and `base_score = mean(Y)` are suggested as defaults but can be overwritten (see `?create_method` for details). Supports tuning (see `?xgboost_tune`). | Cont. & Binary | Binary |
-| `knn` | k-Nearest Neighbors via `FastKNN`. | Cont. & Binary | Binary |
+| `knn` | k-Nearest Neighbors implementation (inspired by `FastKNN`) | Cont. & Binary | Binary |
 | `forest_drf` | Distributional random forest via `drf` (uses FourierMMD splits). | Cont. & Binary | Binary |
 | `glm` | Logit and probit via `glm`. | Binary | Binary |
 | `logit` | Logistic regression via `glmnet`. Uses `family = "binomial"` for binary outcomes, `family = "multinomial"` for multiclass outcomes. | Binary | Binary & Multiclass-Native |

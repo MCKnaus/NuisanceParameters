@@ -14,11 +14,8 @@
 \item{...}{Ignored additional arguments.}
 }
 \value{
-Predicted probabilities:
-  \describe{
-    \item{Binary outcome}{A numeric vector of probabilities for the positive class.}
-    \item{Multiclass outcome}{A numeric matrix with one column per class.}
-  }
+A numeric vector of predicted probabilities for the positive class
+  (binary outcome), or a matrix with one column per class (multiclass outcome).
 }
 \description{
 Generates predicted class probabilities from fitted Support Vector Machine models.

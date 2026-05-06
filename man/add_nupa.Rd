@@ -45,13 +45,13 @@ methods2 <- list(
 
 np1 <- nuisance_parameters(
   NuPa = c("Y.hat", "D.hat"), X = X, Y = Y, D = D,
-  methods = methods1, cf = 5, stacking = "short", storeModels = "Memory"
+  methods = methods1, cf = 5, stacking = "short", store_models = "memory"
 )
 
 np2 <- nuisance_parameters(
   NuPa = c("D.hat", "Z.hat"), X = X, D = D, Z = Z,
   cf_mat = np1$numbers$cf_mat, methods = methods2, cf = 5,
-  stacking = "short", storeModels = "Memory"
+  stacking = "short", store_models = "memory"
 )
 
 np3 <- add_nupa(np = np1, np_new = np2, NuPa = c("D.hat", "Z.hat"), replace = TRUE)

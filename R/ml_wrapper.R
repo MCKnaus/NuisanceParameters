@@ -3,7 +3,7 @@
 #' Calculates the arithmetic mean of the training outcomes for use as a
 #' constant prediction model.
 #'
-#' @param X Covariate matrix (ignored, for compatibility).
+#' @param X Covariate matrix (ignored except for \code{nrow(X)}).
 #' @param Y Numeric vector of training outcomes.
 #' @param ... Ignored additional arguments.
 #'
@@ -28,7 +28,7 @@ mean_fit <- function(X, Y, ...) {
 #' training sample. Covariates \code{Xnew} are ignored.
 #'
 #' @param object An object of class \code{mean_fit} from \code{\link{mean_fit}}.
-#' @param Xnew Covariate matrix for predictions. Only \code{nrow(Xnew)} is used.
+#' @param Xnew Covariate matrix for predictions. Ignored except for \code{nrow(Xnew)}.
 #' @param ... Ignored additional arguments.
 #'
 #' @return A numeric vector of predictions, all equal to the trained mean.
@@ -355,8 +355,8 @@ predict.forest_grf_fit <- function(object, Xnew = NULL, ...) {
 #' }
 #' User-specified values in \code{arguments} take precedence over suggestions.
 #'
-#' @return An object of class \code{xgboost_fit} containing the fitted
-#'   \code{xgb.Booster} model.
+#' @return A list of class \code{xgboost_fit} with three elements: the fitted
+#'   \code{xgb.Booster} and the training data \code{X} and \code{Y}.
 #'
 #' @keywords internal
 #' 
@@ -614,7 +614,7 @@ knn_fit <- function(X, Y, arguments = list()) {
 #'
 #' @param object Output of \code{\link{knn_fit}} of class \code{knn_fit}.
 #'               List of arguments to be used in k-NN prediction. Typically
-#'               includes \code{k}. (number of neighbors). If no \code{k} is
+#'               includes \code{k} (number of neighbors). If no \code{k} is
 #'               specified, defaults to \code{k = 10}.
 #' @param Xnew Numeric matrix of covariates for test sample. If \code{NULL},
 #'             predictions are generated for the training data.
@@ -699,11 +699,11 @@ logit_fit <- function(X, Y, arguments = list()) {
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
 #' @param ... Ignored additional arguments.
 #'
-#' @return A data frame of predicted class probabilities.
-#'   \describe{
-#'     \item{Binary outcome}{A two-column data frame with probabilities for each class.}
-#'     \item{Multiclass outcome}{A data frame with one column per class, containing the predicted probabilities.}
-#'   }
+#' @return A numeric vector of predicted probabilities for the positive class
+#'   (binary outcome), or a matrix with one column per class (multiclass outcome).
+#'   
+#' @details Predictions use the minimum lambda in the fitted path (i.e., the
+#'   least-penalised solution). No cross-validation is performed.
 #'
 #' @keywords internal
 predict.logit_fit <- function(object, Xnew = NULL, ...) {
@@ -780,7 +780,7 @@ predict.glm_fit <- function(object, Xnew = NULL, ...) {
 #' @param Y Vector of outcomes of training sample.
 #' @param arguments List of arguments passed to \code{nnet::multinom()}.
 #'
-#' @return An object of class \code{nnet} containing the fitted model.
+#' @return An object of class \code{multinom} containing the fitted model.
 #'
 #' @keywords internal
 logit_nnet_fit <- function(X, Y, arguments = list()) {
@@ -808,11 +808,8 @@ logit_nnet_fit <- function(X, Y, arguments = list()) {
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
 #' @param ... Ignored additional arguments.
 #'
-#' @return Predicted probabilities:
-#'   \describe{
-#'     \item{Binary outcome}{A numeric vector of probabilities for the positive class.}
-#'     \item{Multiclass outcome}{A numeric matrix with one column per class.}
-#'   }
+#' @return A numeric vector of predicted probabilities for the positive class
+#'   (binary outcome), or a matrix with one column per class (multiclass outcome).
 #'
 #' @keywords internal
 predict.logit_nnet_fit <- function(object, Xnew = NULL, ...) {
@@ -859,11 +856,8 @@ nb_gaussian_fit <- function(X, Y, arguments = list()) {
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
 #' @param ... Ignored additional arguments.
 #'
-#' @return Predicted probabilities:
-#'   \describe{
-#'     \item{Binary outcome}{A numeric vector of probabilities for the positive class.}
-#'     \item{Multiclass outcome}{A numeric matrix with one column per class.}
-#'   }
+#' @return A numeric vector of predicted probabilities for the positive class
+#'   (binary outcome), or a matrix with one column per class (multiclass outcome).
 #'
 #' @keywords internal
 predict.nb_gaussian_fit <- function(object, Xnew = NULL, ...) {
@@ -912,11 +906,8 @@ nb_bernoulli_fit <- function(X, Y, arguments = list()) {
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
 #' @param ... Ignored additional arguments.
 #'
-#' @return Predicted probabilities:
-#'   \describe{
-#'     \item{Binary outcome}{A numeric vector of probabilities for the positive class.}
-#'     \item{Multiclass outcome}{A numeric matrix with one column per class.}
-#'   }
+#' @return A numeric vector of predicted probabilities for the positive class
+#'   (binary outcome), or a matrix with one column per class (multiclass outcome).
 #'
 #' @keywords internal
 predict.nb_bernoulli_fit <- function(object, Xnew = NULL, ...) {
@@ -1000,11 +991,8 @@ xgboost_prop_fit <- function(X, Y, arguments = list()) {
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
 #' @param ... Ignored additional arguments.
 #'
-#' @return Predicted probabilities:
-#'   \describe{
-#'     \item{Binary outcome}{A numeric vector of probabilities for the positive class.}
-#'     \item{Multiclass outcome}{A numeric matrix with one column per class.}
-#'   }
+#' @return A numeric vector of predicted probabilities for the positive class
+#'   (binary outcome), or a matrix with one column per class (multiclass outcome).
 #'
 #' @keywords internal
 predict.xgboost_prop_fit <- function(object, Xnew = NULL, ...) {
@@ -1060,11 +1048,8 @@ svm_fit <- function(X, Y, arguments = list()) {
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
 #' @param ... Ignored additional arguments.
 #'
-#' @return Predicted probabilities:
-#'   \describe{
-#'     \item{Binary outcome}{A numeric vector of probabilities for the positive class.}
-#'     \item{Multiclass outcome}{A numeric matrix with one column per class.}
-#'   }
+#' @return A numeric vector of predicted probabilities for the positive class
+#'   (binary outcome), or a matrix with one column per class (multiclass outcome).
 #'
 #' @keywords internal
 predict.svm_fit <- function(object, Xnew = NULL, ...) {
@@ -1112,11 +1097,8 @@ prob_forest_fit <- function(X, Y, arguments = list()) {
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
 #' @param ... Ignored additional arguments.
 #'
-#' @return Predicted probabilities:
-#'   \describe{
-#'     \item{Binary outcome}{A numeric vector of probabilities for the positive class.}
-#'     \item{Multiclass outcome}{A numeric matrix with one column per class.}
-#'   }
+#' @return A numeric vector of predicted probabilities for the positive class
+#'   (binary outcome), or a matrix with one column per class (multiclass outcome).
 #'
 #' @keywords internal
 predict.prob_forest_fit <- function(object, Xnew = NULL, ...) {
@@ -1138,7 +1120,7 @@ predict.prob_forest_fit <- function(object, Xnew = NULL, ...) {
 #' @param Y Vector of outcomes of training sample.
 #' @param arguments List of arguments passed to \code{kknn::train.kknn()}.
 #'
-#' @return An object of class \code{kknn} containing the fitted model.
+#' @return An object of class \code{train.kknn} containing the fitted model.
 #'
 #' @keywords internal
 knn_prop_fit <- function(X, Y, arguments = list()) {
@@ -1165,11 +1147,8 @@ knn_prop_fit <- function(X, Y, arguments = list()) {
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
 #' @param ... Ignored additional arguments.
 #'
-#' @return Predicted probabilities:
-#'   \describe{
-#'     \item{Binary outcome}{A numeric vector of probabilities for the positive class.}
-#'     \item{Multiclass outcome}{A numeric matrix with one column per class.}
-#'   }
+#' @return A numeric vector of predicted probabilities for the positive class
+#'   (binary outcome), or a matrix with one column per class (multiclass outcome).
 #'
 #' @keywords internal
 predict.knn_prop_fit <- function(object, Xnew = NULL, ...) {
@@ -1218,11 +1197,8 @@ ranger_prop_fit <- function(X, Y, arguments = list()) {
 #' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
 #' @param ... Ignored additional arguments.
 #'
-#' @return Predicted probabilities:
-#'   \describe{
-#'     \item{Binary outcome}{A numeric vector of probabilities for the positive class.}
-#'     \item{Multiclass outcome}{A numeric matrix with one column per class.}
-#'   }
+#' @return A numeric vector of predicted probabilities for the positive class
+#'   (binary outcome), or a matrix with one column per class (multiclass outcome).
 #'
 #' @keywords internal
 predict.ranger_prop_fit <- function(object, Xnew = NULL, ...) {

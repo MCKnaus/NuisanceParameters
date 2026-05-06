@@ -1,7 +1,7 @@
 #' Create a Design Matrix 
 #' 
 #' @description
-#' \code{design_matrix} constructs an expanded design matrix by creating interaction terms,
+#' Constructs an expanded design matrix by creating interaction terms,
 #' polynomial expansions, and logarithmic transformations of specified variables.
 #'
 #' @param data A matrix or data.frame containing the predictor variables. Must have
@@ -9,11 +9,11 @@
 #' @param int Character vector of variable names to include in interaction terms.
 #'   Use "all" to include all variables. If NULL (default), no interactions are created.
 #' @param int_d Integer specifying the maximum degree of interactions to create.
-#'   For example, `int_d = 2` creates all pairwise interactions. Default is 2.
+#'   For example, \code{int_d = 2} creates all pairwise interactions. Default is 2.
 #' @param poly Character vector of variable names for which polynomial terms should
 #'   be created. Use "all" to include all variables. Polynomials are only created for degrees greater than 1.
 #' @param poly_d Integer specifying the degree of polynomial expansion. For example,
-#'   `poly_d = 3` creates terms up to cubic. Default is 2.
+#'   \code{poly_d = 3} creates terms up to cubic. Default is 2.
 #' @param log Character vector of variable names to be log-transformed. Variables with
 #'   non-positive values will be skipped with a warning.
 #'
@@ -21,11 +21,10 @@
 #'   the transformations applied:
 #'   \itemize{
 #'     \item Main effects retain their original names
-#'     \item Interaction terms use colons (e.g., `var1:var2`)
-#'     \item Polynomial terms use underscores (e.g., `var_2` for quadratic terms)
-#'     \item Log-transformed variables are prefixed with "ln_" (e.g., `ln_var`)
+#'     \item Interaction terms use a dot separator (e.g., \code{var1.var2})
+#'     \item Polynomial terms use underscores (e.g., \code{var_2} for quadratic terms)
+#'     \item Log-transformed variables are prefixed with "ln_" (e.g., \code{ln_var})
 #'   }
-#'   The matrix includes an intercept term if present in the original data.
 #' 
 #' @examples
 #' data(mtcars)
@@ -35,7 +34,7 @@
 #'               log = "wt")
 #'
 #' @export
-#'
+#' 
 design_matrix = function(data, int = NULL, int_d = 2, poly = NULL, poly_d = 2, log = NULL) {
   
   # Input validation
@@ -151,7 +150,7 @@ design_matrix = function(data, int = NULL, int_d = 2, poly = NULL, poly_d = 2, l
 #' @details
 #' This function performs the following steps in order:
 #' \enumerate{
-#'   \item Removes variables with zero or near-zero variance (standard deviation = 0 or NA).
+#'   \item Removes variables with zero variance (standard deviation = 0 or NA).
 #'   \item Removes dummy (binary) variables where the prevalence of one category is below a threshold
 #'         in the overall sample or, if a treatment vector is provided, within any treatment group.
 #'   \item Removes redundant variables that are highly correlated with others (keeping the first one encountered).
@@ -167,7 +166,7 @@ design_matrix = function(data, int = NULL, int_d = 2, poly = NULL, poly_d = 2, l
 #' @param quiet Logical. If `FALSE`, details about the removed variables are printed at each step.
 #'              Default is `TRUE`.
 #'
-#' @return A screened matrix with low-variance, near-constant binary, and redundant variables removed.
+#' @return A screened matrix with zero-variance, near-constant binary, and redundant variables removed.
 #'
 #' @examples
 #' set.seed(123)
@@ -203,7 +202,7 @@ data_screen <- function(data, treat = NULL, bin_cut = 0.01, corr_cut = 0.99, qui
     stop("'data' must contain only numeric values.")
   }
   
-  # Eliminate variables with no (or near-zero) variation
+  # Eliminate variables with no variation
   sds <- apply(data, 2, function(x) stats::sd(x, na.rm = TRUE))
   zero_var_mask <- sds == 0 | is.na(sds)
   nm_del_step1 <- colnames(data)[zero_var_mask]

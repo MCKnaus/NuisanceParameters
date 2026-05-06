@@ -22,7 +22,7 @@ variables is considered too high. Default is 0.99.}
 Default is `TRUE`.}
 }
 \value{
-A screened matrix with low-variance, near-constant binary, and redundant variables removed.
+A screened matrix with zero-variance, near-constant binary, and redundant variables removed.
 }
 \description{
 Takes a matrix or data frame of numeric data and cleans it to improve its suitability for subsequent prediction algorithms.
@@ -30,7 +30,7 @@ Takes a matrix or data frame of numeric data and cleans it to improve its suitab
 \details{
 This function performs the following steps in order:
 \enumerate{
-  \item Removes variables with zero or near-zero variance (standard deviation = 0 or NA).
+  \item Removes variables with zero variance (standard deviation = 0 or NA).
   \item Removes dummy (binary) variables where the prevalence of one category is below a threshold
         in the overall sample or, if a treatment vector is provided, within any treatment group.
   \item Removes redundant variables that are highly correlated with others (keeping the first one encountered).

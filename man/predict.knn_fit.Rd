@@ -9,7 +9,7 @@
 \arguments{
 \item{object}{Output of \code{\link{knn_fit}} of class \code{knn_fit}.
 List of arguments to be used in k-NN prediction. Typically
-includes \code{k}. (number of neighbors). If no \code{k} is
+includes \code{k} (number of neighbors). If no \code{k} is
 specified, defaults to \code{k = 10}.}
 
 \item{Xnew}{Numeric matrix of covariates for test sample. If \code{NULL},

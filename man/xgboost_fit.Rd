@@ -14,8 +14,8 @@ xgboost_fit(X, Y, arguments = list())
 \item{arguments}{List of arguments passed to \code{xgb.train}.}
 }
 \value{
-An object of class \code{xgboost_fit} containing the fitted
-  \code{xgb.Booster} model.
+A list of class \code{xgboost_fit} with three elements: the fitted
+  \code{xgb.Booster} and the training data \code{X} and \code{Y}.
 }
 \description{
 Fits an XGBoost model using the \code{xgboost} package.

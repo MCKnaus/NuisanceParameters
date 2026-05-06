@@ -27,7 +27,7 @@ nuisance_cf(
 
 \item{cf_mat}{Logical matrix with k columns of indicators representing the different folds.}
 
-\item{cv}{Number of cross-validation folds when estimating ensemble model (default: 1).}
+\item{cv}{Number of cross-validation folds when estimating ensemble model (default: 5).}
 
 \item{subset}{Optional logical vector if only subset of data should be used for prediction.}
 
@@ -54,7 +54,7 @@ A list containing:
 \itemize{
   \item \code{np}: A vector (or matrix for multinomial outcomes) of length N 
                    containing nuisance parameter estimates
-  \item \code{models}: An object of class \code{ens.learner} containing fitted ensemble models
+  \item \code{models_nupa}: An object of class \code{ens.learner} containing fitted ensemble models
  }
 }
 \description{

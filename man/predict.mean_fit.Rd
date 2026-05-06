@@ -9,7 +9,7 @@
 \arguments{
 \item{object}{An object of class \code{mean_fit} from \code{\link{mean_fit}}.}
 
-\item{Xnew}{Covariate matrix for predictions. Only \code{nrow(Xnew)} is used.}
+\item{Xnew}{Covariate matrix for predictions. Ignored except for \code{nrow(Xnew)}.}
 
 \item{...}{Ignored additional arguments.}
 }

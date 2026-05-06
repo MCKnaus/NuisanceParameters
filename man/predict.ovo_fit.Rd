@@ -11,7 +11,7 @@
 
 \item{X}{Covariate matrix of training sample.}
 
-\item{Xnew}{Covariate matrix of test sample.}
+\item{Xnew}{Covariate matrix of test sample. If \code{NULL}, uses training data.}
 
 \item{method}{Method used for fitting the binary classifiers (e.g., "logit").}
 

@@ -14,7 +14,7 @@ logit_nnet_fit(X, Y, arguments = list())
 \item{arguments}{List of arguments passed to \code{nnet::multinom()}.}
 }
 \value{
-An object of class \code{nnet} containing the fitted model.
+An object of class \code{multinom} containing the fitted model.
 }
 \description{
 Fits a logistic regression model using the \code{nnet} package.

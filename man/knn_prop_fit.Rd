@@ -14,7 +14,7 @@ knn_prop_fit(X, Y, arguments = list())
 \item{arguments}{List of arguments passed to \code{kknn::train.kknn()}.}
 }
 \value{
-An object of class \code{kknn} containing the fitted model.
+An object of class \code{train.kknn} containing the fitted model.
 }
 \description{
 Fits a k-Nearest Neighbor (kNN) model using the \code{kknn} package.

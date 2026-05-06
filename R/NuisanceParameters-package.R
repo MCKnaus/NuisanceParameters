@@ -2,6 +2,6 @@
 "_PACKAGE"
 
 ## usethis namespace: start
-#' @importFrom stats predict weights
+#' @importFrom stats predict
 ## usethis namespace: end
 NULL

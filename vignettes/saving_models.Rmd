@@ -111,7 +111,7 @@ np <- nuisance_parameters(NuPa = c("Y.hat","Y.hat.d","D.hat","Z.hat"),
 Smoother matrices are then extracted simply by providing the saved models to `get_smoother_weights`:
 
 ```{r}
-object <- readRDS(file.path(tmpdir, "nuisance_models.rds"))
+object <- readRDS(file.path(tmpdir, "nupa_models.rds"))
 
 S <- get_smoother_weights(object = object, NuPa = "Y.hat")
 
@@ -126,7 +126,7 @@ Having run grf's regression forest, we might be interested in obtaining a measur
 Let's do exactly that for the outcome nuisance parameter, $\hat{E}(Y \mid X)$, in the first cross-fitting fold:
 
 ```{r}
-m <- readRDS(file.path(tmpdir, "nuisance_models.rds"))
+m <- readRDS(file.path(tmpdir, "nupa_models.rds"))
 grf_object <- m[["models"]][["Y.hat_m"]][["ens_object"]][["ens_models"]][[1]][["forest_grf"]]
 
 vi <- grf::variable_importance(grf_object)

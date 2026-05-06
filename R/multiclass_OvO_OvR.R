@@ -87,7 +87,7 @@ ovo_fit <- function(X, Y, method, parallel = FALSE, quiet = TRUE) {
 #'
 #' @param object Output list of \code{\link{ovo_fit}}.
 #' @param X Covariate matrix of training sample.
-#' @param Xnew Covariate matrix of test sample.
+#' @param Xnew Covariate matrix of test sample. If \code{NULL}, uses training data.
 #' @param method Method used for fitting the binary classifiers (e.g., "logit").
 #' @param parallel Logical. Tries to run in parallel if \code{foreach} and 
 #'  \code{doParallel} packages are available. Defaults to FALSE.
@@ -142,7 +142,7 @@ predict.ovo_fit <- function(object,
     use_parallel <- foreach::getDoParWorkers() > 1
   }
 
-  # ---- Optimization ----
+  # Optimization
   if (use_parallel) {
     if (!quiet) message("[OvO Par]")
     `%dopar%` <- foreach::`%dopar%`

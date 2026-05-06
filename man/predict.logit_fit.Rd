@@ -14,13 +14,14 @@
 \item{...}{Ignored additional arguments.}
 }
 \value{
-A data frame of predicted class probabilities.
-  \describe{
-    \item{Binary outcome}{A two-column data frame with probabilities for each class.}
-    \item{Multiclass outcome}{A data frame with one column per class, containing the predicted probabilities.}
-  }
+A numeric vector of predicted probabilities for the positive class
+  (binary outcome), or a matrix with one column per class (multiclass outcome).
 }
 \description{
 Generates predictions from fitted logistic regression models.
+}
+\details{
+Predictions use the minimum lambda in the fitted path (i.e., the
+  least-penalised solution). No cross-validation is performed.
 }
 \keyword{internal}

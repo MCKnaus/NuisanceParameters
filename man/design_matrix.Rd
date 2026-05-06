@@ -14,13 +14,13 @@ column names for all variables.}
 Use "all" to include all variables. If NULL (default), no interactions are created.}
 
 \item{int_d}{Integer specifying the maximum degree of interactions to create.
-For example, `int_d = 2` creates all pairwise interactions. Default is 2.}
+For example, \code{int_d = 2} creates all pairwise interactions. Default is 2.}
 
 \item{poly}{Character vector of variable names for which polynomial terms should
 be created. Use "all" to include all variables. Polynomials are only created for degrees greater than 1.}
 
 \item{poly_d}{Integer specifying the degree of polynomial expansion. For example,
-`poly_d = 3` creates terms up to cubic. Default is 2.}
+\code{poly_d = 3} creates terms up to cubic. Default is 2.}
 
 \item{log}{Character vector of variable names to be log-transformed. Variables with
 non-positive values will be skipped with a warning.}
@@ -30,14 +30,13 @@ A numeric matrix with the expanded design matrix. The column names indicate
   the transformations applied:
   \itemize{
     \item Main effects retain their original names
-    \item Interaction terms use colons (e.g., `var1:var2`)
-    \item Polynomial terms use underscores (e.g., `var_2` for quadratic terms)
-    \item Log-transformed variables are prefixed with "ln_" (e.g., `ln_var`)
+    \item Interaction terms use a dot separator (e.g., \code{var1.var2})
+    \item Polynomial terms use underscores (e.g., \code{var_2} for quadratic terms)
+    \item Log-transformed variables are prefixed with "ln_" (e.g., \code{ln_var})
   }
-  The matrix includes an intercept term if present in the original data.
 }
 \description{
-\code{design_matrix} constructs an expanded design matrix by creating interaction terms,
+Constructs an expanded design matrix by creating interaction terms,
 polynomial expansions, and logarithmic transformations of specified variables.
 }
 \examples{

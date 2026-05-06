@@ -22,9 +22,9 @@
 #'                 treatment ratios from the full sample. Note: If cluster vector
 #'                 is provided, stratification is ignored due to computational
 #'                 constraints and randomization feasibility issues.
-#' @param stacking Stacking option: Either "short" for short stacking or an integer >1
-#'                 indicating the number of cross-validation folds within each
-#'                 cross-fitting fold.
+#' @param stacking Stacking option: Either "short" for short stacking (requires \code{cf}>1) 
+#'                 or an integer >1 indicating the number of cross-validation 
+#'                 folds within each cross-fitting fold.
 #' @param store_models Character vector indicating whether to save individual
 #'                    models for future processing (default: "no").
 #'                    Supported options: \code{c("no", "memory", "disk")}.
@@ -44,9 +44,10 @@
 #'
 #' 1. `nuisance_parameters` — a list of cross-fitted, out-of-sample
 #' predictions, one entry per element of `NuPa`.
-#'
-#' 2. `models` — a list of fitted `ens.learner` objects, or `NULL` if `store_models = "none"`.
-#' If `store_models = "disk"`, the list is saved to `nupa_models.rds` under `path`.
+#' 
+#' 2. `models` — a list of fitted `ens.learner` objects if `store_models = "memory"`;
+#'    `NULL` if `store_models = "no"` (default);
+#'    if `store_models = "disk"`, the list is saved to `nupa_models.rds` under `path`.
 #'
 #' 3. `numbers` — a list of objects for further reference:
 #'
@@ -349,7 +350,7 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
 #' @param Y Vector of variable to be predicted.
 #' @param X Matrix of covariates.
 #' @param cf_mat Logical matrix with k columns of indicators representing the different folds.
-#' @param cv Number of cross-validation folds when estimating ensemble model (default: 1).
+#' @param cv Number of cross-validation folds when estimating ensemble model (default: 5).
 #' @param subset Optional logical vector if only subset of data should be used for prediction.
 #' @param store_models Vector of characters indicating where to save individual models for future processing.
 #' @param ensemble_type Method for calculating ensemble weights:
@@ -369,7 +370,7 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
 #' \itemize{
 #'   \item \code{np}: A vector (or matrix for multinomial outcomes) of length N 
 #'                    containing nuisance parameter estimates
-#'   \item \code{models}: An object of class \code{ens.learner} containing fitted ensemble models
+#'   \item \code{models_nupa}: An object of class \code{ens.learner} containing fitted ensemble models
 #'  }
 #'
 #' @keywords internal

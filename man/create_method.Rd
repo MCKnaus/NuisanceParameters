@@ -25,13 +25,14 @@ interactions used by Lasso.}
 
 \item{arguments}{Optional list of additional arguments passed to the underlying method.}
 
-\item{tuning}{Hyperparameter tuning options for GRF's regression forest and XGBoost:
-\describe{
-  \item{\code{"full_sample"}}{Tune hyperparameters using full sample.}
-  \item{\code{"fold"}}{Tuning is performed on the estimation part of the cross-fitting split.
-                       Roughly \eqn{F} times more computationally intensive.}
-  \item{\code{"no"}}{No tuning performed; uses default settings.}
-}}
+\item{tuning}{Hyperparameter tuning options for GRF's regression forest, XGBoost,
+ranger, and ranger_prop:
+  \describe{
+    \item{\code{"full_sample"}}{Tune hyperparameters using full sample.}
+    \item{\code{"fold"}}{Tuning is performed on the estimation part of the cross-fitting split.
+                         Roughly \eqn{F} times more computationally intensive.}
+    \item{\code{"no"}}{No tuning performed; uses default settings.}
+  }}
 
 \item{multinomial}{Optional character specifying multiclass handling approach:
 one of \code{c("one-vs-one", "one-vs-rest", "multiclass")}.}
@@ -67,7 +68,7 @@ Supported methods include:
 
   \item \code{"rlasso"}: Lasso via \code{hdm} with a theory-driven,
   data-dependent penalty robust to heteroskedastic and non-Gaussian errors.
-  By default, \code{rlasso()} includes sets the penalty with theoretical choices 
+  By default, \code{rlasso()} sets the penalty with theoretical choices 
   (\eqn{c = 1.1}, \eqn{\gamma = 0.1 / \log(n)}).
 
   \item \code{"forest_grf"}: Regression forest via \code{grf}, with defaults

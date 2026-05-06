@@ -38,9 +38,9 @@ Currently supported options:
 \item{methods}{List of methods to use for \code{\link{ensemble}} estimation.
 Methods can be created using \code{\link{create_method}}.}
 
-\item{stacking}{Stacking option: Either "short" for short stacking or an integer >1
-indicating the number of cross-validation folds within each
-cross-fitting fold.}
+\item{stacking}{Stacking option: Either "short" for short stacking (requires \code{cf}>1)
+or an integer >1 indicating the number of cross-validation
+folds within each cross-fitting fold.}
 
 \item{cluster}{Optional vector of cluster variables if cross-fitting should
 account for clusters within the data.}
@@ -78,8 +78,9 @@ An object of class \code{NuisanceParameters}: a list with three slots:
 \enumerate{
 \item \code{nuisance_parameters} — a list of cross-fitted, out-of-sample
 predictions, one entry per element of \code{NuPa}.
-\item \code{models} — a list of fitted \code{ens.learner} objects, or \code{NULL} if \code{store_models = "none"}.
-If \code{store_models = "disk"}, the list is saved to \code{nupa_models.rds} under \code{path}.
+\item \code{models} — a list of fitted \code{ens.learner} objects if \code{store_models = "memory"};
+\code{NULL} if \code{store_models = "no"} (default);
+if \code{store_models = "disk"}, the list is saved to \code{nupa_models.rds} under \code{path}.
 \item \code{numbers} — a list of objects for further reference:
 \itemize{
 \item \code{N}: Sample size

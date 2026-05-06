@@ -7,7 +7,7 @@
 mean_fit(X, Y, ...)
 }
 \arguments{
-\item{X}{Covariate matrix (ignored, for compatibility).}
+\item{X}{Covariate matrix (ignored except for \code{nrow(X)}).}
 
 \item{Y}{Numeric vector of training outcomes.}
 
