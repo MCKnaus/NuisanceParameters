@@ -87,11 +87,14 @@ ols_fit <- function(X, Y, ...) {
 #' @exportS3Method
 predict.ols_fit <- function(object, Xnew = NULL, ...) {
   if (is.null(Xnew)) Xnew <- object$X
+  
+  keep <- !is.na(object$ols_coef)
 
   Xnew <- add_intercept(Xnew)
-  Xnew <- Xnew[, !is.na(object)]
-
-  fit <- as.vector(Xnew %*% matrix(object$ols_coef, ncol = 1))
+  Xnew <- Xnew[, keep, drop = FALSE]
+  coef <- object$ols_coef[keep]
+  
+  fit <- as.vector(Xnew %*% matrix(coef, ncol = 1))
 
   return(fit)
 }
