@@ -267,7 +267,8 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
         quiet = quiet, pb = pb, pb_np = pb_np, ensemble_type = ensemble_type
       )
 
-      if (K > 2) { D.hat.z[, , i] <- np_cf$np } else { D.hat.z[, i] <- np_cf$np }
+      np_check <- check_prop_bounds(np_cf$np, pb_np)
+      if (K > 2) { D.hat.z[, , i] <- np_check } else { D.hat.z[, i] <- np_check }
       D.hat.z_m[[i]] <- np_cf$models_nupa
       ens_w[[pb_np]] <- extract_w(np_cf)
     }
@@ -281,8 +282,8 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
       cv = cv, subset = NULL, store_models = store_models, 
       quiet = quiet, pb = pb, pb_np = pb_np, ensemble_type = ensemble_type
     )
-
-    D.hat <- np_cf$np
+    
+    D.hat <- check_prop_bounds(np_cf$np, nupa)
     D.hat_m <- np_cf$models_nupa
     ens_w[[pb_np]] <- extract_w(np_cf)
   }
@@ -298,7 +299,7 @@ nuisance_parameters <- function(NuPa = c("Y.hat", "Y.hat.d", "Y.hat.z", "D.hat",
       quiet = quiet, pb = pb, pb_np = pb_np, ensemble_type = ensemble_type
     )
 
-    Z.hat <- np_cf$np
+    Z.hat <- check_prop_bounds(np_cf$np, nupa)
     Z.hat_m <- np_cf$models_nupa
     ens_w[[pb_np]] <- extract_w(np_cf)
   }

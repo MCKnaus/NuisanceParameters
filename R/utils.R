@@ -1191,3 +1191,27 @@ one_hot <- function(Y) {
   
   return(out)
 }
+
+
+#' Check propensity-score bounds
+#'
+#' Issues a warning if any element of a propensity-score nuisance parameter
+#' falls outside the unit interval \code{[0, 1]} (up to a numerical tolerance).
+#'
+#' @param np Numeric vector or matrix of propensity-score predictions.
+#' @param name Character string specifying the nuisance parameter.
+#' @param tol Non-negative numeric tolerance. Defaults to \code{1e-6}.
+#'
+#' @return The input \code{np}, returned unchanged.
+#'
+#' @keywords internal
+check_prop_bounds <- function(np, name, tol = 1e-6) {
+  rng <- range(np, na.rm = TRUE)
+  if (rng[1] < -tol || rng[2] > 1 + tol) {
+    warning(sprintf(
+      "%s: propensity scores outside [0,1] (range: [%.4f, %.4f]). Consider using bounded learners or NNLS stacking.",
+      name, rng[1], rng[2]
+    ), call. = FALSE)
+  }
+  np
+}
